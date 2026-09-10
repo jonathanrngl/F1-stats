@@ -1,32 +1,59 @@
-# React + TypeScript + Vite
+# F1-Statistiken
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Weltmeisterschaftsstände der Formel 1 zu jedem Rennen seit 1950 – Fahrerwertung,
+Konstrukteurswertung und der Punkteverlauf einer Saison als Graph. Die Daten
+kommen live von der [Jolpica-F1-API](https://api.jolpi.ca) (Ergast-Nachfolger).
 
-Currently, two official plugins are available:
+React 19 + TypeScript + Vite, ohne Laufzeit-Abhängigkeiten über React hinaus.
+Der Graph ist handgezeichnetes SVG, keine Chart-Bibliothek.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Entwickeln
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm install
+npm run dev      # http://localhost:5173
+npm run build    # tsc -b && vite build  ->  dist/
+npm run lint     # oxlint
+npm run preview  # gebautes dist/ lokal ansehen
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## Aufbau
+
+| Datei | Inhalt |
+|---|---|
+| `src/api/jolpica.ts` | API-Zugriff, Warteschlange, Cache |
+| `src/App.tsx` | Auswahl, Tabs, Tabellen |
+| `src/ProgressionChart.tsx` | WM-Verlauf als SVG |
+| `src/index.css` | Theme-Token (hell/dunkel) |
+| `src/App.css` | Layout und Komponenten |
+
+## Zwei Dinge, die man wissen sollte
+
+**Die API drosselt.** Jolpica erlaubt anonym rund vier Anfragen pro Sekunde und
+500 pro Stunde und antwortet beim Überschreiten mit `429` – ohne `Retry-After`.
+Der WM-Verlauf braucht eine Anfrage je Rennen, läuft also ohne Gegenmaßnahme
+sofort ins Limit. `src/api/jolpica.ts` schickt deshalb alle Anfragen seriell
+durch eine Warteschlange mit 300 ms Mindestabstand, wiederholt `429` und
+Netzfehler mit wachsender Wartezeit, bündelt gleiche Pfade zu einer Anfrage und
+legt Antworten sechs Stunden im `localStorage` ab.
+
+**Die zuletzt gewertete Runde ist nicht die letzte im Kalender.** In einer
+laufenden Saison stehen die hinteren Rennen noch aus; für sie liefert die API
+keine Wertung. Die Vorauswahl kommt daher aus `/{saison}/driverstandings/`
+(aktueller Stand samt Rundennummer), nicht aus dem Rennkalender. Noch nicht
+gefahrene Rennen sind in der Auswahl ausgegraut.
+
+## Farben im Graphen
+
+Acht Fahrer bekommen eine eigene Farbe, alle weiteren laufen als graue
+Sammelgruppe mit – ab der neunten Farbe wäre kein Ton mehr sicher von den
+anderen zu unterscheiden. Die Reihenfolge der acht Töne ist gegen Rot-Grün- und
+Blau-Gelb-Sehschwäche geprüft (schlechtestes Nachbarpaar ΔE 9,2 bei
+Farbfehlsichtigkeit, 19,6 bei normalem Sehen, in hell wie dunkel). Die Farbe
+hängt am Fahrer, nicht an seinem aktuellen Rang: Wer die Rennen-Auswahl
+zurückdreht, sieht dieselben Linien in denselben Farben.
+
+## Hinweis
+
+Kein offizielles Angebot der Formel 1. F1, FORMULA ONE und Formel 1 sind Marken
+der Formula One Licensing BV.

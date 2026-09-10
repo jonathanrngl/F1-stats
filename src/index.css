@@ -1,111 +1,122 @@
+/*
+ * Theme: Rot / Weiß / Schwarz.
+ * Alle Farben stehen als Token hier – App.css und der Graph greifen nur noch
+ * über die Rollen darauf zu, damit Hell und Dunkel an einer Stelle umschalten.
+ */
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
-
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
-
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
   color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
+
+  --plane: #f2f2f0; /* Seitenhintergrund */
+  --surface: #ffffff; /* Karten, Tabelle, Diagrammfläche */
+  --surface-2: #f7f7f5; /* Hover, Zebra */
+  --ink: #0b0b0b;
+  --ink-2: #52514e;
+  --muted: #6b6a66;
+  --border: #e3e3e0;
+  --grid: #ebebe8; /* Gitternetz, haarfein */
+  --axis: #c9c9c4;
+
+  --accent: #e10600; /* 4,97:1 auf Weiß */
+  --accent-strong: #b80500;
+  --accent-wash: rgba(225, 6, 0, 0.08);
+  --accent-ink: #ffffff; /* Text auf roter Fläche */
+
+  --danger-fg: #b80500;
+  --danger-bg: #fef2f2;
+  --danger-border: #f6c9c7;
+
+  /* Kategoriale Serienfarben des WM-Verlaufs, rot-geführt.
+     Reihenfolge gegen die CVD-Gates geprüft (schlechtestes Nachbarpaar
+     ΔE 9,2 farbfehlsichtig / 19,6 normalsichtig). Nie zyklisch weiterdrehen –
+     ab Platz 9 laufen die Fahrer als graue Sammelgruppe. */
+  --s1: #e34948;
+  --s2: #2a78d6;
+  --s3: #eb6834;
+  --s4: #1baf7a;
+  --s5: #4a3aa7;
+  --s6: #008300;
+  --s7: #e87ba4;
+  --s8: #eda100;
+  --s-rest: #b9b8b3;
+
+  --shadow: 0 1px 2px rgba(11, 11, 11, 0.05), 0 8px 24px -12px rgba(11, 11, 11, 0.18);
+  --radius: 0.75rem;
+  --sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  font: 16px/1.5 var(--sans);
+  color: var(--ink-2);
+  background: var(--plane);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
+    --plane: #0a0a0a;
+    --surface: #141414;
+    --surface-2: #1c1c1b;
+    --ink: #ffffff;
+    --ink-2: #c3c2b7;
+    --muted: #8d8c86;
+    --border: #2a2a28;
+    --grid: #242422;
+    --axis: #3a3a37;
 
-  #social .button-icon {
-    filter: invert(1) brightness(2);
+    --accent: #ff2b1f; /* 4,93:1 auf #141414 */
+    --accent-strong: #ff5c52;
+    --accent-wash: rgba(255, 43, 31, 0.14);
+    --accent-ink: #0a0a0a;
+
+    --danger-fg: #ff8b83;
+    --danger-bg: #24100f;
+    --danger-border: #5b2320;
+
+    /* Dieselben acht Farbtöne, für die dunkle Fläche neu abgestuft. */
+    --s1: #e66767;
+    --s2: #3987e5;
+    --s3: #d95926;
+    --s4: #199e70;
+    --s5: #9085e9;
+    --s6: #008300;
+    --s7: #d55181;
+    --s8: #c98500;
+    --s-rest: #4f4e4a;
+
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 8px 24px -12px rgba(0, 0, 0, 0.8);
   }
 }
 
-#root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
+* {
   box-sizing: border-box;
 }
 
 body {
   margin: 0;
+  min-height: 100svh;
 }
 
 h1,
 h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
-}
-
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
-  }
-}
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
-}
-p {
+  color: var(--ink);
+  font-weight: 650;
+  letter-spacing: -0.02em;
   margin: 0;
 }
 
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
+a {
+  color: var(--accent);
+  text-underline-offset: 0.2em;
 }
 
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+button,
+select {
+  font: inherit;
+}
+
+:where(button, select, a):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 0.35rem;
 }
