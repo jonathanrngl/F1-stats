@@ -1,45 +1,55 @@
 /*
  * Theme: Rot / Weiß / Schwarz.
- * Alle Farben stehen als Token hier – App.css und der Graph greifen nur noch
- * über die Rollen darauf zu, damit Hell und Dunkel an einer Stelle umschalten.
+ *
+ * Alle Farben stehen als Token hier – App.css und die Graphen greifen nur über
+ * die Rollen darauf zu. Jede Rolle ist einmal notiert, hell und dunkel in einem
+ * `light-dark()`. Welcher der beiden Werte gilt, entscheidet `color-scheme`:
+ * ohne Zutun das System, mit Wahl das `data-theme` am Wurzelelement. Damit
+ * braucht der Umschalter keinen zweiten Satz Tokens, den man beim Ändern
+ * vergessen könnte.
  */
 :root {
   color-scheme: light dark;
 
-  --plane: #f2f2f0; /* Seitenhintergrund */
-  --surface: #ffffff; /* Karten, Tabelle, Diagrammfläche */
-  --surface-2: #f7f7f5; /* Hover, Zebra */
-  --ink: #0b0b0b;
-  --ink-2: #52514e;
-  --muted: #6b6a66;
-  --border: #e3e3e0;
-  --grid: #ebebe8; /* Gitternetz, haarfein */
-  --axis: #c9c9c4;
+  --plane: light-dark(#f3f3f1, #0a0a0a); /* Seitenhintergrund */
+  --surface: light-dark(#ffffff, #141414); /* Karten, Tabelle, Diagrammfläche */
+  --surface-2: light-dark(#f7f7f5, #1c1c1b); /* Hover, Zebra */
+  --surface-3: light-dark(#eeeeea, #232322); /* Balkenrinne, Chips */
+  --ink: light-dark(#0b0b0b, #ffffff);
+  --ink-2: light-dark(#52514e, #c3c2b7);
+  --muted: light-dark(#6b6a66, #8d8c86);
+  --border: light-dark(#e3e3e0, #2a2a28);
+  --grid: light-dark(#ebebe8, #242422); /* Gitternetz, haarfein */
+  --axis: light-dark(#c9c9c4, #3a3a37);
 
-  --accent: #e10600; /* 4,97:1 auf Weiß */
-  --accent-strong: #b80500;
-  --accent-wash: rgba(225, 6, 0, 0.08);
-  --accent-ink: #ffffff; /* Text auf roter Fläche */
+  /* 4,97:1 auf Weiß, 4,93:1 auf #141414 */
+  --accent: light-dark(#e10600, #ff2b1f);
+  --accent-strong: light-dark(#b80500, #ff5c52);
+  --accent-wash: light-dark(rgba(225, 6, 0, 0.08), rgba(255, 43, 31, 0.14));
+  --accent-ink: light-dark(#ffffff, #0a0a0a);
 
-  --danger-fg: #b80500;
-  --danger-bg: #fef2f2;
-  --danger-border: #f6c9c7;
+  /* Gegenrichtung zum Rot: Plätze gewonnen, Auto hielt durch, Titel noch drin. */
+  --good: light-dark(#0f7a52, #2fbf88);
+  --good-wash: light-dark(rgba(15, 122, 82, 0.1), rgba(47, 191, 136, 0.16));
 
-  /* Kategoriale Serienfarben des WM-Verlaufs, rot-geführt.
+  --danger-fg: light-dark(#b80500, #ff8b83);
+  --danger-bg: light-dark(#fef2f2, #24100f);
+  --danger-border: light-dark(#f6c9c7, #5b2320);
+
+  /* Kategoriale Serienfarben der Graphen, rot-geführt.
      Reihenfolge gegen die CVD-Gates geprüft (schlechtestes Nachbarpaar
      ΔE 9,2 farbfehlsichtig / 19,6 normalsichtig). Nie zyklisch weiterdrehen –
      ab Platz 9 laufen die Fahrer als graue Sammelgruppe. */
-  --s1: #e34948;
-  --s2: #2a78d6;
-  --s3: #eb6834;
-  --s4: #1baf7a;
-  --s5: #4a3aa7;
-  --s6: #008300;
-  --s7: #e87ba4;
-  --s8: #eda100;
-  --s-rest: #b9b8b3;
+  --s1: light-dark(#e34948, #e66767);
+  --s2: light-dark(#2a78d6, #3987e5);
+  --s3: light-dark(#eb6834, #d95926);
+  --s4: light-dark(#1baf7a, #199e70);
+  --s5: light-dark(#4a3aa7, #9085e9);
+  --s6: light-dark(#008300, #008300);
+  --s7: light-dark(#e87ba4, #d55181);
+  --s8: light-dark(#eda100, #c98500);
+  --s-rest: light-dark(#b9b8b3, #4f4e4a);
 
-  --shadow: 0 1px 2px rgba(11, 11, 11, 0.05), 0 8px 24px -12px rgba(11, 11, 11, 0.18);
   --radius: 0.75rem;
   --sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 
@@ -52,40 +62,30 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Die Wahl im Kopf der Seite. `color-scheme` allein genügt: alle Tokens oben
+   hängen daran, und Formularelemente ziehen gleich mit. */
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+}
+
+/* Der Schatten ist die eine Ausnahme: light-dark() nimmt kein Wertepaar, das
+   selbst Kommas enthält, und eine Schattenliste besteht aus genau solchen. */
+:root {
+  --shadow: 0 1px 2px rgba(11, 11, 11, 0.05), 0 8px 24px -12px rgba(11, 11, 11, 0.18);
+}
+
 @media (prefers-color-scheme: dark) {
-  :root {
-    --plane: #0a0a0a;
-    --surface: #141414;
-    --surface-2: #1c1c1b;
-    --ink: #ffffff;
-    --ink-2: #c3c2b7;
-    --muted: #8d8c86;
-    --border: #2a2a28;
-    --grid: #242422;
-    --axis: #3a3a37;
-
-    --accent: #ff2b1f; /* 4,93:1 auf #141414 */
-    --accent-strong: #ff5c52;
-    --accent-wash: rgba(255, 43, 31, 0.14);
-    --accent-ink: #0a0a0a;
-
-    --danger-fg: #ff8b83;
-    --danger-bg: #24100f;
-    --danger-border: #5b2320;
-
-    /* Dieselben acht Farbtöne, für die dunkle Fläche neu abgestuft. */
-    --s1: #e66767;
-    --s2: #3987e5;
-    --s3: #d95926;
-    --s4: #199e70;
-    --s5: #9085e9;
-    --s6: #008300;
-    --s7: #d55181;
-    --s8: #c98500;
-    --s-rest: #4f4e4a;
-
+  :root:not([data-theme='light']) {
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 8px 24px -12px rgba(0, 0, 0, 0.8);
   }
+}
+
+:root[data-theme='dark'] {
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 8px 24px -12px rgba(0, 0, 0, 0.8);
 }
 
 * {
@@ -95,10 +95,12 @@
 body {
   margin: 0;
   min-height: 100svh;
+  background: var(--plane);
 }
 
 h1,
-h2 {
+h2,
+h3 {
   color: var(--ink);
   font-weight: 650;
   letter-spacing: -0.02em;
@@ -115,8 +117,29 @@ select {
   font: inherit;
 }
 
-:where(button, select, a):focus-visible {
+:where(button, select, a, [tabindex]):focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
   border-radius: 0.35rem;
+}
+
+/* Nur für Hilfsmittel: erklärt, was ein Platzhalter gerade tut. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
