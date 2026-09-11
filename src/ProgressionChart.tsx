@@ -8,6 +8,11 @@ import type { DriverProgression } from './api/jolpica'
  * Sammelgruppe mit. Kategoriale Farben werden nie zyklisch weitergedreht – ab
  * Platz neun waere jede weitere Farbe von einer der ersten acht nicht mehr
  * unterscheidbar. Die Farbe haengt am Fahrer, nicht an seinem Rang im Moment.
+ *
+ * Anwaehlen laesst sich trotzdem jeder Fahrer. Wer aus der Sammelgruppe
+ * gewaehlt wird, bekommt seine Linie in Textfarbe oben aufgelegt – das ist
+ * keine neue Dauerfarbe, sondern die Markierung des einen Ausgewaehlten, und
+ * genau deshalb darf sie sich von den acht Serienfarben unterscheiden.
  */
 const W = 900
 const H = 440
@@ -18,8 +23,10 @@ const PLOT_H = H - PAD.top - PAD.bottom
 
 const STEPS = [1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000]
 
-const seriesColor = (index: number) =>
-  index < NAMED ? `var(--s${index + 1})` : 'var(--s-rest)'
+const seriesColor = (index: number) => (index < NAMED ? `var(--s${index + 1})` : 'var(--s-rest)')
+
+/** Farbe der aufgelegten Linie eines Fahrers aus der Sammelgruppe. */
+const PICKED_COLOR = 'var(--ink)'
 
 export interface ChartRound {
   round: number
@@ -34,7 +41,11 @@ export default function ProgressionChart({
   rounds: ChartRound[]
 }) {
   const [hoverRound, setHoverRound] = useState<number | null>(null)
-  const [soloDriver, setSoloDriver] = useState<string | null>(null)
+  // Zeigen hebt eine Linie hervor, Klicken haelt sie fest. Ohne das Festhalten
+  // waere die Hervorhebung auf einem Tablet nicht zu gebrauchen.
+  const [hoveredDriver, setHoveredDriver] = useState<string | null>(null)
+  const [pinnedDriver, setPinnedDriver] = useState<string | null>(null)
+  const soloDriver = pinnedDriver ?? hoveredDriver
 
   const n = rounds.length
 
@@ -63,24 +74,35 @@ export default function ProgressionChart({
       .join(' ')
 
   const named = drivers.slice(0, NAMED)
+  const rest = drivers.slice(NAMED)
+
+  // Ein Ausgewaehlter aus der Sammelgruppe wird noch einmal obenauf gezeichnet:
+  // in der Zeichenreihenfolge laege er sonst unter den acht farbigen Linien.
+  const pickedRest = soloDriver ? (rest.find((d) => d.driverId === soloDriver) ?? null) : null
 
   // Direktlabels nur fuer die Spitze und nur, wo sie sich nicht ueberlagern.
-  const endLabels: { driver: DriverProgression; yPos: number; color: string }[] = []
-  named.slice(0, 3).forEach((d, i) => {
+  const endLabels: { driver: DriverProgression; yPos: number }[] = []
+  named.slice(0, 3).forEach((d) => {
     const yPos = y(d.total)
     if (endLabels.every((l) => Math.abs(l.yPos - yPos) > 13)) {
-      endLabels.push({ driver: d, yPos, color: seriesColor(i) })
+      endLabels.push({ driver: d, yPos })
     }
   })
 
-  const readout = hoverRound === null
-    ? null
-    : {
-        round: rounds[hoverRound - 1],
-        rows: named
-          .map((d, i) => ({ driver: d, color: seriesColor(i), value: d.points[hoverRound - 1] ?? 0 }))
-          .sort((a, b) => b.value - a.value),
-      }
+  const readout =
+    hoverRound === null
+      ? null
+      : {
+          round: rounds[hoverRound - 1],
+          rows: [
+            ...named.map((d, i) => ({ driver: d, color: seriesColor(i) })),
+            // Der Ausgewaehlte aus der Sammelgruppe gehoert mit in die Ablesung,
+            // sonst zeigt der Graph eine Linie, zu der keine Zahl steht.
+            ...(pickedRest ? [{ driver: pickedRest, color: PICKED_COLOR }] : []),
+          ]
+            .map((row) => ({ ...row, value: row.driver.points[hoverRound - 1] ?? 0 }))
+            .sort((a, b) => b.value - a.value),
+        }
 
   const pointerRound = (event: ReactPointerEvent<SVGRectElement>) => {
     const box = event.currentTarget.getBoundingClientRect()
@@ -92,6 +114,31 @@ export default function ProgressionChart({
   const stepHover = (delta: number) =>
     setHoverRound((prev) => Math.min(n, Math.max(1, (prev ?? 1) + delta)))
 
+  const dim = (driverId: string) => (soloDriver && soloDriver !== driverId ? ' faded' : '')
+
+  const legendItem = (d: DriverProgression, color: string) => (
+    <li
+      key={d.driverId}
+      className="pick"
+      onPointerEnter={() => setHoveredDriver(d.driverId)}
+      onPointerLeave={() => setHoveredDriver(null)}
+    >
+      <span className="key" style={{ background: color }} />
+      <button
+        type="button"
+        className="legend-name"
+        aria-pressed={pinnedDriver === d.driverId}
+        title={
+          pinnedDriver === d.driverId ? 'Hervorhebung aufheben' : `Nur ${d.name} hervorheben`
+        }
+        onClick={() => setPinnedDriver((prev) => (prev === d.driverId ? null : d.driverId))}
+      >
+        {d.name}
+      </button>
+      <span className="pts">{d.total}</span>
+    </li>
+  )
+
   return (
     <div className="chart-wrap">
       <svg
@@ -102,7 +149,13 @@ export default function ProgressionChart({
       >
         {yTicks.map((value) => (
           <g key={value}>
-            <line className="grid-line" x1={PAD.left} x2={W - PAD.right} y1={y(value)} y2={y(value)} />
+            <line
+              className="grid-line"
+              x1={PAD.left}
+              x2={W - PAD.right}
+              y1={y(value)}
+              y2={y(value)}
+            />
             <text
               className="tick"
               x={PAD.left - 9}
@@ -126,17 +179,23 @@ export default function ProgressionChart({
         <text className="tick" x={PAD.left + PLOT_W / 2} y={H - 4} textAnchor="middle">
           Rennen
         </text>
-        <text className="tick" x={12} y={PAD.top + PLOT_H / 2} textAnchor="middle"
-          transform={`rotate(-90 12 ${PAD.top + PLOT_H / 2})`}>
+        <text
+          className="tick"
+          x={12}
+          y={PAD.top + PLOT_H / 2}
+          textAnchor="middle"
+          transform={`rotate(-90 12 ${PAD.top + PLOT_H / 2})`}
+        >
           Punkte
         </text>
 
         {/* Sammelgruppe zuerst zeichnen, damit die benannten Linien darueber liegen. */}
-        {drivers.slice(NAMED).map((d) => (
+        {rest.map((d) => (
           <path
             key={d.driverId}
             className={`series rest${soloDriver ? ' faded' : ''}`}
             stroke="var(--s-rest)"
+            pathLength={1}
             d={linePath(d.points)}
           />
         ))}
@@ -144,27 +203,45 @@ export default function ProgressionChart({
         {named.map((d, i) => (
           <path
             key={d.driverId}
-            className={`series${soloDriver && soloDriver !== d.driverId ? ' faded' : ''}`}
+            className={`series${dim(d.driverId)}`}
             stroke={seriesColor(i)}
+            pathLength={1}
+            style={{ '--i': i } as React.CSSProperties}
             d={linePath(d.points)}
           />
         ))}
 
+        {pickedRest && (
+          <g className="picked-layer">
+            <path className="series picked" pathLength={1} d={linePath(pickedRest.points)} />
+            <circle className="end-dot picked-dot" cx={x(n)} cy={y(pickedRest.total)} r={4} />
+            <text
+              className="end-label"
+              x={x(n) + 11}
+              y={y(pickedRest.total)}
+              dominantBaseline="middle"
+            >
+              {pickedRest.code}
+            </text>
+          </g>
+        )}
+
         {named.map((d, i) => (
           <circle
             key={d.driverId}
-            className={`end-dot${soloDriver && soloDriver !== d.driverId ? ' faded' : ''}`}
+            className={`end-dot settled${dim(d.driverId)}`}
             cx={x(n)}
             cy={y(d.total)}
             r={4}
             fill={seriesColor(i)}
+            style={{ '--i': i } as React.CSSProperties}
           />
         ))}
 
         {endLabels.map(({ driver, yPos }) => (
           <text
             key={driver.driverId}
-            className="end-label"
+            className={`end-label${dim(driver.driverId)}`}
             x={x(n) + 11}
             y={yPos}
             dominantBaseline="middle"
@@ -185,13 +262,21 @@ export default function ProgressionChart({
             {named.map((d, i) => (
               <circle
                 key={d.driverId}
-                className="end-dot"
+                className={`end-dot${dim(d.driverId)}`}
                 cx={x(hoverRound)}
                 cy={y(d.points[hoverRound - 1] ?? 0)}
                 r={4}
                 fill={seriesColor(i)}
               />
             ))}
+            {pickedRest && (
+              <circle
+                className="end-dot picked-dot"
+                cx={x(hoverRound)}
+                cy={y(pickedRest.points[hoverRound - 1] ?? 0)}
+                r={4}
+              />
+            )}
           </g>
         )}
 
@@ -242,25 +327,38 @@ export default function ProgressionChart({
         </div>
       )}
 
-      <ul className="legend">
-        {named.map((d, i) => (
-          <li
-            key={d.driverId}
-            onPointerEnter={() => setSoloDriver(d.driverId)}
-            onPointerLeave={() => setSoloDriver(null)}
+      <ul className="legend">{named.map((d, i) => legendItem(d, seriesColor(i)))}</ul>
+
+      {rest.length > 0 && (
+        <details className="more-drivers">
+          <summary>
+            {rest.length} weitere {rest.length === 1 ? 'Fahrer' : 'Fahrer'} anwählen
+          </summary>
+          <p className="more-note">
+            Sie laufen als graue Gruppe mit. Ein Klick legt den gewählten Fahrer in Textfarbe
+            darüber – die acht Serienfarben bleiben für die Spitze reserviert.
+          </p>
+          <ul className="legend legend-rest">{rest.map((d) => legendItem(d, 'var(--s-rest)'))}</ul>
+        </details>
+      )}
+
+      {pinnedDriver && (
+        <p className="pick-hint">
+          <button
+            type="button"
+            className="clear-pick"
+            // Auch den Hover-Zustand loeschen: steht der Zeiger beim Klick noch
+            // ueber einem Namen, bliebe die Linie sonst hervorgehoben und der
+            // Knopf haette sichtbar nichts getan.
+            onClick={() => {
+              setPinnedDriver(null)
+              setHoveredDriver(null)
+            }}
           >
-            <span className="key" style={{ background: seriesColor(i) }} />
-            <span>{d.name}</span>
-            <span className="pts">{d.total}</span>
-          </li>
-        ))}
-        {drivers.length > NAMED && (
-          <li>
-            <span className="key" style={{ background: 'var(--s-rest)' }} />
-            <span>{drivers.length - NAMED} weitere Fahrer</span>
-          </li>
-        )}
-      </ul>
+            Hervorhebung aufheben
+          </button>
+        </p>
+      )}
     </div>
   )
 }

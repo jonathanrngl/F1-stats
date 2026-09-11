@@ -2,9 +2,15 @@
  * Theme: Rot / Weiß / Schwarz.
  * Alle Farben stehen als Token hier – App.css und der Graph greifen nur noch
  * über die Rollen darauf zu, damit Hell und Dunkel an einer Stelle umschalten.
+ *
+ * Die dunkle Palette hängt an `:root[data-theme='dark']` und nicht an einer
+ * Media Query. Ein Inline-Skript in index.html löst "dem System folgen" vor
+ * dem ersten Bild zu einem konkreten Wert auf und setzt das Attribut; so steht
+ * die dunkle Palette genau einmal im Stylesheet, statt für Media Query und
+ * Umschalter doppelt gepflegt werden zu müssen.
  */
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
 
   --plane: #f2f2f0; /* Seitenhintergrund */
   --surface: #ffffff; /* Karten, Tabelle, Diagrammfläche */
@@ -25,6 +31,12 @@
   --danger-bg: #fef2f2;
   --danger-border: #f6c9c7;
 
+  /* Gewonnene und verlorene Plätze, Zielankunft und Ausfall. Grün und Rot
+     tragen die Aussage nie allein – daneben steht immer ein Vorzeichen oder
+     eine Beschriftung. */
+  --gain: #0f7a4f;
+  --loss: #b80500;
+
   /* Kategoriale Serienfarben des WM-Verlaufs, rot-geführt.
      Reihenfolge gegen die CVD-Gates geprüft (schlechtestes Nachbarpaar
      ΔE 9,2 farbfehlsichtig / 19,6 normalsichtig). Nie zyklisch weiterdrehen –
@@ -43,6 +55,11 @@
   --radius: 0.75rem;
   --sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 
+  /* Eine Dauer, ein Verlauf – damit Tabellen, Kacheln und Graph im
+     gleichen Takt einlaufen. */
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --enter: 420ms;
+
   font: 16px/1.5 var(--sans);
   color: var(--ink-2);
   background: var(--plane);
@@ -52,40 +69,43 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --plane: #0a0a0a;
-    --surface: #141414;
-    --surface-2: #1c1c1b;
-    --ink: #ffffff;
-    --ink-2: #c3c2b7;
-    --muted: #8d8c86;
-    --border: #2a2a28;
-    --grid: #242422;
-    --axis: #3a3a37;
+:root[data-theme='dark'] {
+  color-scheme: dark;
 
-    --accent: #ff2b1f; /* 4,93:1 auf #141414 */
-    --accent-strong: #ff5c52;
-    --accent-wash: rgba(255, 43, 31, 0.14);
-    --accent-ink: #0a0a0a;
+  --plane: #0a0a0a;
+  --surface: #141414;
+  --surface-2: #1c1c1b;
+  --ink: #ffffff;
+  --ink-2: #c3c2b7;
+  --muted: #8d8c86;
+  --border: #2a2a28;
+  --grid: #242422;
+  --axis: #3a3a37;
 
-    --danger-fg: #ff8b83;
-    --danger-bg: #24100f;
-    --danger-border: #5b2320;
+  --accent: #ff2b1f; /* 4,93:1 auf #141414 */
+  --accent-strong: #ff5c52;
+  --accent-wash: rgba(255, 43, 31, 0.14);
+  --accent-ink: #0a0a0a;
 
-    /* Dieselben acht Farbtöne, für die dunkle Fläche neu abgestuft. */
-    --s1: #e66767;
-    --s2: #3987e5;
-    --s3: #d95926;
-    --s4: #199e70;
-    --s5: #9085e9;
-    --s6: #008300;
-    --s7: #d55181;
-    --s8: #c98500;
-    --s-rest: #4f4e4a;
+  --danger-fg: #ff8b83;
+  --danger-bg: #24100f;
+  --danger-border: #5b2320;
 
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 8px 24px -12px rgba(0, 0, 0, 0.8);
-  }
+  --gain: #3fc98a;
+  --loss: #ff6b61;
+
+  /* Dieselben acht Farbtöne, für die dunkle Fläche neu abgestuft. */
+  --s1: #e66767;
+  --s2: #3987e5;
+  --s3: #d95926;
+  --s4: #199e70;
+  --s5: #9085e9;
+  --s6: #008300;
+  --s7: #d55181;
+  --s8: #c98500;
+  --s-rest: #4f4e4a;
+
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 8px 24px -12px rgba(0, 0, 0, 0.8);
 }
 
 * {
@@ -98,7 +118,9 @@ body {
 }
 
 h1,
-h2 {
+h2,
+h3,
+h4 {
   color: var(--ink);
   font-weight: 650;
   letter-spacing: -0.02em;
@@ -119,4 +141,66 @@ select {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
   border-radius: 0.35rem;
+}
+
+/* Für Screenreader da, für das Auge nicht: Tabellenbeschriftungen und
+   Ladehinweise, die auf dem Schirm schon aus dem Layout hervorgehen. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ------------------------------------------------------------- Bewegung */
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+}
+
+@keyframes grow-x {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+/*
+ * Wer Bewegung abbestellt hat, bekommt keine: alles steht sofort an seinem
+ * Platz. Ein `animation: none` allein würde Elemente mit `opacity: 0` im
+ * Startbild unsichtbar lassen – deshalb wird der Endzustand hier erzwungen.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+    transition-duration: 1ms !important;
+  }
 }

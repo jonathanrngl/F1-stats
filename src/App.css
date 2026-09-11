@@ -9,7 +9,15 @@
 .masthead-inner {
   max-width: 68rem;
   margin: 0 auto;
-  padding: 2.25rem 1.25rem 2rem;
+  padding: 1.5rem 1.25rem 2rem;
+}
+
+.masthead-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 2rem;
 }
 
 .eyebrow {
@@ -38,7 +46,7 @@
 
 .subtitle {
   margin: 0.5rem 0 0;
-  max-width: 40rem;
+  max-width: 42rem;
   color: var(--muted);
 }
 
@@ -55,6 +63,37 @@
   box-shadow: var(--shadow);
 }
 
+/* ------------------------------------------------------- Farbschema-Schalter */
+
+.theme-toggle {
+  display: inline-flex;
+  padding: 2px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+
+.theme-toggle button {
+  padding: 0.25rem 0.7rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+  background: none;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color 150ms var(--ease), background-color 150ms var(--ease);
+}
+
+.theme-toggle button:hover {
+  color: var(--ink);
+}
+
+.theme-toggle button.active {
+  color: var(--accent-ink);
+  background: var(--accent);
+}
+
 /* ---------------------------------------------------------------- Steuerung */
 
 .controls {
@@ -64,7 +103,7 @@
   padding: 1.1rem;
 }
 
-.controls label {
+.control {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
@@ -72,7 +111,7 @@
   min-width: 0;
 }
 
-.controls span {
+.control > span {
   font-size: 0.7rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -94,6 +133,7 @@ select {
   background-position: right 1.05rem center, right 0.8rem center;
   background-size: 5px 5px, 5px 5px;
   background-repeat: no-repeat;
+  transition: border-color 150ms var(--ease);
 }
 
 select:hover:not(:disabled) {
@@ -102,6 +142,41 @@ select:hover:not(:disabled) {
 
 select:disabled {
   opacity: 0.55;
+  cursor: default;
+}
+
+/* Ein Rennen weiter oder zurueck, ohne die Liste aufzuklappen: bei 24 Rennen
+   ist das Blaettern der haeufigere Weg als das gezielte Auswaehlen. */
+.stepper {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.stepper select {
+  flex: 1;
+  min-width: 0;
+}
+
+.stepper button {
+  flex: none;
+  width: 2.4rem;
+  font-size: 1.1rem;
+  line-height: 1;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: border-color 150ms var(--ease), color 150ms var(--ease);
+}
+
+.stepper button:hover:not(:disabled) {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.stepper button:disabled {
+  opacity: 0.4;
   cursor: default;
 }
 
@@ -131,6 +206,53 @@ select:disabled {
   font-weight: 700;
 }
 
+/* ------------------------------------------------------------ Kennzahlen */
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 0.75rem;
+  margin: 1rem 0 0;
+}
+
+.tile {
+  padding: 0.85rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  animation: rise var(--enter) var(--ease) both;
+  animation-delay: calc(var(--i) * 55ms);
+}
+
+.tile dt {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+
+.tile dd {
+  margin: 0.3rem 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.tile-value {
+  font-size: 1.35rem;
+  font-weight: 650;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.tile-note {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
 /* -------------------------------------------------------------------- Tabs */
 
 .tabs {
@@ -139,9 +261,11 @@ select:disabled {
   margin: 1.5rem 0 0;
   border-bottom: 1px solid var(--border);
   overflow-x: auto;
+  scrollbar-width: thin;
 }
 
 .tabs button {
+  position: relative;
   padding: 0.7rem 0.95rem;
   white-space: nowrap;
   font-size: 0.95rem;
@@ -149,9 +273,8 @@ select:disabled {
   color: var(--muted);
   background: none;
   border: none;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
   cursor: pointer;
+  transition: color 150ms var(--ease);
 }
 
 .tabs button:hover {
@@ -161,12 +284,44 @@ select:disabled {
 .tabs button.active {
   color: var(--ink);
   font-weight: 650;
-  border-bottom-color: var(--accent);
+}
+
+/* Der Balken waechst aus der Mitte, wenn der Tab aktiv wird – die Bewegung
+   zeigt, wohin die Auswahl gesprungen ist. */
+.tabs button::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 -1px;
+  height: 2px;
+  background: var(--accent);
+  transform: scaleX(0);
+}
+
+.tabs button.active::after {
+  transform: scaleX(1);
+  animation: grow-x 240ms var(--ease);
 }
 
 .panel-body {
   margin-top: 1.25rem;
   padding: 0.5rem;
+  animation: rise var(--enter) var(--ease) both;
+}
+
+.panel-body:focus {
+  outline: none;
+}
+
+.sub-section {
+  margin-top: 1.75rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+}
+
+.sub-section h3,
+.season h3 {
+  padding: 0 0.25rem 0.6rem;
+  font-size: 1rem;
 }
 
 /* ---------------------------------------------------------------- Tabelle */
@@ -181,7 +336,12 @@ table {
   font-size: 0.93rem;
 }
 
-th {
+/* Der Kopf bleibt beim Scrollen stehen – bei 100 Zeilen Saisonbilanz ist das
+   der Unterschied zwischen Lesen und Raten, welche Spalte man vor sich hat. */
+thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
   padding: 0.65rem 0.75rem;
   text-align: left;
   white-space: nowrap;
@@ -190,7 +350,60 @@ th {
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--muted);
+  background: var(--surface);
   border-bottom: 1px solid var(--border);
+}
+
+th.num,
+td.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.sorter {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color 150ms var(--ease);
+}
+
+th.num .sorter {
+  flex-direction: row-reverse;
+}
+
+.sorter:hover {
+  color: var(--ink);
+}
+
+.sorter.active {
+  color: var(--accent);
+}
+
+/* Der Pfeil nimmt seinen Platz immer ein, damit die Spalte beim Sortieren
+   nicht die Breite wechselt. */
+.sorter .arrow {
+  width: 0.7em;
+  font-size: 0.9em;
+  opacity: 0;
+  transition: opacity 150ms var(--ease);
+}
+
+.sorter:hover .arrow,
+.sorter.active .arrow {
+  opacity: 1;
+}
+
+.sorter .short,
+th .short {
+  display: none;
 }
 
 td {
@@ -202,45 +415,165 @@ tbody tr:last-child td {
   border-bottom: none;
 }
 
+tbody tr {
+  animation: rise 300ms var(--ease) both;
+  animation-delay: calc(var(--i, 0) * 16ms);
+}
+
 tbody tr:hover {
   background: var(--surface-2);
 }
 
+/* Der Erste bekommt einen Hauch Rot – erkennbar, ohne dass die Zeile
+   aus der Tabelle springt. */
+tbody tr.p1 {
+  background: var(--accent-wash);
+}
+
+tbody tr.p1:hover {
+  background: var(--accent-wash);
+}
+
 .pos {
-  width: 3rem;
+  display: inline-block;
+  min-width: 1.5rem;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
 
-tbody tr:first-child .pos {
+tr.p1 .pos {
   color: var(--accent);
   font-weight: 700;
 }
 
+tr.p2 .pos,
+tr.p3 .pos {
+  color: var(--ink);
+  font-weight: 650;
+}
+
+/* Ausfall oder Disqualifikation: 'R', 'D' statt einer Platzziffer. */
+.pos.out {
+  color: var(--muted);
+  font-style: italic;
+}
+
 .name {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem;
   color: var(--ink);
   font-weight: 600;
 }
 
-.num {
-  text-align: right;
+.name .sub {
+  flex-basis: 100%;
+  font-size: 0.78rem;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.zero {
+  color: var(--muted);
+}
+
+.muted-cell {
+  color: var(--muted);
+}
+
+.time {
   font-variant-numeric: tabular-nums;
 }
 
-td.points {
+/* Punkte mit Balken: die Zahl bleibt die Aussage, der Balken macht den
+   Abstand zur Spitze ohne Rechnen sichtbar. */
+.bar-cell {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.2rem;
+  min-width: 2.5rem;
+}
+
+.bar-value {
   color: var(--ink);
   font-weight: 650;
+}
+
+.bar {
+  width: 100%;
+  height: 2px;
+  border-radius: 1px;
+  background: linear-gradient(to left, var(--accent) var(--w), transparent var(--w));
+  transform-origin: right;
+  animation: grow-x 500ms var(--ease) both;
+}
+
+.nation {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.45rem;
+}
+
+.nation-code {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.delta {
+  font-weight: 650;
+}
+
+.delta.up {
+  color: var(--gain);
+}
+
+.delta.down {
+  color: var(--loss);
+}
+
+.delta.flat {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.badge-fl,
+.badge-pole {
+  padding: 0.05rem 0.3rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  border-radius: 0.25rem;
+  text-decoration: none;
+  cursor: help;
+}
+
+.badge-fl {
+  color: var(--s5);
+  background: color-mix(in srgb, var(--s5) 14%, transparent);
+}
+
+.badge-pole {
+  color: var(--accent);
+  background: var(--accent-wash);
+  font-variant-numeric: tabular-nums;
 }
 
 /* -------------------------------------------------------- Status & Fehler */
 
 .status {
+  margin: 0;
   padding: 3rem 1rem;
   text-align: center;
   color: var(--muted);
 }
 
 .progress {
+  display: block;
   max-width: 18rem;
   height: 3px;
   margin: 0.9rem auto 0;
@@ -257,7 +590,7 @@ td.points {
 }
 
 .error {
-  margin-top: 1rem;
+  margin: 1rem 0 0;
   padding: 0.85rem 1rem;
   color: var(--danger-fg);
   background: var(--danger-bg);
@@ -266,12 +599,142 @@ td.points {
   font-size: 0.9rem;
 }
 
+/* Platzhalter in Zeilenhoehe der spaeteren Tabelle: das Layout springt beim
+   Eintreffen der Daten nicht. */
+.skeleton {
+  display: grid;
+  gap: 0.55rem;
+  padding: 1rem 0.75rem;
+}
+
+.skeleton-row {
+  height: 1.15rem;
+  border-radius: 0.3rem;
+  background: var(--surface-2);
+  animation: pulse 1.4s var(--ease) infinite both;
+  animation-delay: calc(var(--i) * 70ms);
+}
+
 footer {
   margin-top: 2.5rem;
   padding-top: 1.25rem;
   border-top: 1px solid var(--border);
   font-size: 0.85rem;
   color: var(--muted);
+}
+
+/* ------------------------------------------------------------ Saisonbilanz */
+
+.season {
+  display: grid;
+  gap: 2rem;
+}
+
+.season section {
+  min-width: 0;
+}
+
+.section-note {
+  margin: 0 0.25rem 0.9rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.split {
+  display: flex;
+  height: 0.75rem;
+  margin: 0 0.25rem;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--surface-2);
+}
+
+.split-seg {
+  transform-origin: left;
+  animation: grow-x 650ms var(--ease) both;
+}
+
+.split-seg.finish,
+.key.finish {
+  background: var(--s4);
+}
+
+.split-seg.lapped,
+.key.lapped {
+  background: var(--s-rest);
+}
+
+.split-seg.out,
+.key.out {
+  background: var(--accent);
+}
+
+.split-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.4rem;
+  margin: 0.8rem 0.25rem 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.85rem;
+}
+
+.split-key li {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.split-key .key {
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 2px;
+  flex: none;
+}
+
+.split-key b {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.season h4 {
+  margin: 1.5rem 0.25rem 0.7rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+
+.causes {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0 0.25rem;
+  padding: 0;
+  list-style: none;
+  font-size: 0.88rem;
+}
+
+.causes li {
+  display: grid;
+  grid-template-columns: minmax(7rem, 11rem) 1fr 2.5rem;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.cause-bar {
+  height: 0.55rem;
+  border-radius: 2px;
+  background: linear-gradient(to right, var(--accent) var(--w), transparent var(--w));
+  transform-origin: left;
+  animation: grow-x 600ms var(--ease) both;
+}
+
+.cause-count {
+  text-align: right;
+  color: var(--ink);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ------------------------------------------------------------------ Graph */
@@ -324,28 +787,48 @@ footer {
   font-variant-numeric: tabular-nums;
 }
 
+/*
+ * Die Linien zeichnen sich von links nach rechts – dieselbe Richtung, in der
+ * die Saison verlaeuft. `pathLength="1"` im Markup macht die Strichlaenge
+ * unabhaengig von der echten Pfadlaenge, sonst braeuchte jede Linie eine
+ * eigene, in JS gemessene Dasharray.
+ */
 .chart .series {
   fill: none;
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
+  stroke-dasharray: 1;
+  animation: draw 900ms var(--ease) both;
+  animation-delay: calc(var(--i, 0) * 55ms);
+  transition: opacity 200ms var(--ease);
 }
 
 .chart .series.rest {
   stroke-width: 1.5;
   opacity: 0.5;
+  animation-duration: 700ms;
 }
 
 /* Ring in Flaechenfarbe: haelt den Endpunkt lesbar, wo Linien sich kreuzen. */
 .chart .end-dot {
   stroke: var(--surface);
   stroke-width: 2;
+  transition: opacity 200ms var(--ease);
+}
+
+/* Die Endpunkte kommen, wenn ihre Linie angekommen ist. */
+.chart .end-dot.settled {
+  animation: fade 300ms var(--ease) both;
+  animation-delay: calc(700ms + var(--i, 0) * 55ms);
 }
 
 .chart .end-label {
   fill: var(--ink);
   font-size: 11.5px;
   font-weight: 650;
+  animation: fade 400ms var(--ease) both;
+  animation-delay: 800ms;
 }
 
 .chart .crosshair {
@@ -370,6 +853,7 @@ footer {
   box-shadow: var(--shadow);
   font-size: 0.8rem;
   pointer-events: none;
+  animation: fade 120ms var(--ease) both;
 }
 
 .tooltip h3 {
@@ -432,6 +916,16 @@ footer {
   color: var(--ink-2);
 }
 
+/* Die Legende ist auch der Filter: Zeigen auf einen Namen hebt seine Linie
+   hervor, alles andere tritt zurueck. */
+.legend li.pick {
+  cursor: pointer;
+}
+
+.legend li.pick:hover .legend-name {
+  color: var(--ink);
+}
+
 .legend .key {
   width: 0.9rem;
   height: 2px;
@@ -444,13 +938,541 @@ footer {
   font-variant-numeric: tabular-nums;
 }
 
+/* ------------------------------------------------------------- Schmale Schirme */
+
+@media (max-width: 52rem) {
+  /* Beiwerk fliegt raus, bevor die Tabelle seitlich scrollen muss. */
+  .secondary {
+    display: none;
+  }
+}
+
 @media (max-width: 40rem) {
   .masthead-inner,
   .app {
     padding-inline: 1rem;
   }
 
+  table {
+    font-size: 0.88rem;
+  }
+
+  th,
+  td {
+    padding: 0.55rem 0.5rem;
+  }
+
+  /* Kurzform im Spaltenkopf, wo eine da ist. */
+  .sorter .full,
+  th .full {
+    display: none;
+  }
+
+  .sorter .short,
+  th .short {
+    display: inline;
+  }
+
+  .causes li {
+    grid-template-columns: minmax(5.5rem, 8rem) 1fr 2rem;
+    gap: 0.5rem;
+  }
+
   .chart .end-label {
     display: none;
   }
+}
+
+/* Der Name in der Legende ist ein Knopf, sieht aber wie Text aus: er soll
+   die Legende nicht in eine Knopfleiste verwandeln. */
+.legend-name {
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color 150ms var(--ease);
+}
+
+.legend-name[aria-pressed='true'] {
+  color: var(--ink);
+  font-weight: 650;
+}
+
+/* ------------------------------------------- Anwaehlen in der Sammelgruppe */
+
+/* Der Ausgewaehlte aus der grauen Gruppe: Textfarbe und etwas kraeftiger, aber
+   bewusst keine der acht Serienfarben – die bleiben der Spitze vorbehalten. */
+.chart .series.picked {
+  stroke: var(--ink);
+  stroke-width: 2.4;
+  opacity: 1;
+  animation: draw 500ms var(--ease) both;
+}
+
+.chart .end-dot.picked-dot {
+  fill: var(--ink);
+}
+
+.more-drivers {
+  margin-top: 0.9rem;
+  font-size: 0.85rem;
+}
+
+.more-drivers summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0;
+  color: var(--accent);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.more-drivers summary:hover {
+  color: var(--accent-strong);
+}
+
+.more-note {
+  margin: 0.3rem 0 0.6rem;
+  max-width: 42rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+/* Die Sammelgruppe kann lang werden: in Spalten statt in einer Zeile, damit
+   die Liste nicht ueber den halben Schirm laeuft. */
+.legend-rest {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+  gap: 0.3rem 1rem;
+}
+
+.pick-hint {
+  margin: 0.8rem 0 0;
+}
+
+.clear-pick {
+  padding: 0.3rem 0.7rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: border-color 150ms var(--ease), color 150ms var(--ease);
+}
+
+.clear-pick:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* ------------------------------------------------------------ Wochenende */
+
+.weekend {
+  display: grid;
+  gap: 1.5rem;
+  padding: 0.25rem;
+}
+
+.weekend-day {
+  animation: rise var(--enter) var(--ease) both;
+  animation-delay: calc(var(--i) * 70ms);
+}
+
+.weekend-day h3 {
+  padding: 0 0 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+
+.weekend-day ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.weekend-day li {
+  display: grid;
+  grid-template-columns: 2.7rem 1fr auto minmax(9rem, auto);
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.7rem 0.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.weekend-day li:last-child {
+  border-bottom: none;
+}
+
+.slot-badge {
+  padding: 0.15rem 0;
+  text-align: center;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  background: var(--surface-2);
+  border-radius: 0.3rem;
+}
+
+.has-results .slot-badge {
+  color: var(--accent);
+  background: var(--accent-wash);
+}
+
+.slot-label {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.slot-time {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+}
+
+.slot-link {
+  justify-self: end;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--accent);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 150ms var(--ease), background-color 150ms var(--ease);
+}
+
+.slot-link:hover {
+  border-color: var(--accent);
+  background: var(--accent-wash);
+}
+
+.slot-note {
+  justify-self: end;
+  font-size: 0.78rem;
+  color: var(--muted);
+  text-align: right;
+}
+
+/* Die Datenlage gehoert dazu: eine leere Trainingstabelle waere die
+   schlechtere Antwort als der Satz, warum es keine gibt. */
+.data-note {
+  margin: 0;
+  padding: 0.85rem 1rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--axis);
+  border-radius: 0.5rem;
+}
+
+.data-note strong {
+  color: var(--ink);
+}
+
+@media (max-width: 40rem) {
+  .weekend-day li {
+    grid-template-columns: 2.4rem 1fr auto;
+    row-gap: 0.35rem;
+  }
+
+  .slot-link,
+  .slot-note {
+    grid-column: 2 / -1;
+    justify-self: start;
+    text-align: left;
+  }
+
+  .legend-rest {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ------------------------------------------------------------ Bestenlisten */
+
+.boards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: 1.25rem 2rem;
+  padding: 0 0.25rem;
+}
+
+.board {
+  min-width: 0;
+  animation: rise var(--enter) var(--ease) both;
+  animation-delay: calc(var(--i) * 50ms);
+}
+
+.board h4 {
+  margin: 0 0 0.2rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+
+.board-note {
+  margin: 0 0 0.6rem;
+  font-size: 0.76rem;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.board ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Rang, Name, Zahl in einer Zeile – der Balken laeuft darunter ueber die
+   ganze Breite, damit die Liste auch in einer schmalen Spalte lesbar bleibt. */
+.board li {
+  display: grid;
+  grid-template-columns: 1.3rem minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 0.15rem 0.5rem;
+  padding: 0.38rem 0 0.3rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.88rem;
+}
+
+.board li:last-child {
+  border-bottom: none;
+}
+
+.board-rank {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.board li:first-child .board-rank {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.board-name {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  min-width: 0;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.board-detail {
+  font-size: 0.74rem;
+  font-weight: 400;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.board-value {
+  color: var(--ink);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.board-unit {
+  margin-left: 0.15rem;
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.board-bar {
+  grid-column: 2 / -1;
+  height: 2px;
+  border-radius: 1px;
+  background: linear-gradient(to right, var(--accent) var(--w), transparent var(--w));
+  transform-origin: left;
+  animation: grow-x 500ms var(--ease) both;
+}
+
+.cause-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Ein Abschnitt, der die API 24-mal anfragt, faengt nicht von allein an. */
+.load-button {
+  margin: 0 0.25rem;
+  padding: 0.6rem 1.1rem;
+  font-size: 0.9rem;
+  font-weight: 650;
+  color: var(--accent-ink);
+  background: var(--accent);
+  border: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: background-color 150ms var(--ease);
+}
+
+.load-button:hover {
+  background: var(--accent-strong);
+}
+
+/* Die Kachel mit der Saisonbestzeit traegt zwei Erlaeuterungszeilen und
+   braucht darum mehr Platz als die uebrigen. */
+.tile-wide {
+  grid-column: span 2;
+}
+
+.strong-cell {
+  color: var(--ink);
+  font-weight: 650;
+}
+
+@media (max-width: 34rem) {
+  .tile-wide {
+    grid-column: span 1;
+  }
+}
+
+/* ------------------------------------------------------- Fahrersuche */
+
+.career {
+  display: grid;
+  gap: 1.25rem;
+  padding: 0.25rem;
+}
+
+/* Die Vorschlagsliste haengt ueber dem Inhalt, deshalb ein eigener
+   Positionierungsrahmen um Feld und Liste. */
+.search {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  max-width: 30rem;
+}
+
+.search label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+
+.search input {
+  width: 100%;
+  padding: 0.6rem 0.8rem;
+  font: inherit;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  transition: border-color 150ms var(--ease);
+}
+
+.search input::placeholder {
+  color: var(--muted);
+}
+
+.search input:hover:not(:disabled),
+.search input:focus {
+  border-color: var(--accent);
+}
+
+.search input:disabled {
+  opacity: 0.6;
+}
+
+.search-progress {
+  max-width: none;
+  margin: 0;
+}
+
+.hits {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  max-height: 22rem;
+  overflow-y: auto;
+  margin: 0.35rem 0 0;
+  padding: 0.25rem;
+  list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  box-shadow: var(--shadow);
+  animation: fade 140ms var(--ease) both;
+}
+
+.hits li button {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  width: 100%;
+  padding: 0.45rem 0.55rem;
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: 0.35rem;
+  cursor: pointer;
+}
+
+.hits li button:hover,
+.hits li button:focus-visible {
+  background: var(--surface-2);
+}
+
+.hit-name {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.hit-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.hits-empty {
+  padding: 0.6rem;
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+
+.career-head h2 {
+  font-size: clamp(1.35rem, 3.5vw, 1.9rem);
+}
+
+.career-head p {
+  margin: 0.25rem 0 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+/* Die Teams als Laufbahn, in der Reihenfolge des ersten Einsatzes. */
+.career-teams {
+  font-size: 0.85rem;
+}
+
+.career-head .career-teams {
+  color: var(--ink-2);
 }
