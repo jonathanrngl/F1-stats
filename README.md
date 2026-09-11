@@ -17,6 +17,37 @@ npm run lint     # oxlint
 npm run preview  # gebautes dist/ lokal ansehen
 ```
 
+## Veröffentlichen
+
+Die Seite ist rein statisch – gebautes HTML, CSS, JS, keine Serverlogik. Die
+Daten holt der Browser direkt von der Jolpica-API, es braucht also kein Backend
+und keine Secrets. `vite.config.ts` setzt `base: './'`, damit derselbe Build
+sowohl im Wurzelverzeichnis einer eigenen Domain als auch im Unterpfad von
+GitHub Pages (`/F1-stats/`) funktioniert.
+
+**GitHub Pages** ist eingerichtet: `.github/workflows/deploy.yml` baut bei jedem
+Push auf `main` und veröffentlicht `dist/`. Einmalig im Repo nötig:
+
+1. *Settings → Pages → Build and deployment → Source* auf **GitHub Actions**
+   stellen.
+2. Auf `main` pushen (oder den Workflow unter *Actions* manuell starten).
+
+Danach liegt die Seite unter `https://<user>.github.io/F1-stats/`; die genaue
+URL steht am Ende des Deploy-Jobs.
+
+**Eigene Domain.** *Settings → Pages → Custom domain* eintragen, beim
+DNS-Anbieter einen `CNAME` auf `<user>.github.io` setzen (bzw. `A`-Records auf
+die Pages-IPs bei einer Apex-Domain) und *Enforce HTTPS* anhaken.
+
+**Anderer Hoster.** `npm run build` und den Inhalt von `dist/` hochladen – durch
+den relativen `base` läuft das Verzeichnis auch in einem Unterordner.
+
+Noch offen, sobald die Domain feststeht: `og:url` und `og:image` in
+`index.html`. Social-Netzwerke brauchen dafür absolute URLs, deshalb stehen dort
+bisher nur die domainunabhängigen Tags. `public/robots.txt` greift ebenfalls erst
+bei einer eigenen Domain – unter einem Pages-Unterpfad lesen Crawler nur die
+`robots.txt` der Domainwurzel.
+
 ## Aufbau
 
 | Datei | Inhalt |
