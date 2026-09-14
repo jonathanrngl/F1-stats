@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "import": "node scripts/import.mjs",
-    "import:lokal": "node scripts/import.mjs --csv ../.cache/f1db-csv"
+    "import:lokal": "node scripts/import.mjs --csv ../.cache/f1db-csv",
+    "test": "node scripts/test-engine.mjs"
   }
 }

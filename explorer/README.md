@@ -10,9 +10,41 @@ Architektur und Begründungen: [`../docs/ARCHITEKTUR.md`](../docs/ARCHITEKTUR.md
 | Schritt | Status |
 |---|---|
 | 1 · Import F1DB, Validierung | **fertig** |
-| 2 · Statistik-Engine, Tests | offen |
+| 2 · Statistik-Engine, Tests | **fertig** |
 | 3 · Seitengerüst Astro | offen |
 | 4 · Fahrer-, Team-, Saison-, Renn-, Streckenseiten | offen |
+
+## Tests
+
+```bash
+npm test        # 42 Prüfungen gegen die importierte Datenbank
+```
+
+Der Massenabgleich rechnet Nennungen, Starts, Siege, Podien, Pole-Positions,
+schnellste Runden und Titel für **alle 860 Fahrer** neu und vergleicht mit den
+Gesamtzahlen, die F1DB mitliefert. Dazu Einzelfälle gegen die Rekordbücher und
+Randfälle: leere Eingaben, Division durch null, Fahrer ohne einen einzigen
+Start, geteilte Fahrten.
+
+## Pole-Position ist nicht Startplatz 1
+
+Die Daten führen drei Zählungen, die sich erst in der Strafenära trennen.
+Gemessen an Verstappen:
+
+| Zählung | Anzahl |
+|---|---|
+| schnellste Zeit im Qualifying | **52** |
+| von Startplatz 1 losgefahren | 48 |
+| F1DBs eigenes Flag `polePosition` | 48 |
+
+In Belgien 2024 war Verstappen Schnellster und startete nach einer Motorstrafe
+als Elfter; die Rekordbücher schreiben ihm die Pole gut. Umgekehrt holte
+Leclerc in Monaco 2021 die Pole und ging gar nicht an den Start. Bis in die
+2000er fallen alle drei Zählungen zusammen – Fangios 29 und Sennas 65 stimmen
+in jeder.
+
+`calculatePoles` nimmt die sportliche Bedeutung, `calculateStartsFromPole`
+steht daneben. F1DBs Flag dient nur dem Abgleich.
 
 ## Import
 
