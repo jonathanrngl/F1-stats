@@ -18,6 +18,7 @@ Architektur und Begründungen: [`../docs/ARCHITEKTUR.md`](../docs/ARCHITEKTUR.md
 | 7 · Lader für Rundendaten | **fertig**, Nachladen offen |
 | 8 · WM-Punkteverlauf | **fertig** |
 | 9 · What-if: anderes Punktesystem | **fertig** |
+| 10 · Data Explorer mit Export | **fertig** |
 
 ## Entwickeln
 
