@@ -196,9 +196,9 @@ async function importiere(db) {
 
   einfuegen(
     'circuit_layout',
-    ['id', 'circuit_id', 'effective', 'length_km', 'turns'],
+    ['id', 'circuit_id', 'is_current', 'length_km', 'turns'],
     await lies('f1db-circuits-layouts.csv'),
-    (l) => [l.id, l.circuitId, zahl(l.effective), zahl(l.length), zahl(l.turns)],
+    (l) => [l.id, l.circuitId, ja(l.effective), zahl(l.length), zahl(l.turns)],
   )
 
   einfuegen(

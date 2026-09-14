@@ -95,7 +95,11 @@ CREATE TABLE circuit (
 CREATE TABLE circuit_layout (
   id          TEXT PRIMARY KEY,
   circuit_id  TEXT NOT NULL REFERENCES circuit(id),
-  effective   INTEGER,              -- ab welchem Jahr
+  /* F1DBs "effective" ist ein Wahrheitswert, kein Jahr: Es markiert die
+     Streckenführung, die heute gefahren wird. Von wann bis wann ein Layout
+     benutzt wurde, steht nirgends – das leiten die Rennen ab, die darauf
+     stattfanden (race.circuit_layout_id). */
+  is_current  INTEGER NOT NULL DEFAULT 0,
   length_km   REAL,
   turns       INTEGER
 );
@@ -180,7 +184,17 @@ CREATE TABLE race_result (
   gap_laps        INTEGER,
   reason_retired  TEXT,
   points          REAL NOT NULL DEFAULT 0,
-  pole_position   INTEGER NOT NULL DEFAULT 0,   -- echte Pole, nicht Startplatz 1
+  /*
+   * Achtung, drei verschiedene Dinge:
+   *   qualifying_position = 1  schnellste Zeit im Qualifying – die Pole im
+   *                            sportlichen Sinn, und das, was die Engine zählt
+   *   grid_position = 1        tatsächlich von vorn losgefahren
+   *   pole_position            F1DBs eigenes Flag; folgt im Kern dem Startplatz
+   *                            und dient nur dem Abgleich mit dessen Gesamtzahlen
+   * Bis in die 2000er fallen alle drei zusammen. Erst Strafversetzungen
+   * trennen sie: Verstappen hat 52 Poles, fuhr aber nur 48-mal von Platz 1 los.
+   */
+  pole_position   INTEGER NOT NULL DEFAULT 0,
   qualifying_position INTEGER,
   grid_position   INTEGER,            -- NULL = nicht überliefert (war "0")
   positions_gained INTEGER,

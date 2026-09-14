@@ -1,8 +1,45 @@
 ---
 import Seite from '../../layouts/Seite.astro'
+import { streckenListe, pfad } from '../../lib/db.js'
+
+const strecken = streckenListe()
+const nf = new Intl.NumberFormat('de-DE')
+const ein = (n) => (n === null || n === undefined ? '–' : nf.format(Math.round(n * 10) / 10))
 ---
 
-<Seite titel="Alle Rennstrecken" beschreibung="Alle Rennstrecken – in Arbeit.">
+<Seite
+  titel="Alle Formel-1-Strecken"
+  beschreibung={`${strecken.length} Kurse, auf denen seit 1950 Weltmeisterschaftsläufe stattfanden.`}
+>
   <h1>Strecken</h1>
-  <p class="lead">Diese Übersicht entsteht in Schritt 4.</p>
+  <p class="lead">
+    {strecken.length} Kurse, auf denen seit 1950 Weltmeisterschaftsläufe stattfanden. Sortiert
+    nach der Zahl der Rennen.
+  </p>
+
+  <div class="tabelle">
+    <table>
+      <thead>
+        <tr>
+          <th>Strecke</th><th>Ort</th><th>Zeitraum</th>
+          <th class="num">Rennen</th><th class="num">Länge</th><th class="num">Kurven</th>
+        </tr>
+      </thead>
+      <tbody>
+        {strecken.map((z) => (
+          <tr>
+            <td>
+              <span class="kuerzel" title={z.landName ?? ''}>{z.land ?? '—'}</span>
+              <a class="zeile" href={pfad.strecke(z.id)}>{z.name}</a>
+            </td>
+            <td style="color:var(--muted)">{z.ort}</td>
+            <td style="color:var(--muted)">{z.von === z.bis ? z.von : `${z.von}–${z.bis}`}</td>
+            <td class="num">{z.rennen}</td>
+            <td class="num">{z.laenge ? `${ein(z.laenge)} km` : '–'}</td>
+            <td class="num">{z.kurven ?? '–'}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
 </Seite>

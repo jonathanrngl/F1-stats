@@ -1,0 +1,189 @@
+---
+import Seite from '../../layouts/Seite.astro'
+import { alle, eine, saisonListe, rennenListe, pfad } from '../../lib/db.js'
+
+export async function getStaticPaths() {
+  return saisonListe().map((s) => ({ params: { jahr: String(s.jahr) } }))
+}
+
+const jahr = Number(Astro.params.jahr)
+
+const saison = eine(
+  `SELECT s.*,
+          (SELECT COUNT(*) FROM race WHERE year = s.year) AS rennen
+     FROM season s WHERE s.year = ?`,
+  jahr,
+)
+
+const fahrerWertung = alle(
+  `SELECT sds.position, sds.points, sds.championship_won AS meister,
+          d.id, d.full_name AS name,
+          (SELECT COUNT(*) FROM race_result rr JOIN race r ON r.id = rr.race_id
+            WHERE r.year = ?1 AND rr.driver_id = d.id AND rr.position = 1) AS siege,
+          (SELECT GROUP_CONCAT(DISTINCT k.name) FROM race_result rr
+             JOIN race r ON r.id = rr.race_id JOIN constructor k ON k.id = rr.constructor_id
+            WHERE r.year = ?1 AND rr.driver_id = d.id) AS teams
+     FROM season_driver_standing sds
+     JOIN driver d ON d.id = sds.driver_id
+    WHERE sds.year = ?1
+    ORDER BY sds.position`,
+  jahr,
+)
+
+const teamWertung = alle(
+  `SELECT scs.position, scs.points, scs.championship_won AS meister, k.id, k.name
+     FROM season_constructor_standing scs
+     JOIN constructor k ON k.id = scs.constructor_id
+    WHERE scs.year = ? ORDER BY scs.position`,
+  jahr,
+)
+
+const rennen = rennenListe(jahr).sort((a, b) => a.runde - b.runde)
+
+// Kennzahlen der Saison, direkt aus den Ergebnissen.
+const kennzahlen = eine(
+  `SELECT COUNT(DISTINCT CASE WHEN rr.position = 1 THEN rr.driver_id END) AS sieger,
+          COUNT(DISTINCT CASE WHEN rr.qualifying_position = 1 THEN rr.driver_id END) AS polesetter,
+          SUM(CASE WHEN rr.started = 1 THEN 1 ELSE 0 END) AS starts,
+          SUM(CASE WHEN rr.started = 1 AND rr.classified = 0 THEN 1 ELSE 0 END) AS ausfaelle
+     FROM race_result rr JOIN race r ON r.id = rr.race_id WHERE r.year = ?`,
+  jahr,
+)
+
+const entscheidung = rennen.find((r) => r.titelentscheidung)
+const nf = new Intl.NumberFormat('de-DE')
+const ein = (n) => (n === null || n === undefined ? '–' : nf.format(Math.round(n * 10) / 10))
+const datum = (d) => new Date(d).toLocaleDateString('de-DE')
+const meister = fahrerWertung.find((f) => f.meister)
+const teamMeister = teamWertung.find((t) => t.meister)
+---
+
+<Seite
+  titel={`Formel-1-Saison ${jahr} – Wertungen und Rennen`}
+  beschreibung={`${saison.rennen} Rennen${meister ? `, Weltmeister ${meister.name}` : ''}${teamMeister ? `, Konstrukteurstitel ${teamMeister.name}` : ''}.`}
+>
+  <h1>Saison {jahr}</h1>
+  <p class="lead">
+    {saison.rennen} Rennen
+    {meister && <> · Weltmeister <a href={pfad.fahrer(meister.id)}>{meister.name}</a></>}
+    {teamMeister && <> · Konstrukteurstitel <a href={pfad.team(teamMeister.id)}>{teamMeister.name}</a></>}
+  </p>
+
+  <ul class="kacheln">
+    <li><b>{saison.rennen}</b><span>Rennen</span></li>
+    <li><b>{kennzahlen.sieger}</b><span>verschiedene Sieger</span></li>
+    <li><b>{kennzahlen.polesetter}</b><span>Polesetter</span></li>
+    <li>
+      <b>{kennzahlen.starts ? Math.round((kennzahlen.ausfaelle / kennzahlen.starts) * 100) : 0} %</b>
+      <span>Starts ohne Wertung</span>
+      <i>{kennzahlen.ausfaelle} von {kennzahlen.starts}</i>
+    </li>
+  </ul>
+
+  {saison.dropped_scores === 1 && (
+    <p class="hinweis">
+      In dieser Saison zählten nicht alle Ergebnisse zur Meisterschaft: Nur die besten Rennen
+      eines Fahrers gingen in die Wertung ein, der Rest verfiel. Der WM-Stand liegt deshalb
+      unter der Summe der Rennpunkte.
+    </p>
+  )}
+
+  {entscheidung && (
+    <p class="hinweis entschieden">
+      Der Titel fiel in Runde {entscheidung.runde}: <a href={pfad.rennen(entscheidung.id)}>{entscheidung.name}</a>
+      am {datum(entscheidung.datum)}.
+    </p>
+  )}
+
+  <section>
+    <h2>Fahrerwertung</h2>
+    <div class="tabelle">
+      <table>
+        <thead>
+          <tr><th class="num">#</th><th>Fahrer</th><th>Team</th><th class="num">Siege</th><th class="num">Punkte</th></tr>
+        </thead>
+        <tbody>
+          {fahrerWertung.map((f) => (
+            <tr>
+              <td class={`num${f.meister ? ' meister' : ''}`}>{f.position ?? '–'}</td>
+              <td><a class="zeile" href={pfad.fahrer(f.id)}>{f.name}</a></td>
+              <td style="color:var(--muted)">{f.teams}</td>
+              <td class="num">{f.siege || ''}</td>
+              <td class="num">{ein(f.points)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  {teamWertung.length > 0 && (
+    <section>
+      <h2>Konstrukteurswertung</h2>
+      <div class="tabelle">
+        <table>
+          <thead><tr><th class="num">#</th><th>Team</th><th class="num">Punkte</th></tr></thead>
+          <tbody>
+            {teamWertung.map((t) => (
+              <tr>
+                <td class={`num${t.meister ? ' meister' : ''}`}>{t.position ?? '–'}</td>
+                <td><a class="zeile" href={pfad.team(t.id)}>{t.name}</a></td>
+                <td class="num">{ein(t.points)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  )}
+
+  <section>
+    <h2>Rennkalender</h2>
+    <div class="tabelle">
+      <table>
+        <thead><tr><th class="num">Runde</th><th>Rennen</th><th>Strecke</th><th>Datum</th><th>Sieger</th></tr></thead>
+        <tbody>
+          {rennen.map((r) => (
+            <tr>
+              <td class="num">{r.runde}</td>
+              <td><a class="zeile" href={pfad.rennen(r.id)}>{r.name}</a></td>
+              <td style="color:var(--muted)">{r.strecke}</td>
+              <td style="color:var(--muted)">{datum(r.datum)}</td>
+              <td>
+                {r.siegerId
+                  ? <a class="zeile" href={pfad.fahrer(r.siegerId)}>{r.sieger}</a>
+                  : <span style="color:var(--muted)">–</span>}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</Seite>
+
+<style>
+  .kacheln {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(min(9rem, 100%), 1fr));
+    gap: 0.75rem; margin: 1.75rem 0 0; padding: 0; list-style: none;
+  }
+  .kacheln li {
+    display: flex; flex-direction: column; gap: 0.1rem; padding: 0.9rem 1rem;
+    background: var(--surface-2); border: 1px solid var(--border); border-radius: 0.6rem;
+  }
+  .kacheln b {
+    font-size: 1.6rem; font-weight: 680; line-height: 1.1; color: var(--ink);
+    font-variant-numeric: tabular-nums; letter-spacing: -0.02em;
+  }
+  .kacheln span { font-size: 0.78rem; color: var(--muted); }
+  .kacheln i { font-style: normal; font-size: 0.72rem; color: var(--muted); opacity: 0.8; }
+  .hinweis {
+    margin: 1.25rem 0 0; padding: 0.85rem 1rem; font-size: 0.87rem;
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-left: 3px solid var(--axis); border-radius: 0.5rem; max-width: 46rem; text-wrap: pretty;
+  }
+  .hinweis.entschieden { border-left-color: var(--accent); background: var(--accent-wash); }
+  section { margin-top: 2.5rem; }
+  h2 { font-size: 1.15rem; margin: 0 0 0.75rem; }
+  td.meister { color: var(--accent); font-weight: 700; }
+</style>

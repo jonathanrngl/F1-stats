@@ -1,0 +1,236 @@
+---
+import Seite from '../../layouts/Seite.astro'
+import { eine, streckenListe, pfad, db } from '../../lib/db.js'
+import { land } from '../../lib/laender.js'
+import {
+  circuitLayouts, circuitLeaders, circuitRaces, circuitSpecialists, circuitStats,
+  circuitTeamLeaders,
+} from '../../engine/circuit.js'
+
+export async function getStaticPaths() {
+  return streckenListe().map((z) => ({ params: { id: z.id } }))
+}
+
+const { id } = Astro.params
+const strecke = eine(
+  `SELECT z.*, c.name AS landName, c.ioc AS ioc, c.demonym AS demonym
+     FROM circuit z LEFT JOIN country c ON c.id = z.country_id WHERE z.id = ?`,
+  id,
+)
+const heimat = land(strecke.demonym, strecke.landName, strecke.ioc)
+const rennen = circuitRaces(db(), id)
+const sieger = circuitLeaders(db(), id, 'siege')
+const polesetter = circuitLeaders(db(), id, 'poles')
+const teams = circuitTeamLeaders(db(), id)
+const zahlen = circuitStats(db(), id)
+const spezialisten = circuitSpecialists(db(), id)
+const layouts = circuitLayouts(db(), id)
+
+const nf = new Intl.NumberFormat('de-DE')
+const ein = (n) => (n === null || n === undefined ? '–' : nf.format(Math.round(n * 10) / 10))
+const proz = (m) => (m.value === null ? '–' : `${Math.round(m.value * 100)} %`)
+const zeitraum = rennen.length ? `${rennen.at(-1).year}–${rennen[0].year}` : '–'
+---
+
+<Seite
+  titel={`${strecke.name} – Formel-1-Statistik der Strecke`}
+  beschreibung={`${rennen.length} Formel-1-Rennen in ${strecke.place_name} (${zeitraum}).`}
+>
+  <header class="profil">
+    <span class="kuerzel gross" title={heimat.name}>{heimat.code}</span>
+    <div>
+      <h1>{strecke.name}</h1>
+      <p class="lead">
+        {[strecke.place_name, heimat.name, zeitraum,
+          strecke.length_km ? `${ein(strecke.length_km)} km` : null,
+          strecke.turns ? `${strecke.turns} Kurven` : null]
+          .filter(Boolean).join(' · ')}
+      </p>
+    </div>
+  </header>
+
+  <ul class="kacheln">
+    <li><b>{rennen.length}</b><span>Rennen</span></li>
+    <li><b>{proz(zahlen.ausfallquote)}</b><span>Starts ohne Wertung</span></li>
+    <li><b>{proz(zahlen.poleZuSieg)}</b><span>Pole wurde Sieg</span></li>
+    <li><b>{ein(zahlen.mittlererSiegerStart.value)}</b><span>Ø Startplatz des Siegers</span></li>
+  </ul>
+
+  {zahlen.groessteAufholjagd && (
+    <p class="hinweis">
+      Größte Aufholjagd: <a href={pfad.fahrer(zahlen.groessteAufholjagd.id)}>{zahlen.groessteAufholjagd.name}</a>
+      gewann {zahlen.groessteAufholjagd.year} von Startplatz {zahlen.groessteAufholjagd.start}.
+    </p>
+  )}
+
+  <div class="spalten">
+    <section>
+      <h2>Meiste Siege</h2>
+      <ol class="rangliste">
+        {sieger.map((s) => (
+          <li>
+            <a href={pfad.fahrer(s.id)}>{s.name}</a>
+            <b>{s.anzahl}</b>
+          </li>
+        ))}
+      </ol>
+    </section>
+
+    {polesetter.length > 0 && (
+      <section>
+        <h2>Meiste Pole-Positions</h2>
+        <ol class="rangliste">
+          {polesetter.map((s) => (
+            <li>
+              <a href={pfad.fahrer(s.id)}>{s.name}</a>
+              <b>{s.anzahl}</b>
+            </li>
+          ))}
+        </ol>
+      </section>
+    )}
+
+    <section>
+      <h2>Erfolgreichste Teams</h2>
+      <ol class="rangliste">
+        {teams.map((t) => (
+          <li>
+            <a href={pfad.team(t.id)}>{t.name}</a>
+            <b>{t.anzahl}</b>
+          </li>
+        ))}
+      </ol>
+    </section>
+  </div>
+
+  {spezialisten.length > 0 && (
+    <section>
+      <h2>Streckenspezialisten</h2>
+      <p class="lead">
+        Verglichen wird die mittlere Zielposition hier mit der desselben Fahrers überall sonst.
+        Wer hier deutlich besser abschneidet, kann die Strecke – unabhängig davon, wie gut sein
+        Auto war. Mindestens drei Starts hier und drei anderswo.
+      </p>
+      <div class="tabelle">
+        <table>
+          <thead>
+            <tr>
+              <th>Fahrer</th><th class="num">Starts hier</th><th class="num">Siege</th>
+              <th class="num">Ø hier</th><th class="num">Ø sonst</th><th class="num">Vorteil</th>
+            </tr>
+          </thead>
+          <tbody>
+            {spezialisten.map((s) => (
+              <tr>
+                <td><a class="zeile" href={pfad.fahrer(s.id)}>{s.name}</a></td>
+                <td class="num">{s.startsHier}</td>
+                <td class="num">{s.siegeHier || ''}</td>
+                <td class="num">{ein(s.hier)}</td>
+                <td class="num">{ein(s.sonst)}</td>
+                <td class="num vorteil">+{ein(s.vorteil)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  )}
+
+  {layouts.length > 1 && (
+    <section>
+      <h2>Streckenführungen</h2>
+      <p class="lead">
+        Der Kurs wurde umgebaut. Rundenzeiten über eine Layoutgrenze hinweg zu vergleichen,
+        ist unzulässig.
+      </p>
+      <div class="tabelle">
+        <table>
+          <thead><tr><th>Zeitraum</th><th class="num">Länge</th><th class="num">Kurven</th><th class="num">Rennen</th></tr></thead>
+          <tbody>
+            {layouts.map((l) => (
+              <tr>
+                <td>
+                  {l.von ? (l.von === l.bis ? l.von : `${l.von}–${l.bis}`) : 'nie gefahren'}
+                  {l.aktuell === 1 && <span class="jetzt">heute</span>}
+                </td>
+                <td class="num">{l.laenge ? `${ein(l.laenge)} km` : '–'}</td>
+                <td class="num">{l.kurven ?? '–'}</td>
+                <td class="num">{l.rennen}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  )}
+
+  <section>
+    <h2>Alle Rennen</h2>
+    <div class="tabelle">
+      <table>
+        <thead><tr><th>Jahr</th><th>Rennen</th><th>Sieger</th><th>Team</th><th class="num">Von Platz</th></tr></thead>
+        <tbody>
+          {rennen.map((r) => (
+            <tr>
+              <td><a class="zeile" href={pfad.rennen(r.id)}>{r.year}</a></td>
+              <td style="color:var(--muted)">{r.grandPrix}</td>
+              <td>{r.siegerId ? <a class="zeile" href={pfad.fahrer(r.siegerId)}>{r.sieger}</a> : '–'}</td>
+              <td style="color:var(--muted)">{r.siegerTeam ?? ''}</td>
+              <td class="num">{r.siegerStart ?? '–'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</Seite>
+
+<style>
+  .profil { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
+  .kuerzel.gross {
+    flex: none; min-width: 3.6rem; padding: 0.5rem 0.35rem; margin: 0;
+    font-size: 0.86rem; color: var(--accent); background: var(--accent-wash);
+  }
+  .kacheln {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(min(9rem, 100%), 1fr));
+    gap: 0.75rem; margin: 0 0 1.5rem; padding: 0; list-style: none;
+  }
+  .kacheln li {
+    display: flex; flex-direction: column; gap: 0.1rem; padding: 0.9rem 1rem;
+    background: var(--surface-2); border: 1px solid var(--border); border-radius: 0.6rem;
+  }
+  .kacheln b {
+    font-size: 1.6rem; font-weight: 680; line-height: 1.1; color: var(--ink);
+    font-variant-numeric: tabular-nums; letter-spacing: -0.02em;
+  }
+  .kacheln span { font-size: 0.78rem; color: var(--muted); }
+  .hinweis {
+    margin: 0 0 1.5rem; padding: 0.8rem 1rem; font-size: 0.87rem;
+    background: var(--accent-wash); border: 1px solid var(--border);
+    border-left: 3px solid var(--accent); border-radius: 0.5rem; max-width: 46rem;
+  }
+  .spalten {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(min(15rem, 100%), 1fr));
+    gap: 1.5rem; margin-top: 2rem;
+  }
+  .spalten section { margin-top: 0; }
+  section { margin-top: 2.5rem; }
+  h2 { font-size: 1.15rem; margin: 0 0 0.75rem; }
+  .rangliste { margin: 0; padding: 0; list-style: none; counter-reset: rang; }
+  .rangliste li {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem;
+    padding: 0.4rem 0; border-bottom: 1px solid var(--border); font-size: 0.89rem;
+  }
+  .rangliste li::before {
+    counter-increment: rang; content: counter(rang);
+    min-width: 1.2rem; color: var(--muted); font-variant-numeric: tabular-nums; font-size: 0.78rem;
+  }
+  .rangliste a { flex: 1; color: var(--ink); text-decoration: none; font-weight: 550; }
+  .rangliste a:hover { color: var(--accent); }
+  .rangliste b { font-variant-numeric: tabular-nums; color: var(--ink); }
+  td.vorteil { color: var(--good); font-weight: 650; }
+  .jetzt {
+    margin-left: 0.4rem; padding: 0.05rem 0.35rem; font-size: 0.64rem; font-weight: 700;
+    color: var(--accent); background: var(--accent-wash); border-radius: 0.25rem;
+  }
+</style>

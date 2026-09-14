@@ -1,8 +1,87 @@
 ---
 import Seite from '../../layouts/Seite.astro'
+import { rennenListe, saisonListe, pfad } from '../../lib/db.js'
+
+const rennen = rennenListe()
+const saisons = saisonListe()
+const datum = (d) => new Date(d).toLocaleDateString('de-DE')
+
+/*
+ * Alle 1172 Rennen auf einer Seite, nach Saison gegliedert. Das ist viel, aber
+ * es ist fertiges HTML ohne Nachladen – und wer ein bestimmtes Rennen sucht,
+ * findet es mit der Suche des Browsers schneller als über eine Blätterfunktion.
+ */
+const proJahr = new Map()
+for (const r of rennen) {
+  const e = proJahr.get(r.jahr) ?? []
+  e.push(r)
+  proJahr.set(r.jahr, e)
+}
+const jahre = [...proJahr.keys()].sort((a, b) => b - a)
 ---
 
-<Seite titel="Alle Rennen seit 1950" beschreibung="Alle Rennen seit 1950 – in Arbeit.">
+<Seite
+  titel="Alle Formel-1-Rennen seit 1950"
+  beschreibung={`${rennen.length} Weltmeisterschaftsläufe mit Sieger, Strecke und Datum.`}
+>
   <h1>Rennen</h1>
-  <p class="lead">Diese Übersicht entsteht in Schritt 4.</p>
+  <p class="lead">
+    {rennen.length} Weltmeisterschaftsläufe seit 1950, nach Saison gegliedert.
+  </p>
+
+  <nav class="jahre" aria-label="Zu einer Saison springen">
+    {jahre.map((j) => <a href={`#j${j}`}>{j}</a>)}
+  </nav>
+
+  {jahre.map((j) => (
+    <section id={`j${j}`}>
+      <h2>
+        <a href={pfad.saison(j)}>{j}</a>
+        <span>{proJahr.get(j).length} Rennen</span>
+      </h2>
+      <div class="tabelle">
+        <table>
+          <thead>
+            <tr><th class="num">Runde</th><th>Rennen</th><th>Strecke</th><th>Datum</th><th>Sieger</th></tr>
+          </thead>
+          <tbody>
+            {proJahr.get(j).map((r) => (
+              <tr>
+                <td class="num">{r.runde}</td>
+                <td><a class="zeile" href={pfad.rennen(r.id)}>{r.name}</a></td>
+                <td style="color:var(--muted)">{r.strecke}</td>
+                <td style="color:var(--muted)">{datum(r.datum)}</td>
+                <td>
+                  {r.siegerId
+                    ? <a class="zeile" href={pfad.fahrer(r.siegerId)}>{r.sieger}</a>
+                    : <span style="color:var(--muted)">–</span>}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  ))}
 </Seite>
+
+<style>
+  .jahre {
+    display: flex; flex-wrap: wrap; gap: 0.25rem; margin: 1.5rem 0 0;
+    padding: 0.85rem 1rem; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 0.6rem;
+  }
+  .jahre a {
+    padding: 0.15rem 0.4rem; font-size: 0.8rem; color: var(--muted);
+    text-decoration: none; border-radius: 0.25rem; font-variant-numeric: tabular-nums;
+  }
+  .jahre a:hover { color: var(--accent); background: var(--accent-wash); }
+  section { margin-top: 2.5rem; scroll-margin-top: 4.5rem; }
+  h2 {
+    display: flex; align-items: baseline; gap: 0.75rem;
+    font-size: 1.15rem; margin: 0 0 0.75rem;
+  }
+  h2 a { color: var(--ink); text-decoration: none; }
+  h2 a:hover { color: var(--accent); }
+  h2 span { font-size: 0.78rem; font-weight: 400; color: var(--muted); }
+</style>
