@@ -15,7 +15,7 @@ Architektur und Begründungen: [`../docs/ARCHITEKTUR.md`](../docs/ARCHITEKTUR.md
 | 4 · Team-, Saison-, Renn-, Streckenseiten | **fertig** |
 | 5 · Rekorddatenbank | **fertig** |
 | 6 · JSON-API und Fahrervergleich | **fertig** |
-| 7 · Rundendaten, Positionsverlauf | offen |
+| 7 · Lader für Rundendaten | **fertig**, Nachladen offen |
 
 ## Entwickeln
 
