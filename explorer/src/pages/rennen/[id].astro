@@ -1,0 +1,211 @@
+---
+import Seite from '../../layouts/Seite.astro'
+import { alle, eine, rennenListe, pfad } from '../../lib/db.js'
+
+export async function getStaticPaths() {
+  return rennenListe().map((r) => ({ params: { id: r.id } }))
+}
+
+const { id } = Astro.params
+
+const rennen = eine(
+  `SELECT r.*, g.name AS gpName, g.full_name AS gpVoll,
+          z.name AS strecke, z.place_name AS ort, c.name AS land, c.ioc AS ioc, c.demonym AS demonym
+     FROM race r
+     JOIN grand_prix g ON g.id = r.grand_prix_id
+     JOIN circuit z ON z.id = r.circuit_id
+     LEFT JOIN country c ON c.id = z.country_id
+    WHERE r.id = ?`,
+  id,
+)
+
+/*
+ * Ergebnisse in der Reihenfolge der Anzeige: Erst die Gewerteten nach Platz,
+ * danach Ausfälle und Nichtstarter. display_order aus F1DB trägt genau das.
+ */
+const ergebnisse = alle(
+  `SELECT rr.*, d.full_name AS fahrer, d.id AS fahrerId, k.name AS team, k.id AS teamId
+     FROM race_result rr
+     JOIN driver d ON d.id = rr.driver_id
+     JOIN constructor k ON k.id = rr.constructor_id
+    WHERE rr.race_id = ?
+    ORDER BY rr.display_order`,
+  id,
+)
+
+const boxenstopps = alle(
+  `SELECT p.driver_id AS fahrerId, d.full_name AS fahrer, COUNT(*) AS stopps,
+          MIN(p.duration_ms) AS schnellster
+     FROM pit_stop p JOIN driver d ON d.id = p.driver_id
+    WHERE p.race_id = ? GROUP BY p.driver_id ORDER BY stopps, schnellster`,
+  id,
+)
+
+const nachbarn = alle(
+  `SELECT id, round, (SELECT name FROM grand_prix WHERE id = grand_prix_id) AS name
+     FROM race WHERE year = ? AND round IN (?, ?)`,
+  rennen.year, rennen.round - 1, rennen.round + 1,
+)
+const vorher = nachbarn.find((n) => n.round === rennen.round - 1)
+const nachher = nachbarn.find((n) => n.round === rennen.round + 1)
+
+const nf = new Intl.NumberFormat('de-DE')
+const ein = (n) => (n === null || n === undefined ? '' : nf.format(Math.round(n * 10) / 10))
+const datum = (d) => new Date(d).toLocaleDateString('de-DE', { day: 'numeric', month: 'long', year: 'numeric' })
+
+/** Millisekunden als Rennzeit oder Abstand. */
+function zeit(ms) {
+  if (ms === null || ms === undefined) return ''
+  const s = ms / 1000
+  const h = Math.floor(s / 3600)
+  const m = Math.floor((s % 3600) / 60)
+  const rest = (s % 60).toFixed(3).padStart(6, '0')
+  return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${rest}` : `${m}:${rest}`
+}
+
+const sieger = ergebnisse.find((e) => e.position === 1)
+const pole = ergebnisse.find((e) => e.qualifying_position === 1)
+const schnellste = ergebnisse.find((e) => e.fastest_lap)
+---
+
+<Seite
+  titel={`${rennen.gpName} Grand Prix ${rennen.year} – Ergebnis`}
+  beschreibung={`Runde ${rennen.round} der Saison ${rennen.year} in ${rennen.ort}${sieger ? `. Sieger: ${sieger.fahrer}` : ''}.`}
+>
+  <p class="brotkrumen">
+    <a href={pfad.saison(rennen.year)}>Saison {rennen.year}</a> · Runde {rennen.round}
+  </p>
+  <h1>{rennen.gpName} Grand Prix {rennen.year}</h1>
+  <p class="lead">
+    <a href={pfad.strecke(rennen.circuit_id)}>{rennen.strecke}</a> · {rennen.ort} · {datum(rennen.date)}
+    {rennen.laps && <> · {rennen.laps} Runden</>}
+    {rennen.distance_km && <> · {ein(rennen.distance_km)} km</>}
+  </p>
+
+  {rennen.drivers_title_decider === 1 && (
+    <p class="hinweis">In diesem Rennen fiel die Entscheidung um den Fahrertitel.</p>
+  )}
+
+  <ul class="kacheln">
+    {sieger && (
+      <li><b>Sieger</b><a href={pfad.fahrer(sieger.fahrerId)}>{sieger.fahrer}</a>
+        <i>{sieger.team}{sieger.grid_position ? ` · von Platz ${sieger.grid_position}` : ''}</i></li>
+    )}
+    {pole && (
+      <li><b>Pole-Position</b><a href={pfad.fahrer(pole.fahrerId)}>{pole.fahrer}</a><i>{pole.team}</i></li>
+    )}
+    {schnellste && (
+      <li><b>Schnellste Runde</b><a href={pfad.fahrer(schnellste.fahrerId)}>{schnellste.fahrer}</a>
+        <i>{schnellste.team}</i></li>
+    )}
+  </ul>
+
+  <section>
+    <h2>Ergebnis</h2>
+    <div class="tabelle">
+      <table>
+        <thead>
+          <tr>
+            <th class="num">#</th><th>Fahrer</th><th>Team</th>
+            <th class="num">Start</th><th class="num">Runden</th>
+            <th>Zeit / Grund</th><th class="num">Punkte</th>
+          </tr>
+        </thead>
+        <tbody>
+          {ergebnisse.map((e) => (
+            <tr class={e.classified ? '' : 'raus'}>
+              <td class="num">{e.position ?? e.position_text}</td>
+              <td>
+                <a class="zeile" href={pfad.fahrer(e.fahrerId)}>{e.fahrer}</a>
+                {e.shared_car === 1 && <span class="marke" title="Geteiltes Auto">geteilt</span>}
+              </td>
+              <td style="color:var(--muted)"><a class="leise" href={pfad.team(e.teamId)}>{e.team}</a></td>
+              <td class="num">{e.grid_position ?? '–'}</td>
+              <td class="num">{e.laps ?? ''}</td>
+              <td style="color:var(--muted)">
+                {e.position === 1 && e.time_ms
+                  ? zeit(e.time_ms)
+                  : e.gap_ms
+                    ? `+${zeit(e.gap_ms)}`
+                    : e.gap_laps
+                      ? `+${e.gap_laps} ${e.gap_laps === 1 ? 'Runde' : 'Runden'}`
+                      : (e.reason_retired ?? '')}
+              </td>
+              <td class="num">{e.points ? ein(e.points) : ''}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+    <p class="fussnote">
+      Eine Ziffer in der ersten Spalte heißt gewertet. DNF, DNQ und DNS stehen für Ausfall,
+      nicht qualifiziert und nicht gestartet. „geteilt“ markiert ein Auto, das sich zwei Fahrer
+      teilten – in den 1950ern erlaubt, beide wurden gewertet.
+    </p>
+  </section>
+
+  {boxenstopps.length > 0 && (
+    <section>
+      <h2>Boxenstopps</h2>
+      <div class="tabelle">
+        <table>
+          <thead><tr><th>Fahrer</th><th class="num">Stopps</th><th class="num">Schnellster</th></tr></thead>
+          <tbody>
+            {boxenstopps.map((b) => (
+              <tr>
+                <td><a class="zeile" href={pfad.fahrer(b.fahrerId)}>{b.fahrer}</a></td>
+                <td class="num">{b.stopps}</td>
+                <td class="num">{b.schnellster ? `${(b.schnellster / 1000).toFixed(3).replace('.', ',')} s` : '–'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  )}
+
+  <nav class="nachbarn">
+    {vorher
+      ? <a href={pfad.rennen(vorher.id)}>‹ {vorher.name}</a>
+      : <span></span>}
+    {nachher && <a href={pfad.rennen(nachher.id)}>{nachher.name} ›</a>}
+  </nav>
+</Seite>
+
+<style>
+  .brotkrumen { margin: 0 0 0.4rem; font-size: 0.82rem; color: var(--muted); }
+  .brotkrumen a { color: var(--muted); }
+  .kacheln {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(min(12rem, 100%), 1fr));
+    gap: 0.75rem; margin: 1.75rem 0 0; padding: 0; list-style: none;
+  }
+  .kacheln li {
+    display: grid; gap: 0.1rem; padding: 0.85rem 1rem;
+    background: var(--surface-2); border: 1px solid var(--border); border-radius: 0.6rem;
+  }
+  .kacheln b {
+    font-size: 0.66rem; font-weight: 700; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--muted);
+  }
+  .kacheln a { color: var(--ink); font-weight: 650; text-decoration: none; }
+  .kacheln a:hover { color: var(--accent); }
+  .kacheln i { font-style: normal; font-size: 0.76rem; color: var(--muted); }
+  .hinweis {
+    margin: 1.25rem 0 0; padding: 0.8rem 1rem; font-size: 0.87rem;
+    background: var(--accent-wash); border: 1px solid var(--border);
+    border-left: 3px solid var(--accent); border-radius: 0.5rem; max-width: 46rem;
+  }
+  section { margin-top: 2.5rem; }
+  h2 { font-size: 1.15rem; margin: 0 0 0.75rem; }
+  tr.raus td { color: var(--muted); }
+  tr.raus .zeile { color: var(--muted); font-weight: 500; }
+  a.leise { color: inherit; text-decoration: none; }
+  a.leise:hover { color: var(--accent); }
+  .marke {
+    margin-left: 0.4rem; padding: 0.05rem 0.3rem; font-size: 0.64rem;
+    color: var(--muted); background: var(--surface-3); border-radius: 0.25rem;
+  }
+  .fussnote { margin: 0.85rem 0 0; font-size: 0.79rem; color: var(--muted); max-width: 46rem; text-wrap: pretty; }
+  .nachbarn { display: flex; justify-content: space-between; gap: 1rem; margin-top: 2.5rem; }
+  .nachbarn a { font-size: 0.9rem; font-weight: 600; text-decoration: none; }
+</style>

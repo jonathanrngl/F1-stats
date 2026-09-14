@@ -1,0 +1,40 @@
+---
+import Seite from '../../layouts/Seite.astro'
+import { saisonListe, pfad } from '../../lib/db.js'
+
+const saisons = saisonListe()
+const mitStreich = saisons.filter((s) => s.streichresultate).length
+---
+
+<Seite titel="Alle Formel-1-Saisons" beschreibung={`${saisons.length} Saisons von 1950 bis heute.`}>
+  <h1>Saisons</h1>
+  <p class="lead">
+    {saisons.length} Jahre Weltmeisterschaft. In {mitStreich} davon zählten nicht alle
+    Ergebnisse zur Wertung – dort liegt der WM-Stand unter der Summe der Rennpunkte.
+  </p>
+
+  <div class="tabelle">
+    <table>
+      <thead>
+        <tr>
+          <th>Saison</th>
+          <th class="num">Rennen</th>
+          <th>Weltmeister</th>
+          <th>Konstrukteurstitel</th>
+          <th>Besonderheit</th>
+        </tr>
+      </thead>
+      <tbody>
+        {saisons.map((s) => (
+          <tr>
+            <td><a class="zeile" href={pfad.saison(s.jahr)}>{s.jahr}</a></td>
+            <td class="num">{s.rennen}</td>
+            <td>{s.meister ?? <span style="color:var(--muted)">läuft noch</span>}</td>
+            <td style="color:var(--muted)">{s.teamMeister ?? (s.mitTeamWM ? '' : 'noch keine')}</td>
+            <td style="color:var(--muted)">{s.streichresultate ? 'Streichresultate' : ''}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+</Seite>

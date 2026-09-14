@@ -12,7 +12,25 @@ const MIN_GAP_MS = 300
 const MAX_RETRIES = 4
 const BACKOFF_MS = 700
 const STORE_PREFIX = 'f1cache:v1:'
-const STORE_TTL_MS = 6 * 60 * 60 * 1000
+const TTL_KURZ_MS = 6 * 60 * 60 * 1000
+const TTL_LANG_MS = 30 * 24 * 60 * 60 * 1000
+
+/*
+ * Wie lange ein Pfad im Cache gilt.
+ *
+ * Eine Lebensdauer für alles war in beide Richtungen falsch: Das Ergebnis des
+ * Großen Preises von 1988 ändert sich nie, wurde aber nach sechs Stunden
+ * verworfen und neu geholt – beim Fahrerverzeichnis sind das neun Anfragen für
+ * Daten, die seit Jahrzehnten feststehen. Abgeschlossene Saisons und das
+ * Verzeichnis halten deshalb lange, alles andere bleibt bei sechs Stunden:
+ * die laufende Saison ändert sich jedes Wochenende.
+ */
+function ttlOf(path: string): number {
+  if (path.startsWith('/drivers/?')) return TTL_LANG_MS
+  const jahr = /^\/(\d{4})\//.exec(path)
+  if (jahr && Number(jahr[1]) < new Date().getFullYear()) return TTL_LANG_MS
+  return TTL_KURZ_MS
+}
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
@@ -73,7 +91,7 @@ function readStore<T>(path: string): T | undefined {
     const raw = localStorage.getItem(STORE_PREFIX + path)
     if (!raw) return undefined
     const entry = JSON.parse(raw) as { t: number; v: T }
-    if (Date.now() - entry.t > STORE_TTL_MS) {
+    if (Date.now() - entry.t > ttlOf(path)) {
       localStorage.removeItem(STORE_PREFIX + path)
       return undefined
     }
@@ -222,17 +240,40 @@ export function fetchLatestRound(season: string): Promise<string> {
   )
 }
 
+
 /**
  * Punkteverlauf aller Fahrer über die Saison – eine Anfrage je Runde, seriell
- * durch die Warteschlange. `onProgress` meldet den Fortschritt für die Anzeige.
+ * durch die Warteschlange. `onProgress` meldet nicht nur den Fortschritt,
+ * sondern auch den bis dahin bekannten Verlauf: der Graph zeichnet sich damit
+ * Runde für Runde auf, statt am Ladebalken zu warten.
+ *
+ * Warum je Runde und nicht in einem Rutsch über `/{saison}/results/`?
+ * Bis 1990 zählten nur die besten N Rennen einer Saison zur Meisterschaft
+ * (1988 fuhr Prost 105 Punkte ein, gewertet wurden 87). Die Summe der
+ * Rennergebnisse ist dann nicht der WM-Stand. `/driverstandings/` kennt die
+ * Streichresultate, die Ergebnisliste nicht.
  */
 export async function fetchProgression(
   season: string,
   lastRound: number,
-  onProgress: (done: number, total: number) => void,
+  onProgress: (done: number, total: number, partial: DriverProgression[]) => void,
 ): Promise<DriverProgression[]> {
   const perRound: Map<string, number>[] = []
   const meta = new Map<string, { code: string; name: string; team: string }>()
+
+  const collect = (): DriverProgression[] =>
+    [...meta]
+      .map(([driverId, info]) => {
+        // Fehlt ein Fahrer in einer Runde (Einstieg mitten in der Saison, noch
+        // keine Wertung), wird der letzte bekannte Punktestand fortgeschrieben.
+        let carried = 0
+        const points = perRound.map((round) => {
+          carried = round.get(driverId) ?? carried
+          return carried
+        })
+        return { driverId, ...info, points, total: points.at(-1) ?? 0 }
+      })
+      .sort((a, b) => b.total - a.total)
 
   for (let round = 1; round <= lastRound; round++) {
     const standings = await fetchDriverStandings(season, String(round))
@@ -246,17 +287,254 @@ export async function fetchProgression(
       })
     }
     perRound.push(points)
-    onProgress(round, lastRound)
+    onProgress(round, lastRound, collect())
   }
 
-  return [...meta].map(([driverId, info]) => {
-    // Fehlt ein Fahrer in einer Runde (Einstieg mitten in der Saison, noch
-    // keine Wertung), wird der letzte bekannte Punktestand fortgeschrieben.
-    let carried = 0
-    const points = perRound.map((round) => {
-      carried = round.get(driverId) ?? carried
-      return carried
-    })
-    return { driverId, ...info, points, total: points.at(-1) ?? 0 }
-  }).sort((a, b) => b.total - a.total)
+  return collect()
+}
+
+// ------------------------------------------------------- Ergebnisse je Rennen
+
+export interface ResultRow {
+  position: string
+  /** Ziffer = gewertet; R/D/W/N/E = ausgefallen, disqualifiziert, nicht gestartet. */
+  positionText: string
+  points: string
+  /** Startplatz. "0" heißt: nicht überliefert (kommt in frühen Jahren vor). */
+  grid: string
+  status: string
+  Driver: {
+    driverId: string
+    code?: string
+    givenName: string
+    familyName: string
+    nationality: string
+  }
+  Constructor: { constructorId: string; name: string; nationality: string }
+  FastestLap?: { rank: string }
+}
+
+export interface RaceResults {
+  round: number
+  raceName: string
+  date: string
+  results: ResultRow[]
+}
+
+const PAGE = 100
+
+/**
+ * Alle Rennergebnisse einer Saison. Die API zählt hier Ergebniszeilen, nicht
+ * Rennen, und deckelt eine Seite bei 100 – eine moderne Saison (24 Rennen,
+ * ~480 Zeilen) kostet damit fünf Anfragen statt einer pro Rennen.
+ */
+export async function fetchSeasonResults(
+  season: string,
+  onProgress: (done: number, total: number) => void = () => {},
+): Promise<RaceResults[]> {
+  const page = (offset: number) =>
+    get(`/${season}/results/?limit=${PAGE}&offset=${offset}`, (d) => ({
+      total: Number(d.total) || 0,
+      races: (d.RaceTable.Races ?? []) as {
+        round: string
+        raceName: string
+        date: string
+        Results: ResultRow[]
+      }[],
+    }))
+
+  const first = await page(0)
+  const pages = Math.max(1, Math.ceil(first.total / PAGE))
+  const raw = [...first.races]
+  onProgress(1, pages)
+
+  for (let p = 1; p < pages; p++) {
+    raw.push(...(await page(p * PAGE)).races)
+    onProgress(p + 1, pages)
+  }
+
+  // Eine Seitengrenze läuft mitten durch ein Rennen: dasselbe Rennen kommt dann
+  // auf zwei Seiten mit je einem Teil der Ergebnisse. Nach Runde zusammenführen.
+  const byRound = new Map<number, RaceResults>()
+  for (const r of raw) {
+    const round = Number(r.round)
+    const entry = byRound.get(round)
+    if (entry) entry.results.push(...r.Results)
+    else
+      byRound.set(round, {
+        round,
+        raceName: r.raceName,
+        date: r.date,
+        results: [...r.Results],
+      })
+  }
+
+  return [...byRound.values()].sort((a, b) => a.round - b.round)
+}
+
+export interface SprintInfo {
+  /** Runden, an denen ein Sprint gefahren wurde. */
+  rounds: number[]
+  /** Größte in einem Sprint dieser Saison erzielte Punktzahl. */
+  maxPoints: number
+}
+
+/**
+ * Sprint-Wochenenden einer Saison. Gibt es keine (alles vor 2021), kommt eine
+ * leere Liste zurück – die Anfrage kostet dann genau einen Treffer im Cache.
+ */
+export async function fetchSprintRounds(season: string): Promise<SprintInfo> {
+  const page = (offset: number) =>
+    get(`/${season}/sprint/?limit=${PAGE}&offset=${offset}`, (d) => ({
+      total: Number(d.total) || 0,
+      races: (d.RaceTable.Races ?? []) as {
+        round: string
+        SprintResults: { points: string }[]
+      }[],
+    }))
+
+  const first = await page(0)
+  const pages = Math.max(1, Math.ceil(first.total / PAGE))
+  const raw = [...first.races]
+  for (let p = 1; p < pages; p++) raw.push(...(await page(p * PAGE)).races)
+
+  const rounds = new Set<number>()
+  let maxPoints = 0
+  for (const r of raw) {
+    rounds.add(Number(r.round))
+    for (const x of r.SprintResults ?? []) maxPoints = Math.max(maxPoints, Number(x.points) || 0)
+  }
+  return { rounds: [...rounds].sort((a, b) => a - b), maxPoints }
+}
+
+// ------------------------------------------------------------------ Fahrer
+
+export interface DriverInfo {
+  driverId: string
+  code?: string
+  givenName: string
+  familyName: string
+  /**
+   * Fehlt bei 16 Fahrern des Verzeichnisses – durchweg Reserve- und
+   * Testfahrer der jüngsten Jahre (Paul Aron, Colton Herta, Ryo Hirakawa …).
+   * Die API liefert für sie nur Name und Kennung, kein Land und kein
+   * Geburtsdatum. Als Pflichtfeld geführt, brachte das die Suche zum Absturz.
+   */
+  nationality?: string
+  dateOfBirth?: string
+  url?: string
+}
+
+/**
+ * Das vollständige Fahrerverzeichnis – 881 Namen seit 1950, neun Seiten.
+ *
+ * Die API kennt keine Namenssuche, deshalb wird einmal alles geholt und im
+ * Browser gefiltert. Das ist vertretbar, weil das Verzeichnis sich höchstens
+ * zum Saisonstart ändert und deshalb lange im Cache bleibt (siehe `ttlOf`):
+ * die neun Anfragen fallen im Normalfall genau einmal an.
+ */
+export async function fetchAllDrivers(
+  onProgress: (done: number, total: number) => void = () => {},
+): Promise<DriverInfo[]> {
+  const page = (offset: number) =>
+    get(`/drivers/?limit=${PAGE}&offset=${offset}`, (d) => ({
+      total: Number(d.total) || 0,
+      drivers: (d.DriverTable.Drivers ?? []) as DriverInfo[],
+    }))
+
+  const first = await page(0)
+  const pages = Math.max(1, Math.ceil(first.total / PAGE))
+  const all = [...first.drivers]
+  onProgress(1, pages)
+
+  for (let p = 1; p < pages; p++) {
+    all.push(...(await page(p * PAGE)).drivers)
+    onProgress(p + 1, pages)
+  }
+  return all
+}
+
+/** Ein Rennen aus Sicht eines Fahrers – genau eine Ergebniszeile je Rennen. */
+export interface CareerRace {
+  season: string
+  round: string
+  raceName: string
+  date: string
+  result: ResultRow
+}
+
+/**
+ * Alle Rennergebnisse eines Fahrers, über die ganze Karriere.
+ *
+ * Auch hier zählt die API Ergebniszeilen: Verstappen kostet drei Anfragen,
+ * Alonso fünf. Jedes Rennen enthält genau eine Zeile – die des Fahrers.
+ */
+export async function fetchDriverCareer(
+  driverId: string,
+  onProgress: (done: number, total: number) => void = () => {},
+): Promise<CareerRace[]> {
+  const page = (offset: number) =>
+    get(`/drivers/${driverId}/results/?limit=${PAGE}&offset=${offset}`, (d) => ({
+      total: Number(d.total) || 0,
+      races: (d.RaceTable.Races ?? []) as {
+        season: string
+        round: string
+        raceName: string
+        date: string
+        Results: ResultRow[]
+      }[],
+    }))
+
+  const first = await page(0)
+  const pages = Math.max(1, Math.ceil(first.total / PAGE))
+  const raw = [...first.races]
+  onProgress(1, pages)
+
+  for (let p = 1; p < pages; p++) {
+    raw.push(...(await page(p * PAGE)).races)
+    onProgress(p + 1, pages)
+  }
+
+  return raw
+    .flatMap((r) =>
+      (r.Results ?? []).map((result) => ({
+        season: r.season,
+        round: r.round,
+        raceName: r.raceName,
+        date: r.date,
+        result,
+      })),
+    )
+    .sort((a, b) => Number(a.season) - Number(b.season) || Number(a.round) - Number(b.round))
+}
+
+export interface SeasonStanding {
+  season: string
+  position: number | null
+  points: number
+  wins: number
+}
+
+/**
+ * Endstand eines Fahrers in einer Saison.
+ *
+ * Jolpica verlangt für Wertungen zwingend ein Saisonjahr – einen Endpunkt, der
+ * die Meisterschaftsplätze einer ganzen Karriere auf einmal liefert, gibt es
+ * nicht. Also eine Anfrage je Saison. Das lohnt trotzdem: Nur die Wertung kennt
+ * die Streichresultate bis 1990, die Summe der Rennpunkte ist dort nicht der
+ * WM-Stand, und nur so stimmt die Zahl der Titel.
+ */
+export function fetchDriverSeasonStanding(
+  season: string,
+  driverId: string,
+): Promise<SeasonStanding> {
+  return get(`/${season}/drivers/${driverId}/driverstandings/?limit=1`, (d) => {
+    const row = d.StandingsTable.StandingsLists[0]?.DriverStandings?.[0]
+    return {
+      season,
+      position: row ? Number(row.position) || null : null,
+      points: row ? Number(row.points) || 0 : 0,
+      wins: row ? Number(row.wins) || 0 : 0,
+    }
+  })
 }

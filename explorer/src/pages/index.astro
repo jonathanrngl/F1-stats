@@ -1,0 +1,50 @@
+---
+import Seite from '../layouts/Seite.astro'
+import { eine, saisonListe, pfad } from '../lib/db.js'
+
+const zahlen = eine(`
+  SELECT (SELECT COUNT(*) FROM race)        AS rennen,
+         (SELECT COUNT(*) FROM driver)      AS fahrer,
+         (SELECT COUNT(*) FROM constructor) AS teams,
+         (SELECT COUNT(*) FROM circuit)     AS strecken,
+         (SELECT COUNT(*) FROM race_result) AS ergebnisse,
+         (SELECT MIN(year) FROM season)     AS von,
+         (SELECT MAX(year) FROM season)     AS bis`)
+
+const saisons = saisonListe().slice(0, 6)
+const nf = new Intl.NumberFormat('de-DE')
+---
+
+<Seite
+  titel="Formel 1 Statistiken – jede Saison seit 1950"
+  beschreibung={`Ergebnisse, Wertungen und Auswertungen aus ${zahlen.rennen} Rennen zwischen ${zahlen.von} und ${zahlen.bis}.`}
+>
+  <h1>Formel 1, vollständig</h1>
+  <p class="lead">
+    {nf.format(zahlen.rennen)} Rennen zwischen {zahlen.von} und {zahlen.bis}, {nf.format(zahlen.fahrer)}
+    Fahrer, {zahlen.teams} Teams, {zahlen.strecken} Strecken. Jede Zahl auf dieser Seite
+    entsteht aus {nf.format(zahlen.ergebnisse)} Ergebniszeilen – nicht aus einer gepflegten
+    Rekordliste.
+  </p>
+
+  <ul class="karten">
+    <li><a class="karte" href="/fahrer/"><b>Fahrer</b><span>{nf.format(zahlen.fahrer)} Profile mit Karriere, Serien und Teamkollegen</span></a></li>
+    <li><a class="karte" href="/teams/"><b>Teams</b><span>{zahlen.teams} Konstrukteure samt Vorgängern</span></a></li>
+    <li><a class="karte" href="/saisons/"><b>Saisons</b><span>Wertungen, Kalender und Verlauf je Jahr</span></a></li>
+    <li><a class="karte" href="/rennen/"><b>Rennen</b><span>{nf.format(zahlen.rennen)} Einzelergebnisse</span></a></li>
+    <li><a class="karte" href="/strecken/"><b>Strecken</b><span>{zahlen.strecken} Kurse und wer dort stark war</span></a></li>
+    <li><a class="karte" href="/rekorde/"><b>Rekorde</b><span>Bestmarken mit Verweis auf das Rennen</span></a></li>
+  </ul>
+
+  <h2 style="margin-top:2.5rem">Zuletzt</h2>
+  <ul class="karten">
+    {saisons.map((s) => (
+      <li>
+        <a class="karte" href={pfad.saison(s.jahr)}>
+          <b>{s.jahr}</b>
+          <span>{s.meister ?? 'läuft noch'}{s.teamMeister ? ` · ${s.teamMeister}` : ''}</span>
+        </a>
+      </li>
+    ))}
+  </ul>
+</Seite>

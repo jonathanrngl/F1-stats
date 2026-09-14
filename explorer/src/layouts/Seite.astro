@@ -1,0 +1,81 @@
+---
+/**
+ * Gerüst jeder Seite: Kopfleiste mit Navigation, Inhalt, Fußzeile.
+ *
+ * Die Navigation steht oben links und ist auf jeder Seite dieselbe – sie
+ * gehört zur Website, nicht zum Inhalt. Welcher Punkt aktiv ist, entscheidet
+ * der Pfad, nicht ein übergebener Wert: So kann keine Seite vergessen, sich
+ * selbst zu markieren.
+ */
+import '../styles/theme.css'
+
+interface Props {
+  titel: string
+  beschreibung: string
+  /** Wird an den Seitentitel angehängt; ohne ihn steht nur der Name. */
+  kopf?: string
+}
+
+const { titel, beschreibung } = Astro.props
+
+const NAV = [
+  { pfad: '/fahrer/', label: 'Fahrer' },
+  { pfad: '/teams/', label: 'Teams' },
+  { pfad: '/saisons/', label: 'Saisons' },
+  { pfad: '/rennen/', label: 'Rennen' },
+  { pfad: '/strecken/', label: 'Strecken' },
+  { pfad: '/rekorde/', label: 'Rekorde' },
+]
+
+const hier = Astro.url.pathname
+/** Aktiv ist auch die Übersicht, wenn man auf einer ihrer Unterseiten steht. */
+const istAktiv = (pfad: string) => hier === pfad || hier.startsWith(pfad)
+---
+
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)" />
+    <title>{titel}</title>
+    <meta name="description" content={beschreibung} />
+    <meta property="og:title" content={titel} />
+    <meta property="og:description" content={beschreibung} />
+    <meta property="og:type" content="website" />
+  </head>
+
+  <body>
+    <header class="kopf">
+      <div class="wrap">
+        <a class="marke" href="/">
+          <b>Formel 1</b><span>Statistiken</span>
+        </a>
+        <nav class="hauptnav" aria-label="Hauptnavigation">
+          {
+            NAV.map((n) => (
+              <a href={n.pfad} aria-current={istAktiv(n.pfad) ? 'page' : undefined}>
+                {n.label}
+              </a>
+            ))
+          }
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <div class="wrap">
+        <slot />
+      </div>
+    </main>
+
+    <footer>
+      <div class="wrap">
+        Daten von <a href="https://github.com/f1db/f1db">F1DB</a>, Creative Commons BY 4.0.
+        Kein offizielles Angebot der Formel 1. F1, FORMULA ONE und Formel 1 sind Marken der
+        Formula One Licensing BV.
+      </div>
+    </footer>
+  </body>
+</html>
