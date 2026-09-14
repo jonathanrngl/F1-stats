@@ -432,12 +432,20 @@ export default function App() {
 
   return (
     <>
+      {/* Die Ansichtswahl gehört nach ganz oben links: Sie gilt für die ganze
+          Seite, während Saison und Rennen darunter nur den Inhalt eingrenzen. */}
+      <div className="topbar">
+        <div className="topbar-inner">
+          <ViewMenu gruppen={MENU} aktiv={tab} onSelect={setTab} />
+          <span className="wortmarke">
+            <b>Formel 1</b> Statistiken
+          </span>
+          <ThemeSwitch />
+        </div>
+      </div>
+
       <header className="masthead">
         <div className="masthead-inner">
-          <div className="masthead-top">
-            <span className="eyebrow">Formel 1</span>
-            <ThemeSwitch />
-          </div>
           <h1>Statistiken</h1>
           <p className="subtitle">
             Jede Saison seit 1950, zu jedem Rennen: Weltmeisterschaftsstand, Punkteverlauf, das
@@ -509,9 +517,6 @@ export default function App() {
 
         {error && <div className="error">{error}</div>}
 
-        <nav className="viewbar" aria-label="Ansicht">
-          <ViewMenu gruppen={MENU} aktiv={tab} onSelect={setTab} />
-        </nav>
 
         <div className="panel panel-body">
           {tab === 'drivers' || tab === 'constructors' ? (

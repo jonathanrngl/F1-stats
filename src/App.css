@@ -1,7 +1,6 @@
 /* ------------------------------------------------------------------ Gerüst */
 
 .masthead {
-  border-top: 4px solid var(--accent);
   background: var(--surface);
   border-bottom: 1px solid var(--border);
 }
@@ -10,31 +9,6 @@
   max-width: 72rem;
   margin: 0 auto;
   padding: 1.5rem 1.25rem 1.75rem;
-}
-
-.masthead-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--accent);
-}
-
-.eyebrow::before {
-  content: '';
-  width: 1.75rem;
-  height: 2px;
-  background: var(--accent);
 }
 
 .masthead h1 {
@@ -208,44 +182,89 @@ select:disabled {
   font-weight: 700;
 }
 
-/* ------------------------------------------------------------ Ansichtsmenü */
+/* ---------------------------------------------------------------- Kopfleiste */
 
-.viewbar {
+/* Bleibt beim Scrollen oben: Die Ansichtswahl soll erreichbar sein, ohne dass
+   man an den Seitenanfang zurückmuss. */
+.topbar {
+  border-top: 3px solid var(--accent);
   position: sticky;
   top: 0;
-  z-index: 4;
-  display: flex;
-  margin: 1.5rem 0 0;
-  padding: 0.5rem 0;
-  background: var(--plane);
+  z-index: 10;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
 }
+
+.topbar-inner {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 0.55rem 1.25rem;
+}
+
+.wortmarke {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+  letter-spacing: 0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wortmarke b {
+  color: var(--accent);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  margin-right: 0.35rem;
+}
+
+/* ------------------------------------------------------------ Ansichtsmenü */
 
 .viewmenu {
   position: relative;
+  flex: none;
 }
 
-/* Die Schaltfläche nennt immer die Ansicht, in der man steht – sonst wäre nach
-   dem Zuklappen nicht mehr zu sehen, was man gerade anschaut. */
+/*
+ * Die Schaltfläche nennt immer die Ansicht, in der man steht – sonst wäre nach
+ * dem Zuklappen nicht zu sehen, was man gerade anschaut. Das Zeilenpaar aus
+ * Gattung und Name hält sie schmal genug für die Kopfleiste.
+ */
 .menu-knopf {
   display: flex;
   align-items: center;
-  gap: 0.7rem;
-  min-height: 2.9rem;
-  padding: 0.4rem 0.8rem 0.4rem 0.7rem;
+  gap: 0.65rem;
+  /* 44 Pixel: die kleinste Fläche, die ein Finger sicher trifft. */
+  min-height: 2.75rem;
+  padding: 0.35rem 0.75rem 0.35rem 0.65rem;
   color: var(--ink);
-  background: var(--surface);
+  background: var(--surface-2);
   border: 1px solid var(--border);
-  border-radius: 0.6rem;
-  box-shadow: var(--shadow);
+  border-radius: 0.55rem;
   cursor: pointer;
   text-align: left;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
-.menu-knopf:hover,
+.menu-knopf:hover {
+  background: var(--surface);
+  border-color: var(--axis);
+}
+
 .menu-knopf.offen {
+  background: var(--surface);
   border-color: var(--accent);
 }
 
+/* Drei Striche, deren mittlerer kürzer ist – das liest sich als Menü und
+   nicht als beliebiges Zeichen, und es passt zu den Streifen der Marke. */
 .menu-balken {
   display: grid;
   gap: 3px;
@@ -254,95 +273,131 @@ select:disabled {
 
 .menu-balken i {
   display: block;
-  width: 1rem;
+  width: 0.95rem;
   height: 2px;
   background: var(--accent);
   border-radius: 1px;
+  transition: width 0.18s ease;
+}
+
+.menu-balken i:nth-child(2) {
+  width: 0.6rem;
+}
+
+.menu-knopf.offen .menu-balken i:nth-child(2) {
+  width: 0.95rem;
 }
 
 .menu-text {
   display: grid;
-  line-height: 1.2;
-  font-weight: 650;
+  line-height: 1.15;
+  min-width: 0;
 }
 
 .menu-text small {
-  font-size: 0.62rem;
+  font-size: 0.58rem;
   font-weight: 700;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--muted);
 }
 
-/* Als Inline-Element dreht das Zeichen um eine Grundlinie, nicht um seine
-   Mitte, und rutscht dabei nach oben. Als eigenes Kästchen sitzt es richtig. */
+.menu-text {
+  font-weight: 650;
+  font-size: 0.92rem;
+}
+
 .menu-pfeil {
   display: grid;
   place-items: center;
-  width: 1.1rem;
-  height: 1.1rem;
-  margin-left: auto;
-  font-size: 1.1rem;
+  width: 1rem;
+  height: 1rem;
+  font-size: 0.95rem;
   line-height: 1;
   color: var(--muted);
   transform: rotate(90deg);
-  transition: transform 0.15s ease;
+  transition: transform 0.18s ease;
 }
 
 .menu-knopf.offen .menu-pfeil {
   transform: rotate(-90deg);
+  color: var(--accent);
 }
 
 .menu-panel {
   position: absolute;
-  z-index: 5;
-  top: calc(100% + 0.4rem);
+  z-index: 11;
+  top: calc(100% + 0.45rem);
   left: 0;
-  min-width: 20rem;
-  max-width: min(26rem, calc(100vw - 2rem));
-  padding: 0.5rem;
+  width: 23rem;
+  max-width: calc(100vw - 2rem);
+  padding: 0.45rem;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 0.6rem;
+  border-radius: 0.7rem;
   box-shadow: var(--shadow);
+  animation: menu-auf 0.14s ease-out;
+}
+
+@keyframes menu-auf {
+  from {
+    opacity: 0;
+    transform: translateY(-0.35rem);
+  }
 }
 
 .menu-panel section + section {
-  margin-top: 0.4rem;
-  padding-top: 0.4rem;
+  margin-top: 0.3rem;
+  padding-top: 0.3rem;
   border-top: 1px solid var(--border);
 }
 
 .menu-panel h3 {
   margin: 0;
-  padding: 0.35rem 0.6rem 0.25rem;
-  font-size: 0.64rem;
+  padding: 0.4rem 0.7rem 0.3rem;
+  font-size: 0.6rem;
   font-weight: 700;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--muted);
 }
 
+/* Der aktive Eintrag trägt links eine Fahne in Akzentfarbe. Fläche allein
+   reichte nicht: Im Dunkelmodus ist ein zarter Hintergrund kaum zu sehen. */
 .menu-item {
+  position: relative;
   display: grid;
   width: 100%;
-  gap: 0.05rem;
-  padding: 0.45rem 0.6rem;
+  gap: 0.1rem;
+  padding: 0.5rem 0.7rem 0.55rem 0.85rem;
   text-align: left;
   background: none;
   border: none;
-  border-radius: 0.4rem;
+  border-radius: 0.45rem;
   cursor: pointer;
+}
+
+.menu-item::before {
+  content: '';
+  position: absolute;
+  left: 0.25rem;
+  top: 0.55rem;
+  bottom: 0.55rem;
+  width: 3px;
+  border-radius: 2px;
+  background: transparent;
 }
 
 .menu-item b {
   font-size: 0.94rem;
   font-weight: 600;
   color: var(--ink);
+  letter-spacing: -0.005em;
 }
 
 .menu-item span {
-  font-size: 0.79rem;
+  font-size: 0.78rem;
+  line-height: 1.35;
   color: var(--muted);
 }
 
@@ -350,8 +405,16 @@ select:disabled {
   background: var(--surface-2);
 }
 
+.menu-item:hover::before {
+  background: var(--axis);
+}
+
 .menu-item.on {
   background: var(--accent-wash);
+}
+
+.menu-item.on::before {
+  background: var(--accent);
 }
 
 .menu-item.on b {
@@ -1076,14 +1139,19 @@ footer {
     gap: 0.8rem;
   }
 
-  /* Am Telefon spannt die Schaltfläche über die Breite, und das Menü darunter
-     ebenso – ein 20rem breites Kästchen passte sonst nicht neben den Rand. */
-  .menu-knopf {
-    width: 100%;
+  /* Am Telefon weicht die Wortmarke, damit Menü und Theme-Schalter Platz
+     haben; das Panel spannt dafür über die ganze Breite. */
+  .wortmarke {
+    display: none;
+  }
+
+  .topbar-inner {
+    justify-content: space-between;
+    padding-inline: 0.9rem;
   }
 
   .menu-panel {
-    min-width: 0;
+    width: auto;
     left: 0;
     right: 0;
     max-width: none;
