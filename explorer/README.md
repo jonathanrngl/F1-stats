@@ -17,6 +17,7 @@ Architektur und Begründungen: [`../docs/ARCHITEKTUR.md`](../docs/ARCHITEKTUR.md
 | 6 · JSON-API und Fahrervergleich | **fertig** |
 | 7 · Lader für Rundendaten | **fertig**, Nachladen offen |
 | 8 · WM-Punkteverlauf | **fertig** |
+| 9 · What-if: anderes Punktesystem | **fertig** |
 
 ## Entwickeln
 
