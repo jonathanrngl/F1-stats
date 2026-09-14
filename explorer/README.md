@@ -14,7 +14,8 @@ Architektur und Begründungen: [`../docs/ARCHITEKTUR.md`](../docs/ARCHITEKTUR.md
 | 3 · Seitengerüst Astro, Fahrerprofile | **fertig** |
 | 4 · Team-, Saison-, Renn-, Streckenseiten | **fertig** |
 | 5 · Rekorddatenbank | **fertig** |
-| 6 · Fahrer- und Teamkollegen-Vergleich | offen |
+| 6 · JSON-API und Fahrervergleich | **fertig** |
+| 7 · Rundendaten, Positionsverlauf | offen |
 
 ## Entwickeln
 

@@ -1,0 +1,265 @@
+---
+import Seite from '../../layouts/Seite.astro'
+import Vergleich from '../../components/Vergleich.jsx'
+import { fahrerIndex } from '../../lib/profil.js'
+
+/*
+ * Die einzige Seite mit echtem JavaScript. Grund: Ein Vergleich beliebiger
+ * Paare lässt sich nicht vorrendern, und der Zeitraum soll sich einstellen
+ * lassen, ohne bei jedem Schritt nachzuladen.
+ *
+ * Der Suchindex kommt vorgerendert mit (rund 60 KB für 881 Fahrer), die
+ * Profile lädt die Insel bei Bedarf aus der JSON-API.
+ */
+const index = fahrerIndex()
+---
+
+<Seite
+  titel="Fahrervergleich – zwei Karrieren nebeneinander"
+  beschreibung="Zwei Formel-1-Fahrer im direkten Vergleich: Siege, Podien, Quoten und Durchschnitte, für die ganze Karriere oder einen frei gewählten Zeitraum."
+>
+  <h1>Vergleich</h1>
+  <p class="lead">
+    Zwei Fahrer nebeneinander – über die ganze Karriere oder einen Zeitraum deiner Wahl. Waren
+    sie einmal Teamkollegen, steht die direkte Bilanz darunter: gleiches Auto, gleiche Rennen.
+  </p>
+
+  <Vergleich index={index} client:load />
+</Seite>
+
+<style is:global>
+  .vgl { margin-top: 1.75rem; }
+
+  .waehler {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr));
+    gap: 1rem;
+  }
+
+  .auswahl > label {
+    display: block;
+    margin-bottom: 0.35rem;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .auswahl .feld { position: relative; }
+
+  .auswahl input {
+    width: 100%;
+    padding: 0.65rem 0.8rem;
+    font: inherit;
+    color: var(--ink);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0.55rem;
+    appearance: none;
+  }
+
+  .auswahl input:hover,
+  .auswahl input:focus { border-color: var(--accent); }
+
+  .auswahl ul {
+    position: absolute;
+    z-index: 5;
+    top: calc(100% + 0.3rem);
+    left: 0;
+    right: 0;
+    margin: 0;
+    padding: 0.25rem;
+    list-style: none;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0.55rem;
+    box-shadow: var(--shadow);
+  }
+
+  .auswahl ul button,
+  .auswahl .gewaehlt {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.5rem 0.55rem;
+    text-align: left;
+    background: none;
+    border: none;
+    border-radius: 0.4rem;
+    cursor: pointer;
+    font: inherit;
+  }
+
+  .auswahl .gewaehlt {
+    padding: 0.6rem 0.7rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+  }
+
+  .auswahl .gewaehlt:hover { border-color: var(--accent); }
+  .auswahl ul button:hover { background: var(--surface-2); }
+  .auswahl b { flex: 1; min-width: 0; color: var(--ink); font-weight: 600;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .auswahl i { font-style: normal; font-size: 0.78rem; color: var(--muted); flex: none; }
+
+  .vgl .kuerzel {
+    display: inline-block; min-width: 2.6rem; padding: 0.1rem 0.3rem; margin: 0;
+    font-size: 0.64rem; font-weight: 700; text-align: center;
+    color: var(--muted); background: var(--surface-3); border-radius: 0.25rem; flex: none;
+  }
+
+  .zeitwahl {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1rem;
+    margin-top: 1.5rem;
+    padding: 0.8rem 1rem;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 0.6rem;
+  }
+
+  .zeitwahl > span {
+    font-size: 0.68rem; font-weight: 700; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--muted);
+  }
+
+  .zeitwahl .knoepfe { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+
+  .zeitwahl button {
+    padding: 0.3rem 0.7rem;
+    font: inherit;
+    font-size: 0.82rem;
+    color: var(--ink-2);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    cursor: pointer;
+  }
+
+  .zeitwahl button:hover { border-color: var(--accent); }
+  .zeitwahl button.on { color: var(--accent); background: var(--accent-wash); border-color: var(--accent); }
+
+  .zeitwahl .regler { display: flex; gap: 0.75rem; margin-left: auto; }
+  .zeitwahl .regler label { display: flex; align-items: center; gap: 0.35rem;
+    font-size: 0.8rem; color: var(--muted); }
+  .zeitwahl .regler input {
+    width: 4.5rem; padding: 0.25rem 0.4rem; font: inherit; font-size: 0.85rem;
+    color: var(--ink); background: var(--surface);
+    border: 1px solid var(--border); border-radius: 0.35rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .kopf {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+  }
+
+  .kopfkarte {
+    display: grid;
+    gap: 0.15rem;
+    padding: 0.85rem 1rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0.6rem;
+  }
+
+  .kopfkarte.s0 { border-top: 3px solid var(--accent); }
+  .kopfkarte.s1 { border-top: 3px solid var(--s2); }
+  .kopfkarte a { color: var(--ink); font-weight: 650; text-decoration: none; }
+  .kopfkarte a:hover { color: var(--accent); }
+  .kopfkarte i { font-style: normal; font-size: 0.76rem; color: var(--muted); }
+  .kopfkarte .kuerzel { justify-self: start; margin-bottom: 0.25rem; }
+
+  table.gegen { width: 100%; border-collapse: collapse; margin-top: 1.25rem; }
+
+  table.gegen tr.gruppe td {
+    padding: 1rem 0 0.35rem;
+    font-size: 0.64rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-align: center;
+    border: none;
+  }
+
+  table.gegen th[scope='row'] {
+    width: 34%;
+    padding: 0.45rem 0.6rem;
+    text-align: center;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--muted);
+    text-transform: none;
+    letter-spacing: 0;
+    border-bottom: 1px solid var(--border);
+    white-space: normal;
+  }
+
+  table.gegen th i {
+    display: inline-grid; place-items: center;
+    width: 0.95rem; height: 0.95rem; margin-left: 0.3rem;
+    font-style: normal; font-size: 0.62rem; font-weight: 700;
+    color: var(--muted); background: var(--surface-3); border-radius: 50%;
+    cursor: help; vertical-align: 0.05em;
+  }
+
+  /* Der Balken läuft von der Mitte nach außen: So zeigt die Länge sofort,
+     wer bei welcher Zeile vorn liegt, ohne dass man Zahlen vergleichen muss. */
+  td.wert {
+    position: relative;
+    width: 33%;
+    padding: 0.45rem 0.7rem;
+    border-bottom: 1px solid var(--border);
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-2);
+  }
+
+  td.wert b { position: relative; z-index: 1; font-weight: 600; }
+  td.links { text-align: right; }
+  td.rechts { text-align: left; }
+
+  td.wert .balken {
+    position: absolute;
+    top: 0.35rem;
+    bottom: 0.35rem;
+    background: var(--surface-3);
+    border-radius: 0.2rem;
+  }
+
+  td.links .balken { right: 0.35rem; }
+  td.rechts .balken { left: 0.35rem; }
+
+  td.fuehrt b { color: var(--ink); font-weight: 700; }
+  td.links.fuehrt .balken { background: var(--accent-wash); }
+  td.rechts.fuehrt .balken { background: color-mix(in srgb, var(--s2) 18%, transparent); }
+
+  .vgl .status, .vgl .fehler, .vgl .hinweis {
+    margin-top: 1.5rem;
+    padding: 0.85rem 1rem;
+    font-size: 0.88rem;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 0.55rem;
+    text-wrap: pretty;
+  }
+
+  .vgl .fehler { color: var(--danger-fg); background: var(--danger-bg); border-color: var(--danger-border); }
+  .vgl .hinweis { border-left: 3px solid var(--axis); }
+
+  .duell { margin-top: 3rem; padding-top: 1.5rem; border-top: 2px solid var(--border); }
+  .duell h2 { font-size: 1.15rem; margin: 0 0 0.5rem; }
+  .duell p { max-width: 46rem; color: var(--muted); font-size: 0.88rem; text-wrap: pretty; }
+  .duell .fuss { margin-top: 0.75rem; font-size: 0.79rem; }
+
+  @media (max-width: 40rem) {
+    .zeitwahl .regler { margin-left: 0; }
+    table.gegen th[scope='row'] { width: 40%; font-size: 0.74rem; }
+  }
+</style>
