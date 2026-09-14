@@ -1,4 +1,4 @@
-import type { DriverProgression, RaceResults, ResultRow } from './api/jolpica'
+import type { CareerRace, DriverProgression, RaceResults, ResultRow } from './api/jolpica'
 
 /*
  * Auswertungen über eine ganze Saison. Reine Funktionen ohne Netzzugriff:
@@ -8,6 +8,53 @@ import type { DriverProgression, RaceResults, ResultRow } from './api/jolpica'
 /** Gewertet ist, wer eine Platzziffer hat. R/D/W/N/E stehen für Ausfall,
  *  Disqualifikation, Nichtantritt, nicht gewertet, Ausschluss. */
 const isClassified = (r: ResultRow) => /^\d+$/.test(r.positionText)
+
+/**
+ * Mehrere Ergebniszeilen eines Fahrers in einem Rennen zu einer verschmelzen.
+ *
+ * In den 1950ern durfte man das Auto wechseln: Wessen Wagen liegen blieb,
+ * übernahm den eines Teamkollegen, und beide wurden gewertet. Die API führt
+ * dann zwei Zeilen für denselben Fahrer im selben Rennen. Fangio hat so 58
+ * Ergebniszeilen bei 51 Rennen – wer Zeilen zählt, dichtet ihm sieben Starts
+ * an und zählt Siege doppelt.
+ *
+ * Zusammengefasst gilt: das beste gewertete Ergebnis zählt als sein Resultat,
+ * die Punkte beider Zeilen werden addiert (beide gingen in die Wertung ein),
+ * und die schnellste Runde zählt, wenn eine der Zeilen sie trägt.
+ *
+ * Der Startplatz kommt eigens vom besten der Zeilen, nicht von der mit dem
+ * besten Ergebnis. Grund: Wer sein Auto abgab, taucht mit dem Startplatz des
+ * fremden Wagens auf. Nimmt man den, verliert der Fahrer seine eigene Pole –
+ * Fangio fiel so von 29 Starts aus der ersten Reihe auf 23. Zwei Autos können
+ * nicht beide von Platz 1 losfahren, doppelt gezählt wird also nichts.
+ */
+function mergeRows(rows: ResultRow[]): ResultRow {
+  if (rows.length === 1) return rows[0]
+
+  const gewertet = rows.filter(isClassified).sort((a, b) => Number(a.position) - Number(b.position))
+  const fuehrend = gewertet[0] ?? rows[0]
+  const punkte = rows.reduce((sum, r) => sum + (Number(r.points) || 0), 0)
+  const startplaetze = rows.map((r) => Number(r.grid)).filter((g) => g > 0)
+
+  return {
+    ...fuehrend,
+    points: String(punkte),
+    grid: startplaetze.length > 0 ? String(Math.min(...startplaetze)) : fuehrend.grid,
+    FastestLap: rows.find((r) => r.FastestLap?.rank === '1')?.FastestLap ?? fuehrend.FastestLap,
+  }
+}
+
+/** Je Fahrer eine Zeile – siehe `mergeRows`. */
+function perDriver(rows: ResultRow[]): ResultRow[] {
+  const byDriver = new Map<string, ResultRow[]>()
+  for (const r of rows) {
+    const id = r.Driver.driverId
+    const list = byDriver.get(id)
+    if (list) list.push(r)
+    else byDriver.set(id, [r])
+  }
+  return [...byDriver.values()].map(mergeRows)
+}
 
 /** "0" heißt: Startplatz nicht überliefert – kommt in frühen Jahren vor. */
 const hasGrid = (r: ResultRow) => Number(r.grid) > 0
@@ -43,7 +90,7 @@ export function driverRaceStats(races: RaceResults[]): DriverRaceStats[] {
   const gridRaces = new Map<string, number>()
 
   for (const race of races) {
-    for (const r of race.results) {
+    for (const r of perDriver(race.results)) {
       const id = r.Driver.driverId
       let s = byDriver.get(id)
       if (!s) {
@@ -143,7 +190,7 @@ export function teamDuels(races: RaceResults[]): TeamDuel[] {
   >()
 
   for (const race of races) {
-    for (const r of race.results) {
+    for (const r of perDriver(race.results)) {
       const id = r.Constructor.constructorId
       let t = teams.get(id)
       if (!t) {
@@ -255,7 +302,7 @@ export function roundCaps(
 ): number[] {
   let raceMax = 0
   for (const race of races) {
-    for (const r of race.results) raceMax = Math.max(raceMax, Number(r.points) || 0)
+    for (const r of perDriver(race.results)) raceMax = Math.max(raceMax, Number(r.points) || 0)
   }
   if (raceMax === 0) return []
 
@@ -409,7 +456,7 @@ export interface Reason {
 export function retirementReasons(races: RaceResults[]): Reason[] {
   const counts = new Map<string, number>()
   for (const race of races) {
-    for (const r of race.results) {
+    for (const r of perDriver(race.results)) {
       if (isClassified(r)) continue
       const label = REASONS[r.status] ?? r.status
       counts.set(label, (counts.get(label) ?? 0) + 1)
@@ -442,11 +489,199 @@ export function hadDroppedScores(
 
   const scored = new Map<string, number>()
   for (const race of races) {
-    for (const r of race.results) {
+    for (const r of perDriver(race.results)) {
       const id = r.Driver.driverId
       scored.set(id, (scored.get(id) ?? 0) + (Number(r.points) || 0))
     }
   }
 
   return progression.some((d) => (scored.get(d.driverId) ?? 0) > d.total)
+}
+
+// --------------------------------------------------------------- Karriere
+
+export interface CareerSeasonRow {
+  season: string
+  teams: string[]
+  races: number
+  classified: number
+  wins: number
+  podiums: number
+  /** In diesen Rennen erzielte Punkte – nicht zwingend der WM-Stand. */
+  racePoints: number
+  fromPole: number
+  bestFinish: number | null
+}
+
+export interface CareerTotals {
+  starts: number
+  classified: number
+  retired: number
+  wins: number
+  podiums: number
+  scoring: number
+  racePoints: number
+  /**
+   * Rennen von Startplatz 1 aus begonnen.
+   *
+   * Bewusst nicht „Poles": Die API führt Qualifying-Ergebnisse erst ab 1996 –
+   * Fangio hätte dort null. Der Startplatz steht dagegen in den Rennergebnissen
+   * fast lückenlos seit 1950 und trifft die Pole-Zahl der frühen Jahre exakt
+   * (Fangio 29, Senna 65). Ab den 2010ern gehen beide auseinander, weil
+   * Strafversetzungen den Startplatz verschieben: Verstappen 48 statt 64.
+   */
+  fromPole: number
+  fastestLaps: number
+  /**
+   * Ob die Zahl der schnellsten Runden überhaupt etwas aussagt.
+   *
+   * Die API führt dieses Feld erst ab 2004. Für Fangio stünde sonst eine
+   * glatte Null, obwohl er 23 schnellste Runden gefahren hat – eine Null, die
+   * wie eine Aussage aussieht, aber nur eine Datenlücke ist.
+   */
+  fastestLapsKnown: boolean
+  bestFinish: number | null
+  avgFinish: number | null
+  avgGrid: number | null
+  firstSeason: string
+  lastSeason: string
+  seasonCount: number
+  teams: { name: string; seasons: string[] }[]
+}
+
+const klassiert = (r: { positionText: string }) => /^\d+$/.test(r.positionText)
+
+/**
+ * Karriere-Zeilen zu je einem Eintrag pro Rennen zusammenfassen.
+ *
+ * Gleicher Grund wie bei `mergeRows`: Wer in den 1950ern das Auto eines
+ * Teamkollegen übernahm, steht zweimal im selben Rennen. Fangio kommt so auf
+ * 58 Zeilen bei 51 Starts.
+ */
+function racesOnly(races: CareerRace[]): CareerRace[] {
+  const byRace = new Map<string, CareerRace[]>()
+  for (const r of races) {
+    const key = `${r.season}/${r.round}`
+    const list = byRace.get(key)
+    if (list) list.push(r)
+    else byRace.set(key, [r])
+  }
+  return [...byRace.values()].map((gruppe) =>
+    gruppe.length === 1 ? gruppe[0] : { ...gruppe[0], result: mergeRows(gruppe.map((g) => g.result)) },
+  )
+}
+
+/** Karriere Saison für Saison, in zeitlicher Reihenfolge. */
+export function careerBySeason(races: CareerRace[]): CareerSeasonRow[] {
+  const bySeason = new Map<string, CareerSeasonRow>()
+  races = racesOnly(races)
+
+  for (const race of races) {
+    const r = race.result
+    let s = bySeason.get(race.season)
+    if (!s) {
+      s = {
+        season: race.season,
+        teams: [],
+        races: 0,
+        classified: 0,
+        wins: 0,
+        podiums: 0,
+        racePoints: 0,
+        fromPole: 0,
+        bestFinish: null,
+      }
+      bySeason.set(race.season, s)
+    }
+    const team = r.Constructor.name
+    if (!s.teams.includes(team)) s.teams.push(team)
+    s.races++
+    s.racePoints += Number(r.points) || 0
+    if (Number(r.grid) === 1) s.fromPole++
+    if (klassiert(r)) {
+      const pos = Number(r.position)
+      s.classified++
+      if (pos === 1) s.wins++
+      if (pos <= 3) s.podiums++
+      if (s.bestFinish === null || pos < s.bestFinish) s.bestFinish = pos
+    }
+  }
+
+  return [...bySeason.values()].sort((a, b) => Number(a.season) - Number(b.season))
+}
+
+/** Die Karriere in einer Zeile Zahlen. */
+export function careerTotals(races: CareerRace[]): CareerTotals {
+  const leer: CareerTotals = {
+    starts: 0,
+    classified: 0,
+    retired: 0,
+    wins: 0,
+    podiums: 0,
+    scoring: 0,
+    racePoints: 0,
+    fromPole: 0,
+    fastestLaps: 0,
+    fastestLapsKnown: false,
+    bestFinish: null,
+    avgFinish: null,
+    avgGrid: null,
+    firstSeason: '',
+    lastSeason: '',
+    seasonCount: 0,
+    teams: [],
+  }
+  races = racesOnly(races)
+
+  if (races.length === 0) return leer
+
+  const t = { ...leer }
+  let finishSum = 0
+  let gridSum = 0
+  let gridRaces = 0
+  const teams = new Map<string, Set<string>>()
+  const seasons = new Set<string>()
+
+  for (const race of races) {
+    const r = race.result
+    seasons.add(race.season)
+    const team = r.Constructor.name
+    if (!teams.has(team)) teams.set(team, new Set())
+    teams.get(team)!.add(race.season)
+
+    t.starts++
+    t.racePoints += Number(r.points) || 0
+    if ((Number(r.points) || 0) > 0) t.scoring++
+    if (Number(r.grid) === 1) t.fromPole++
+    if (r.FastestLap?.rank === '1') t.fastestLaps++
+    if (Number(r.grid) > 0) {
+      gridSum += Number(r.grid)
+      gridRaces++
+    }
+    if (klassiert(r)) {
+      const pos = Number(r.position)
+      t.classified++
+      if (pos === 1) t.wins++
+      if (pos <= 3) t.podiums++
+      if (t.bestFinish === null || pos < t.bestFinish) t.bestFinish = pos
+      finishSum += pos
+    } else {
+      t.retired++
+    }
+  }
+
+  const jahre = [...seasons].sort()
+  t.firstSeason = jahre[0]
+  t.lastSeason = jahre[jahre.length - 1]
+  t.seasonCount = jahre.length
+  // Schnellste Runden führt die API erst ab 2004 – davor ist die Null keine Null.
+  t.fastestLapsKnown = Number(t.lastSeason) >= 2004
+  t.avgFinish = t.classified > 0 ? finishSum / t.classified : null
+  t.avgGrid = gridRaces > 0 ? gridSum / gridRaces : null
+  // Nach Einsatzdauer sortiert: das prägende Team steht oben.
+  t.teams = [...teams]
+    .map(([name, s]) => ({ name, seasons: [...s].sort() }))
+    .sort((a, b) => b.seasons.length - a.seasons.length)
+
+  return t
 }

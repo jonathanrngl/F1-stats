@@ -8,22 +8,30 @@ import {
   fetchProgression,
   fetchSeasonResults,
   fetchSprintRounds,
+  fetchAllDrivers,
+  fetchDriverCareer,
+  fetchDriverSeasonStanding,
   type Race,
   type DriverStanding,
   type ConstructorStanding,
   type DriverProgression,
   type RaceResults,
   type SprintInfo,
+  type DriverInfo,
+  type CareerRace,
+  type SeasonStanding,
 } from './api/jolpica'
 import { hadDroppedScores, roundCaps, titleRace } from './analysis'
 import SeasonChart, { type ChartRound } from './SeasonChart'
 import RaceAnalysis from './RaceAnalysis'
 import TitleRace from './TitleRace'
 import ThemeSwitch from './ThemeSwitch'
+import DriverSearch from './DriverSearch'
+import DriverCareer from './DriverCareer'
 import { nation } from './nations'
 import './App.css'
 
-type Tab = 'drivers' | 'constructors' | 'progression' | 'analysis' | 'title'
+type Tab = 'drivers' | 'constructors' | 'progression' | 'analysis' | 'title' | 'career'
 
 const TABS: { id: Tab; label: string; short: string }[] = [
   { id: 'drivers', label: 'Fahrerwertung', short: 'Fahrer' },
@@ -31,6 +39,7 @@ const TABS: { id: Tab; label: string; short: string }[] = [
   { id: 'progression', label: 'WM-Verlauf', short: 'Verlauf' },
   { id: 'analysis', label: 'Rennanalyse', short: 'Analyse' },
   { id: 'title', label: 'Titelkampf', short: 'Titel' },
+  { id: 'career', label: 'Karriere', short: 'Karriere' },
 ]
 
 /** Tabs, die den rundenweisen Punkteverlauf brauchen (teuer: eine Anfrage je Rennen). */
@@ -40,6 +49,9 @@ const NEEDS_RESULTS: Tab[] = ['analysis', 'title']
 
 /** Eine einzige leere Liste: als frisches [] je Render würde jedes Memo daran hängen. */
 const NO_RACES: Race[] = []
+
+/** Ebenso eine feste leere Karte, damit die Karriere-Ansicht nicht je Render neu rendert. */
+const LEERE_STANDS = new Map<string, SeasonStanding>()
 
 interface Loaded<T> {
   season: string
@@ -87,6 +99,28 @@ export default function App() {
   const [sprint, setSprint] = useState<Loaded<SprintInfo>>(() =>
     EMPTY({ rounds: [], maxPoints: 0 }),
   )
+
+  // Karriere-Tab: Verzeichnis für die Suche, gewählter Fahrer, seine Rennen und
+  // seine WM-Endstände. Der Fahrer ist der Schlüssel, nicht die Saison.
+  const [index, setIndex] = useState<{
+    drivers: DriverInfo[]
+    done: number
+    total: number
+    complete: boolean
+  }>({ drivers: [], done: 0, total: 0, complete: false })
+  const [picked, setPicked] = useState<DriverInfo | null>(null)
+  const [career, setCareer] = useState<{
+    driverId: string
+    races: CareerRace[]
+    complete: boolean
+  }>({ driverId: '', races: [], complete: false })
+  const [standings, setStandings] = useState<{
+    driverId: string
+    map: Map<string, SeasonStanding>
+    done: number
+    total: number
+    complete: boolean
+  }>({ driverId: '', map: new Map(), done: 0, total: 0, complete: false })
 
   // Solange der Kalender einer anderen Saison gehört, gilt er als nicht da –
   // lieber ein Ladezustand als Zahlen aus dem falschen Jahr. Steht vor den
@@ -152,7 +186,7 @@ export default function App() {
    * keine Abhängigkeit; ob eine Antwort noch gebraucht wird, entscheidet der
    * Vergleich beim Eintreffen.
    */
-  const wanted = useRef({ prog: '', results: '' })
+  const wanted = useRef({ prog: '', results: '', career: '', index: false })
 
   // Der Verlauf kostet eine Anfrage je Rennen, deshalb erst beim Öffnen eines
   // Tabs, der ihn braucht, und genau einmal pro Saison. Die Zwischenstände
@@ -212,6 +246,80 @@ export default function App() {
         setError(e.message)
       })
   }, [tab, season])
+
+  /*
+   * Das Fahrerverzeichnis: 881 Namen, neun Anfragen, einmal beim ersten Öffnen
+   * des Karriere-Tabs. Die API kennt keine Namenssuche, deshalb liegt die Liste
+   * komplett im Browser – und dank der langen Cache-Dauer meist schon dort.
+   */
+  useEffect(() => {
+    if (tab !== 'career' || index.complete || wanted.current.index) return
+    wanted.current.index = true
+    fetchAllDrivers((done, total) =>
+      setIndex((p) => ({ ...p, done, total, complete: false })),
+    )
+      .then((drivers) => setIndex({ drivers, done: 1, total: 1, complete: true }))
+      .catch((e) => {
+        wanted.current.index = false
+        setError(e.message)
+      })
+  }, [tab, index.complete])
+
+  /*
+   * Karriere eines Fahrers: erst die Rennergebnisse (drei bis fünf Anfragen),
+   * danach die WM-Endstände Saison für Saison. Der zweite Teil ist der teure –
+   * eine Anfrage je Saison, weil Jolpica für Wertungen zwingend ein Jahr will.
+   * Er läuft deshalb nach und füllt die Tabelle von oben nach unten.
+   */
+  useEffect(() => {
+    const id = picked?.driverId
+    if (!id || wanted.current.career === id) return
+    wanted.current.career = id
+    setCareer({ driverId: id, races: [], complete: false })
+    setStandings({ driverId: id, map: new Map(), done: 0, total: 0, complete: false })
+    setError('')
+
+    fetchDriverCareer(id)
+      .then(async (races) => {
+        if (wanted.current.career !== id) return
+        setCareer({ driverId: id, races, complete: true })
+
+        const jahre = [...new Set(races.map((r) => r.season))].sort()
+        setStandings({ driverId: id, map: new Map(), done: 0, total: jahre.length, complete: false })
+
+        const map = new Map<string, SeasonStanding>()
+        for (const jahr of jahre) {
+          if (wanted.current.career !== id) return
+          try {
+            map.set(jahr, await fetchDriverSeasonStanding(jahr, id))
+          } catch {
+            // Eine fehlende Saison macht die Karriere nicht wertlos – die Zeile
+            // bleibt dann ohne WM-Platz stehen.
+          }
+          if (wanted.current.career !== id) return
+          setStandings({
+            driverId: id,
+            map: new Map(map),
+            done: map.size,
+            total: jahre.length,
+            complete: false,
+          })
+        }
+        if (wanted.current.career !== id) return
+        setStandings({ driverId: id, map, done: jahre.length, total: jahre.length, complete: true })
+      })
+      .catch((e) => {
+        if (wanted.current.career !== id) return
+        wanted.current.career = ''
+        setError(e.message)
+      })
+  }, [picked])
+
+  /** Aus einer Wertungszeile in die Karriere springen. */
+  const zeigeFahrer = (d: DriverInfo) => {
+    setPicked(d)
+    setTab('career')
+  }
 
   const selectedRace = races.find((r) => r.round === round)
   const isUpcoming = (r: Race) => latestRound > 0 && Number(r.round) > latestRound
@@ -408,8 +516,10 @@ export default function App() {
                   nationality: d.Driver.nationality,
                   points: d.points,
                   wins: d.wins,
+                  driver: d.Driver,
                 }))}
                 detailLabel="Team"
+                onDriver={zeigeFahrer}
                 empty={
                   selectedRace && isUpcoming(selectedRace)
                     ? 'Dieses Rennen wurde noch nicht gefahren.'
@@ -460,6 +570,44 @@ export default function App() {
             ) : (
               <RaceAnalysis races={analysisRaces} />
             )
+          ) : tab === 'career' ? (
+            <div className="karriere">
+              {index.complete ? (
+                <DriverSearch drivers={index.drivers} onPick={setPicked} autoFocus={!picked} />
+              ) : (
+                progressBar(
+                  index.done,
+                  index.total || 9,
+                  'Lade das Fahrerverzeichnis – 881 Namen seit 1950 …',
+                )
+              )}
+
+              {picked ? (
+                career.driverId === picked.driverId && career.complete ? (
+                  <DriverCareer
+                    driver={picked}
+                    races={career.races}
+                    standings={standings.driverId === picked.driverId ? standings.map : LEERE_STANDS}
+                    pending={
+                      standings.driverId === picked.driverId && !standings.complete
+                        ? { done: standings.done, total: standings.total }
+                        : undefined
+                    }
+                  />
+                ) : (
+                  <p className="status">
+                    Lade die Karriere von {picked.givenName} {picked.familyName} …
+                  </p>
+                )
+              ) : (
+                index.complete && (
+                  <p className="status">
+                    Tippe einen Namen oder ein Kürzel – etwa „Senna“, „VER“ oder „Fangio“. In den
+                    Wertungstabellen führt auch ein Klick auf einen Fahrernamen hierher.
+                  </p>
+                )
+              )}
+            </div>
           ) : chartSeries.length === 0 ? (
             !progReady ? (
               progressBar(prog.done, prog.total, `Lade ${prog.total} Rennen der Saison ${season} …`)
@@ -513,16 +661,21 @@ interface Row {
   nationality: string
   points: string
   wins: string
+  /** Gesetzt bei Fahrern: macht den Namen zum Weg in die Karriere. */
+  driver?: DriverInfo
 }
 
 function StandingsTable({
   rows,
   detailLabel,
   empty,
+  onDriver,
 }: {
   rows: Row[]
   detailLabel: string
   empty: string
+  /** Fehlt bei der Konstrukteurswertung – Teams haben keine Fahrerkarriere. */
+  onDriver?: (d: DriverInfo) => void
 }) {
   if (rows.length === 0) return <p className="status">{empty}</p>
 
@@ -549,7 +702,20 @@ function StandingsTable({
                   <span className="code" title={nat.name}>
                     {nat.code}
                   </span>
-                  {r.name}
+                  {/* Der Name führt zur Karriere. Ein Knopf, kein Link: es wird
+                      keine Adresse gewechselt, nur die Ansicht. */}
+                  {r.driver && onDriver ? (
+                    <button
+                      type="button"
+                      className="namens-knopf"
+                      onClick={() => onDriver(r.driver!)}
+                      title={`Karriere von ${r.name} ansehen`}
+                    >
+                      {r.name}
+                    </button>
+                  ) : (
+                    r.name
+                  )}
                   {/* Auf schmalen Anzeigen steht das Team unter dem Namen,
                       statt in einer eigenen Spalte weit rechts. */}
                   {r.detail && <span className="sub">{r.detail}</span>}

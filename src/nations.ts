@@ -65,8 +65,15 @@ const NATIONS: Record<string, Nation> = {
   Venezuelan: { code: 'VEN', name: 'Venezuela' },
 }
 
-/** Kuerzel und deutscher Name; unbekannte Nationalitaet behaelt ihren Text. */
-export function nation(nationality: string): Nation {
+/**
+ * Kuerzel und deutscher Name; unbekannte Nationalitaet behaelt ihren Text.
+ *
+ * Das Feld darf fehlen: Fuer 16 Fahrer des Verzeichnisses – Reserve- und
+ * Testfahrer der juengsten Jahre – liefert die API kein Land. Sie bekommen
+ * einen leeren Platzhalter statt einer geratenen Herkunft.
+ */
+export function nation(nationality?: string): Nation {
+  if (!nationality) return { code: '—', name: 'Land nicht überliefert' }
   return (
     NATIONS[nationality] ?? {
       code: nationality.slice(0, 3).toUpperCase(),
