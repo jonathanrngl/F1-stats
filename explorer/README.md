@@ -11,8 +11,20 @@ Architektur und Begründungen: [`../docs/ARCHITEKTUR.md`](../docs/ARCHITEKTUR.md
 |---|---|
 | 1 · Import F1DB, Validierung | **fertig** |
 | 2 · Statistik-Engine, Tests | **fertig** |
-| 3 · Seitengerüst Astro | offen |
-| 4 · Fahrer-, Team-, Saison-, Renn-, Streckenseiten | offen |
+| 3 · Seitengerüst Astro, Fahrerprofile | **fertig** |
+| 4 · Team-, Saison-, Renn-, Streckenseiten | offen |
+
+## Entwickeln
+
+```bash
+npm run import   # Datenbank bauen (einmalig, 8 s)
+npm run dev      # http://localhost:4321
+npm run build    # 867 statische Seiten in ~9 s nach dist/
+```
+
+Der Build erzeugt fertiges HTML: 12 MB für 867 Seiten, eine einzige
+JavaScript-Datei in der gesamten Ausgabe. Eine Fahrerseite wiegt 18 KB und
+braucht kein JavaScript, um ihre Zahlen zu zeigen.
 
 ## Tests
 

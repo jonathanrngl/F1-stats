@@ -5,6 +5,15 @@
   "scripts": {
     "import": "node scripts/import.mjs",
     "import:lokal": "node scripts/import.mjs --csv ../.cache/f1db-csv",
-    "test": "node scripts/test-engine.mjs"
+    "test": "node scripts/test-engine.mjs",
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview"
+  },
+  "devDependencies": {
+    "@astrojs/react": "^6.0.5",
+    "astro": "^7.3.2",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
   }
 }

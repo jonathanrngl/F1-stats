@@ -1,0 +1,44 @@
+---
+import Seite from '../../layouts/Seite.astro'
+import { teamListe, pfad } from '../../lib/db.js'
+
+const teams = teamListe().sort((a, b) => (b.siege ?? 0) - (a.siege ?? 0) || (b.starts ?? 0) - (a.starts ?? 0))
+---
+
+<Seite titel="Alle Formel-1-Teams" beschreibung={`${teams.length} Konstrukteure seit 1950.`}>
+  <h1>Teams</h1>
+  <p class="lead">
+    {teams.length} Konstrukteure, die seit 1950 angetreten sind. Namenswechsel und
+    Vorgängerteams stehen auf der jeweiligen Seite.
+  </p>
+
+  <div class="tabelle">
+    <table>
+      <thead>
+        <tr>
+          <th>Team</th>
+          <th>Zeitraum</th>
+          <th class="num">Starts</th>
+          <th class="num">Siege</th>
+          <th class="num">Doppelsiege</th>
+          <th class="num">Titel</th>
+        </tr>
+      </thead>
+      <tbody>
+        {teams.map((t) => (
+          <tr>
+            <td>
+              <span class="kuerzel" title={t.landName ?? ''}>{t.land ?? '—'}</span>
+              <a class="zeile" href={pfad.team(t.id)}>{t.name}</a>
+            </td>
+            <td style="color:var(--muted)">{t.von === t.bis ? t.von : `${t.von}–${t.bis}`}</td>
+            <td class="num">{t.starts ?? 0}</td>
+            <td class="num">{t.siege || ''}</td>
+            <td class="num">{t.doppelsiege || ''}</td>
+            <td class="num">{t.titel || ''}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+</Seite>

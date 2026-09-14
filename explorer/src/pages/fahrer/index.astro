@@ -1,0 +1,52 @@
+---
+import Seite from '../../layouts/Seite.astro'
+import { fahrerListe, pfad } from '../../lib/db.js'
+
+const fahrer = fahrerListe()
+const nf = new Intl.NumberFormat('de-DE')
+// Nach Siegen sortiert zeigt die Übersicht sofort, worauf es ankommt.
+const nachSiegen = [...fahrer].sort(
+  (a, b) => (b.siege ?? 0) - (a.siege ?? 0) || (b.starts ?? 0) - (a.starts ?? 0),
+)
+---
+
+<Seite
+  titel="Alle Formel-1-Fahrer seit 1950"
+  beschreibung={`${fahrer.length} Fahrer mit Starts, Siegen, Podien und Titeln.`}
+>
+  <h1>Fahrer</h1>
+  <p class="lead">
+    {nf.format(fahrer.length)} Fahrer, die seit 1950 mindestens einmal gemeldet waren. Sortiert
+    nach Siegen.
+  </p>
+
+  <div class="tabelle">
+    <table>
+      <thead>
+        <tr>
+          <th>Fahrer</th>
+          <th>Zeitraum</th>
+          <th class="num">Starts</th>
+          <th class="num">Siege</th>
+          <th class="num">Podien</th>
+          <th class="num">Titel</th>
+        </tr>
+      </thead>
+      <tbody>
+        {nachSiegen.map((f) => (
+          <tr>
+            <td>
+              <span class="kuerzel" title={f.landName ?? ''}>{f.land ?? '—'}</span>
+              <a class="zeile" href={pfad.fahrer(f.id)}>{f.name}</a>
+            </td>
+            <td style="color:var(--muted)">{f.von === f.bis ? f.von : `${f.von}–${f.bis}`}</td>
+            <td class="num">{f.starts ?? 0}</td>
+            <td class="num">{f.siege || ''}</td>
+            <td class="num">{f.podien || ''}</td>
+            <td class="num">{f.titel || ''}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+</Seite>
