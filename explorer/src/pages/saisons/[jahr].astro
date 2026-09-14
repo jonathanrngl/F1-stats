@@ -1,6 +1,7 @@
 ---
 import Seite from '../../layouts/Seite.astro'
 import { alle, eine, saisonListe, rennenListe, pfad } from '../../lib/db.js'
+import Verlauf from '../../components/Verlauf.astro'
 
 export async function getStaticPaths() {
   return saisonListe().map((s) => ({ params: { jahr: String(s.jahr) } }))
@@ -17,7 +18,7 @@ const saison = eine(
 
 const fahrerWertung = alle(
   `SELECT sds.position, sds.points, sds.championship_won AS meister,
-          d.id, d.full_name AS name,
+          d.id, d.full_name AS name, d.abbreviation AS kuerzel,
           (SELECT COUNT(*) FROM race_result rr JOIN race r ON r.id = rr.race_id
             WHERE r.year = ?1 AND rr.driver_id = d.id AND rr.position = 1) AS siege,
           (SELECT GROUP_CONCAT(DISTINCT k.name) FROM race_result rr
@@ -49,6 +50,53 @@ const kennzahlen = eine(
      FROM race_result rr JOIN race r ON r.id = rr.race_id WHERE r.year = ?`,
   jahr,
 )
+
+/*
+ * Der Verlauf kommt aus den Zwischenständen nach jeder Runde, nicht aus der
+ * Summe der Rennpunkte: Bis 1990 verfielen Streichresultate, dort wären beide
+ * Kurven verschieden – und nur die Wertung ist die amtliche.
+ *
+ * Fehlt einem Fahrer eine Runde (Einstieg mitten in der Saison), wird der
+ * letzte bekannte Stand fortgeschrieben. Eine Lücke als Null zu zeichnen,
+ * ließe die Linie auf die Achse abstürzen.
+ */
+const staende = alle(
+  `SELECT r.round AS runde, rds.driver_id AS id, rds.points AS punkte
+     FROM race_driver_standing rds
+     JOIN race r ON r.id = rds.race_id
+    WHERE r.year = ?
+    ORDER BY r.round`,
+  jahr,
+)
+
+const rundenMitStand = [...new Set(staende.map((s) => s.runde))].sort((a, b) => a - b)
+const standProRunde = new Map()
+for (const s of staende) {
+  if (!standProRunde.has(s.runde)) standProRunde.set(s.runde, new Map())
+  standProRunde.get(s.runde).set(s.id, s.punkte)
+}
+
+const namen = new Map(fahrerWertung.map((f) => [f.id, f]))
+const verlauf = fahrerWertung
+  .filter((f) => namen.has(f.id))
+  .map((f) => {
+    let getragen = 0
+    return {
+      id: f.id,
+      name: f.name,
+      kuerzel: f.kuerzel ?? null,
+      punkte: rundenMitStand.map((r) => {
+        const w = standProRunde.get(r)?.get(f.id)
+        if (w !== undefined) getragen = w
+        return getragen
+      }),
+    }
+  })
+
+const verlaufRunden = rundenMitStand.map((r) => ({
+  runde: r,
+  name: rennen.find((x) => x.runde === r)?.name ?? `Runde ${r}`,
+}))
 
 const entscheidung = rennen.find((r) => r.titelentscheidung)
 const nf = new Intl.NumberFormat('de-DE')
@@ -93,6 +141,17 @@ const teamMeister = teamWertung.find((t) => t.meister)
       Der Titel fiel in Runde {entscheidung.runde}: <a href={pfad.rennen(entscheidung.id)}>{entscheidung.name}</a>
       am {datum(entscheidung.datum)}.
     </p>
+  )}
+
+  {verlauf.length > 0 && verlaufRunden.length > 1 && (
+    <section>
+      <h2>Punkteverlauf</h2>
+      <Verlauf
+        fahrer={verlauf}
+        runden={verlaufRunden}
+        streichresultate={saison.dropped_scores === 1}
+      />
+    </section>
   )}
 
   <section>

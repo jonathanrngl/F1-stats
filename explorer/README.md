@@ -16,6 +16,7 @@ Architektur und Begründungen: [`../docs/ARCHITEKTUR.md`](../docs/ARCHITEKTUR.md
 | 5 · Rekorddatenbank | **fertig** |
 | 6 · JSON-API und Fahrervergleich | **fertig** |
 | 7 · Lader für Rundendaten | **fertig**, Nachladen offen |
+| 8 · WM-Punkteverlauf | **fertig** |
 
 ## Entwickeln
 
