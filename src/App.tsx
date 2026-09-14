@@ -28,18 +28,40 @@ import TitleRace from './TitleRace'
 import ThemeSwitch from './ThemeSwitch'
 import DriverSearch from './DriverSearch'
 import DriverCareer from './DriverCareer'
+import ViewMenu, { type MenuGruppe } from './ViewMenu'
 import { nation } from './nations'
 import './App.css'
 
 type Tab = 'drivers' | 'constructors' | 'progression' | 'analysis' | 'title' | 'career'
 
-const TABS: { id: Tab; label: string; short: string }[] = [
-  { id: 'drivers', label: 'Fahrerwertung', short: 'Fahrer' },
-  { id: 'constructors', label: 'Konstrukteurswertung', short: 'Teams' },
-  { id: 'progression', label: 'WM-Verlauf', short: 'Verlauf' },
-  { id: 'analysis', label: 'Rennanalyse', short: 'Analyse' },
-  { id: 'title', label: 'Titelkampf', short: 'Titel' },
-  { id: 'career', label: 'Karriere', short: 'Karriere' },
+/*
+ * Die Ansichten, gruppiert für das Menü. Die Gruppen sind keine Dekoration:
+ * Die ersten beiden hängen am gewählten Rennen, die nächsten beiden an der
+ * ganzen Saison, und die Karriere an gar keiner Saison. Wer das weiß,
+ * versteht auch, warum manche Ansicht lädt und manche sofort da ist.
+ */
+const MENU: MenuGruppe<Tab>[] = [
+  {
+    titel: 'Stand nach dem Rennen',
+    eintraege: [
+      { id: 'drivers', label: 'Fahrerwertung', hint: 'Weltmeisterschaftsstand der Fahrer' },
+      { id: 'constructors', label: 'Konstrukteurswertung', hint: 'Dasselbe für die Teams, ab 1958' },
+    ],
+  },
+  {
+    titel: 'Über die Saison',
+    eintraege: [
+      { id: 'progression', label: 'WM-Verlauf', hint: 'Punkte aller Fahrer Rennen für Rennen' },
+      { id: 'title', label: 'Titelkampf', hint: 'Rückstand zur Spitze und wann der Titel feststand' },
+      { id: 'analysis', label: 'Rennanalyse', hint: 'Teamduelle, Startplatz zu Ziel, Zuverlässigkeit' },
+    ],
+  },
+  {
+    titel: 'Einzelne Fahrer',
+    eintraege: [
+      { id: 'career', label: 'Karriere', hint: 'Suche unter 881 Fahrern seit 1950' },
+    ],
+  },
 ]
 
 /** Tabs, die den rundenweisen Punkteverlauf brauchen (teuer: eine Anfrage je Rennen). */
@@ -487,19 +509,8 @@ export default function App() {
 
         {error && <div className="error">{error}</div>}
 
-        <nav className="tabs" aria-label="Ansicht">
-          {TABS.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              aria-current={tab === t.id ? 'page' : undefined}
-              className={tab === t.id ? 'active' : ''}
-              onClick={() => setTab(t.id)}
-            >
-              <span className="long">{t.label}</span>
-              <span className="short">{t.short}</span>
-            </button>
-          ))}
+        <nav className="viewbar" aria-label="Ansicht">
+          <ViewMenu gruppen={MENU} aktiv={tab} onSelect={setTab} />
         </nav>
 
         <div className="panel panel-body">
