@@ -1,0 +1,583 @@
+/**
+ * F1DB-Release in die eigene SQLite-Datenbank importieren.
+ *
+ *   node scripts/import.mjs [--csv <verzeichnis>] [--out <datei>]
+ *
+ * Ohne --csv lädt das Skript das aktuelle Release von GitHub. Der Import
+ * schreibt nichts, wenn eine Prüfung fehlschlägt: lieber keine Datenbank als
+ * eine mit falschen Zahlen.
+ */
+import { DatabaseSync } from 'node:sqlite'
+import { createWriteStream } from 'node:fs'
+import fs from 'node:fs/promises'
+import path from 'node:path'
+import { execFileSync } from 'node:child_process'
+import { Readable } from 'node:stream'
+import { pipeline } from 'node:stream/promises'
+
+const HIER = path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1'))
+const WURZEL = path.join(HIER, '..')
+const RELEASE = 'https://github.com/f1db/f1db/releases/latest/download/f1db-csv.zip'
+
+// --------------------------------------------------------------- Argumente
+
+const args = process.argv.slice(2)
+const argWert = (name) => {
+  const i = args.indexOf(name)
+  return i >= 0 ? args[i + 1] : undefined
+}
+const ZIEL = path.resolve(argWert('--out') ?? path.join(WURZEL, 'data', 'f1.sqlite'))
+let CSV = argWert('--csv') && path.resolve(argWert('--csv'))
+
+// ------------------------------------------------------------- CSV-Leser
+
+/**
+ * CSV nach Objekten. Eigener Leser statt Abhängigkeit: Die Dateien halten
+ * sich an RFC 4180, und mehr als Anführungszeichen, eingebettete Kommas und
+ * Zeilenumbrüche kommt darin nicht vor.
+ */
+function parseCSV(text) {
+  const zeilen = []
+  let zeile = []
+  let feld = ''
+  let inQuotes = false
+
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i]
+    if (inQuotes) {
+      if (c === '"') {
+        if (text[i + 1] === '"') {
+          feld += '"'
+          i++
+        } else inQuotes = false
+      } else feld += c
+    } else if (c === '"') inQuotes = true
+    else if (c === ',') {
+      zeile.push(feld)
+      feld = ''
+    } else if (c === '\n') {
+      zeile.push(feld)
+      zeilen.push(zeile)
+      zeile = []
+      feld = ''
+    } else if (c !== '\r') feld += c
+  }
+  if (feld !== '' || zeile.length) {
+    zeile.push(feld)
+    zeilen.push(zeile)
+  }
+
+  const kopf = zeilen.shift()
+  return zeilen
+    .filter((r) => r.length === kopf.length)
+    .map((r) => Object.fromEntries(kopf.map((h, i) => [h, r[i]])))
+}
+
+const lies = async (datei) => parseCSV(await fs.readFile(path.join(CSV, datei), 'utf8'))
+
+// Leerstring heißt in F1DB „nicht überliefert" – und wird hier NULL, nie 0.
+const txt = (v) => (v === undefined || v === '' ? null : v)
+const zahl = (v) => (v === undefined || v === '' ? null : Number(v))
+/** Startplatz 0 ist keine Position, sondern eine Lücke. */
+const platz = (v) => {
+  const n = zahl(v)
+  return n === null || n === 0 ? null : n
+}
+const ja = (v) => (v === 'true' ? 1 : 0)
+
+/*
+ * positionText-Werte, die eine Nennung ohne Start bezeichnen: nicht
+ * qualifiziert, nicht angetreten, zurückgezogen, ausgeschlossen. Mit genau
+ * dieser Liste stimmen die Startzahlen für alle 860 Fahrer mit den
+ * Gesamtzahlen von F1DB überein.
+ */
+const NICHT_GESTARTET = new Set(['DNQ', 'DNPQ', 'DNS', 'WD', 'DNA', 'EX', 'DNP'])
+
+// ------------------------------------------------------------- Beschaffung
+
+async function holeRelease() {
+  const tmp = path.join(WURZEL, 'data', '.f1db')
+  await fs.mkdir(tmp, { recursive: true })
+  const zip = path.join(tmp, 'f1db-csv.zip')
+
+  console.log('Lade F1DB-Release …')
+  const res = await fetch(RELEASE, { redirect: 'follow' })
+  if (!res.ok) throw new Error(`Release nicht erreichbar (HTTP ${res.status})`)
+  await pipeline(Readable.fromWeb(res.body), createWriteStream(zip))
+
+  const ziel = path.join(tmp, 'csv')
+  await fs.rm(ziel, { recursive: true, force: true })
+  // tar liegt auf Windows seit Jahren bei und kann ZIP entpacken.
+  await fs.mkdir(ziel, { recursive: true })
+  execFileSync('tar', ['-xf', zip, '-C', ziel], { stdio: 'pipe' })
+
+  const { size } = await fs.stat(zip)
+  console.log(`  ${(size / 1024 / 1024).toFixed(1)} MB entpackt nach ${path.relative(WURZEL, ziel)}`)
+  return ziel
+}
+
+// ----------------------------------------------------------------- Import
+
+async function importiere(db) {
+  const zaehler = {}
+  const einfuegen = (tabelle, spalten, zeilen, abbilden) => {
+    const platzhalter = spalten.map(() => '?').join(', ')
+    const stmt = db.prepare(
+      `INSERT OR REPLACE INTO ${tabelle} (${spalten.join(', ')}) VALUES (${platzhalter})`,
+    )
+    let n = 0
+    for (const z of zeilen) {
+      const werte = abbilden(z)
+      if (werte === null) continue
+      stmt.run(...werte)
+      n++
+    }
+    zaehler[tabelle] = n
+    return n
+  }
+
+  // -- Stammdaten ----------------------------------------------------------
+
+  einfuegen(
+    'country',
+    ['id', 'alpha3', 'ioc', 'name', 'demonym'],
+    await lies('f1db-countries.csv'),
+    (c) => [c.id, txt(c.alpha3Code), txt(c.iocCode), c.name, txt(c.demonym)],
+  )
+
+  einfuegen(
+    'driver',
+    [
+      'id', 'first_name', 'last_name', 'full_name', 'abbreviation', 'permanent_number',
+      'date_of_birth', 'date_of_death', 'place_of_birth', 'nationality_id',
+      'f1db_race_entries', 'f1db_race_starts', 'f1db_race_wins', 'f1db_podiums',
+      'f1db_pole_positions', 'f1db_fastest_laps', 'f1db_championship_wins',
+      'f1db_points', 'f1db_championship_points',
+    ],
+    await lies('f1db-drivers.csv'),
+    (d) => [
+      d.id, d.firstName, d.lastName, d.fullName, txt(d.abbreviation), txt(d.permanentNumber),
+      txt(d.dateOfBirth), txt(d.dateOfDeath), txt(d.placeOfBirth), txt(d.nationalityCountryId),
+      zahl(d.totalRaceEntries), zahl(d.totalRaceStarts), zahl(d.totalRaceWins), zahl(d.totalPodiums),
+      zahl(d.totalPolePositions), zahl(d.totalFastestLaps), zahl(d.totalChampionshipWins),
+      zahl(d.totalPoints), zahl(d.totalChampionshipPoints),
+    ],
+  )
+
+  einfuegen(
+    'constructor',
+    [
+      'id', 'name', 'full_name', 'nationality_id', 'f1db_race_entries', 'f1db_race_starts',
+      'f1db_race_wins', 'f1db_one_twos', 'f1db_podiums', 'f1db_pole_positions',
+      'f1db_fastest_laps', 'f1db_championship_wins',
+    ],
+    await lies('f1db-constructors.csv'),
+    (c) => [
+      c.id, c.name, txt(c.fullName), txt(c.countryId), zahl(c.totalRaceEntries),
+      zahl(c.totalRaceStarts), zahl(c.totalRaceWins), zahl(c.total1And2Finishes),
+      zahl(c.totalPodiums), zahl(c.totalPolePositions), zahl(c.totalFastestLaps),
+      zahl(c.totalChampionshipWins),
+    ],
+  )
+
+  einfuegen(
+    'constructor_chronology',
+    ['parent_id', 'constructor_id', 'sort_order', 'year_from', 'year_to'],
+    await lies('f1db-constructors-chronology.csv'),
+    (c) => [c.parentConstructorId, c.constructorId, Number(c.positionDisplayOrder), Number(c.yearFrom), zahl(c.yearTo)],
+  )
+
+  einfuegen(
+    'circuit',
+    ['id', 'name', 'full_name', 'previous_names', 'type', 'direction', 'place_name', 'country_id', 'latitude', 'longitude', 'length_km', 'turns'],
+    await lies('f1db-circuits.csv'),
+    (c) => [c.id, c.name, txt(c.fullName), txt(c.previousNames), txt(c.type), txt(c.direction), txt(c.placeName), txt(c.countryId), zahl(c.latitude), zahl(c.longitude), zahl(c.length), zahl(c.turns)],
+  )
+
+  einfuegen(
+    'circuit_layout',
+    ['id', 'circuit_id', 'effective', 'length_km', 'turns'],
+    await lies('f1db-circuits-layouts.csv'),
+    (l) => [l.id, l.circuitId, zahl(l.effective), zahl(l.length), zahl(l.turns)],
+  )
+
+  einfuegen(
+    'grand_prix',
+    ['id', 'name', 'full_name', 'short_name', 'abbreviation', 'country_id'],
+    await lies('f1db-grands-prix.csv'),
+    (g) => [g.id, g.name, txt(g.fullName), txt(g.shortName), txt(g.abbreviation), txt(g.countryId)],
+  )
+
+  // -- Saisons und Rennen --------------------------------------------------
+
+  const rennen = await lies('f1db-races.csv')
+  const jahre = await lies('f1db-seasons.csv')
+  const rennenJeJahr = new Map()
+  for (const r of rennen) rennenJeJahr.set(Number(r.year), (rennenJeJahr.get(Number(r.year)) ?? 0) + 1)
+
+  const ctorStandings = await lies('f1db-seasons-constructor-standings.csv')
+  const jahreMitCtor = new Set(ctorStandings.map((s) => Number(s.year)))
+
+  einfuegen(
+    'season',
+    ['year', 'race_count', 'has_constructors_championship'],
+    jahre,
+    (s) => [Number(s.year), rennenJeJahr.get(Number(s.year)) ?? 0, jahreMitCtor.has(Number(s.year)) ? 1 : 0],
+  )
+
+  // Sprint-Wochenenden erkennen: F1DB führt ein sprintRaceDate.
+  einfuegen(
+    'race',
+    [
+      'id', 'f1db_id', 'year', 'round', 'grand_prix_id', 'official_name', 'circuit_id',
+      'circuit_layout_id', 'date', 'course_length_km', 'turns', 'laps', 'distance_km',
+      'scheduled_laps', 'qualifying_format', 'had_sprint',
+      'drivers_title_decider', 'constructors_title_decider',
+    ],
+    rennen,
+    (r) => [
+      slugRennen(r), Number(r.id), Number(r.year), Number(r.round), r.grandPrixId,
+      txt(r.officialName), r.circuitId, txt(r.circuitLayoutId), r.date,
+      zahl(r.courseLength), zahl(r.turns), zahl(r.laps), zahl(r.distance),
+      zahl(r.scheduledLaps), txt(r.qualifyingFormat), r.sprintRaceDate ? 1 : 0,
+      ja(r.driversChampionshipDecider), ja(r.constructorsChampionshipDecider),
+    ],
+  )
+
+  // F1DB adressiert Rennen numerisch, die Plattform sprechend. Diese Karte
+  // übersetzt zwischen beidem.
+  const rennenId = new Map(rennen.map((r) => [r.id, slugRennen(r)]))
+
+  // -- Ergebnisse ----------------------------------------------------------
+
+  // Ein Fahrer kann in einem Rennen zwei Zeilen haben (geteiltes Auto).
+  // Der entry_index nummeriert sie in der Reihenfolge der Anzeige durch.
+  const zaehlerJeFahrer = new Map()
+  const naechsterIndex = (raceId, driverId) => {
+    const k = `${raceId}|${driverId}`
+    const n = zaehlerJeFahrer.get(k) ?? 0
+    zaehlerJeFahrer.set(k, n + 1)
+    return n
+  }
+
+  const ergebnisse = await lies('f1db-races-race-results.csv')
+  einfuegen(
+    'race_result',
+    [
+      'race_id', 'driver_id', 'constructor_id', 'engine_id', 'tyre_id', 'entry_index',
+      'display_order', 'position', 'position_text', 'classified', 'started', 'shared_car', 'laps',
+      'time_ms', 'gap_ms', 'gap_laps', 'reason_retired', 'points', 'pole_position',
+      'qualifying_position', 'grid_position', 'positions_gained', 'pit_stops',
+      'fastest_lap', 'driver_of_the_day', 'grand_slam',
+    ],
+    ergebnisse,
+    (r) => {
+      const race = rennenId.get(r.raceId)
+      if (!race) return null
+      const pos = zahl(r.positionNumber)
+      return [
+        race, r.driverId, r.constructorId, txt(r.engineManufacturerId), txt(r.tyreManufacturerId),
+        naechsterIndex(race, r.driverId), Number(r.positionDisplayOrder),
+        pos, r.positionText, pos === null ? 0 : 1,
+        NICHT_GESTARTET.has(r.positionText) ? 0 : 1, ja(r.sharedCar), zahl(r.laps),
+        zahl(r.timeMillis), zahl(r.gapMillis), zahl(r.gapLaps), txt(r.reasonRetired),
+        zahl(r.points) ?? 0, ja(r.polePosition), platz(r.qualificationPositionNumber),
+        platz(r.gridPositionNumber), zahl(r.positionsGained), zahl(r.pitStops),
+        ja(r.fastestLap), ja(r.driverOfTheDay), ja(r.grandSlam),
+      ]
+    },
+  )
+
+  einfuegen(
+    'qualifying_result',
+    ['race_id', 'driver_id', 'constructor_id', 'position', 'position_text', 'time_ms', 'q1_ms', 'q2_ms', 'q3_ms', 'gap_ms'],
+    await lies('f1db-races-qualifying-results.csv'),
+    (q) => {
+      const race = rennenId.get(q.raceId)
+      if (!race) return null
+      return [race, q.driverId, q.constructorId, platz(q.positionNumber), txt(q.positionText), zahl(q.timeMillis), zahl(q.q1Millis), zahl(q.q2Millis), zahl(q.q3Millis), zahl(q.gapMillis)]
+    },
+  )
+
+  einfuegen(
+    'starting_grid',
+    ['race_id', 'driver_id', 'constructor_id', 'position', 'position_text', 'qualifying_position', 'grid_penalty', 'grid_penalty_positions', 'time_ms'],
+    await lies('f1db-races-starting-grid-positions.csv'),
+    (g) => {
+      const race = rennenId.get(g.raceId)
+      if (!race) return null
+      return [race, g.driverId, g.constructorId, platz(g.positionNumber), txt(g.positionText), platz(g.qualificationPositionNumber), txt(g.gridPenalty), zahl(g.gridPenaltyPositions), zahl(g.timeMillis)]
+    },
+  )
+
+  einfuegen(
+    'sprint_result',
+    ['race_id', 'driver_id', 'constructor_id', 'position', 'position_text', 'classified', 'grid_position', 'points'],
+    await lies('f1db-races-sprint-race-results.csv'),
+    (s) => {
+      const race = rennenId.get(s.raceId)
+      if (!race) return null
+      const pos = zahl(s.positionNumber)
+      return [race, s.driverId, s.constructorId, pos, s.positionText, pos === null ? 0 : 1, platz(s.gridPositionNumber), zahl(s.points) ?? 0]
+    },
+  )
+
+  einfuegen(
+    'pit_stop',
+    ['race_id', 'driver_id', 'stop', 'lap', 'duration_ms'],
+    await lies('f1db-races-pit-stops.csv'),
+    (p) => {
+      const race = rennenId.get(p.raceId)
+      if (!race) return null
+      return [race, p.driverId, Number(p.stop), Number(p.lap), zahl(p.timeMillis)]
+    },
+  )
+
+  // -- Wertungen -----------------------------------------------------------
+
+  einfuegen(
+    'race_driver_standing',
+    ['race_id', 'driver_id', 'position', 'position_text', 'points', 'positions_gained', 'championship_won'],
+    await lies('f1db-races-driver-standings.csv'),
+    (s) => {
+      const race = rennenId.get(s.raceId)
+      if (!race) return null
+      return [race, s.driverId, platz(s.positionNumber), txt(s.positionText), zahl(s.points) ?? 0, zahl(s.positionsGained), ja(s.championshipWon)]
+    },
+  )
+
+  einfuegen(
+    'race_constructor_standing',
+    ['race_id', 'constructor_id', 'position', 'points', 'championship_won'],
+    await lies('f1db-races-constructor-standings.csv'),
+    (s) => {
+      const race = rennenId.get(s.raceId)
+      if (!race) return null
+      return [race, s.constructorId, platz(s.positionNumber), zahl(s.points) ?? 0, ja(s.championshipWon)]
+    },
+  )
+
+  einfuegen(
+    'season_driver_standing',
+    ['year', 'driver_id', 'position', 'position_text', 'points', 'championship_won'],
+    await lies('f1db-seasons-driver-standings.csv'),
+    (s) => [Number(s.year), s.driverId, platz(s.positionNumber), txt(s.positionText), zahl(s.points) ?? 0, ja(s.championshipWon)],
+  )
+
+  einfuegen(
+    'season_constructor_standing',
+    ['year', 'constructor_id', 'position', 'points', 'championship_won'],
+    ctorStandings,
+    (s) => [Number(s.year), s.constructorId, platz(s.positionNumber), zahl(s.points) ?? 0, ja(s.championshipWon)],
+  )
+
+  return zaehler
+}
+
+/** Sprechende, zugleich als Adresse taugliche Kennung eines Rennens. */
+function slugRennen(r) {
+  return `${r.grandPrixId}-grand-prix-${r.year}`
+}
+
+// ------------------------------------------------------------- Abgeleitetes
+
+/**
+ * Saisons mit Streichresultaten erkennen – aus den Daten, nicht aus einer
+ * gepflegten Regeltabelle. Liegt der WM-Stand eines Fahrers unter der Summe
+ * seiner Rennpunkte, wurde gestrichen. Falschmeldungen sind ausgeschlossen:
+ * Sprintpunkte können den WM-Stand nur heben.
+ */
+function markiereStreichresultate(db) {
+  const jahre = db
+    .prepare(
+      `SELECT r.year AS jahr
+         FROM race_result rr
+         JOIN race r ON r.id = rr.race_id
+         JOIN season_driver_standing sds
+              ON sds.year = r.year AND sds.driver_id = rr.driver_id
+        GROUP BY r.year, rr.driver_id, sds.points
+       HAVING SUM(rr.points) > sds.points + 0.001`,
+    )
+    .all()
+    .map((z) => z.jahr)
+
+  const einmalig = [...new Set(jahre)]
+  const stmt = db.prepare('UPDATE season SET dropped_scores = 1 WHERE year = ?')
+  for (const j of einmalig) stmt.run(j)
+  return einmalig.sort((a, b) => a - b)
+}
+
+/**
+ * Deckung je Kennzahl auszählen: ab wann belegt und wie vollständig. Die
+ * Oberfläche fragt das, bevor sie eine Null anzeigt.
+ */
+function zaehleDeckung(db) {
+  const messungen = [
+    ['race_result', 'Ergebnisse', 'SELECT MIN(r.year) a, MAX(r.year) b, COUNT(DISTINCT rr.race_id) n FROM race_result rr JOIN race r ON r.id=rr.race_id', 'F1DB'],
+    ['pole_position', 'Pole-Position', "SELECT MIN(r.year) a, MAX(r.year) b, COUNT(DISTINCT rr.race_id) n FROM race_result rr JOIN race r ON r.id=rr.race_id WHERE rr.pole_position=1", 'F1DB'],
+    ['fastest_lap', 'Schnellste Rennrunde', "SELECT MIN(r.year) a, MAX(r.year) b, COUNT(DISTINCT rr.race_id) n FROM race_result rr JOIN race r ON r.id=rr.race_id WHERE rr.fastest_lap=1", 'F1DB'],
+    ['grid_position', 'Startplatz', 'SELECT MIN(r.year) a, MAX(r.year) b, COUNT(DISTINCT rr.race_id) n FROM race_result rr JOIN race r ON r.id=rr.race_id WHERE rr.grid_position IS NOT NULL', 'F1DB'],
+    ['qualifying_time', 'Qualifying-Zeit', 'SELECT MIN(r.year) a, MAX(r.year) b, COUNT(DISTINCT q.race_id) n FROM qualifying_result q JOIN race r ON r.id=q.race_id WHERE q.time_ms IS NOT NULL', 'F1DB'],
+    ['qualifying_segments', 'Q1/Q2/Q3 getrennt', 'SELECT MIN(r.year) a, MAX(r.year) b, COUNT(DISTINCT q.race_id) n FROM qualifying_result q JOIN race r ON r.id=q.race_id WHERE q.q3_ms IS NOT NULL', 'F1DB'],
+    ['pit_stop', 'Boxenstopps', 'SELECT MIN(r.year) a, MAX(r.year) b, COUNT(DISTINCT p.race_id) n FROM pit_stop p JOIN race r ON r.id=p.race_id', 'F1DB'],
+    ['driver_of_the_day', 'Fahrer des Tages', 'SELECT MIN(r.year) a, MAX(r.year) b, COUNT(DISTINCT rr.race_id) n FROM race_result rr JOIN race r ON r.id=rr.race_id WHERE rr.driver_of_the_day=1', 'F1DB'],
+    ['lap_position', 'Positionsverlauf je Runde', 'SELECT MIN(r.year) a, MAX(r.year) b, COUNT(DISTINCT l.race_id) n FROM lap_position l JOIN race r ON r.id=l.race_id', 'Jolpica'],
+  ]
+
+  const setze = db.prepare(
+    'INSERT OR REPLACE INTO coverage (metric, first_year, last_year, completeness, source, note) VALUES (?, ?, ?, ?, ?, ?)',
+  )
+  const ergebnis = []
+  for (const [metric, note, sql, quelle] of messungen) {
+    const z = db.prepare(sql).get()
+    if (!z || z.a === null) {
+      setze.run(metric, null, null, 0, quelle, note + ' – nicht geladen')
+      ergebnis.push({ metric, note, von: null, bis: null, anteil: 0 })
+      continue
+    }
+    const gesamt = db.prepare('SELECT COUNT(*) n FROM race WHERE year BETWEEN ? AND ?').get(z.a, z.b).n
+    const anteil = gesamt > 0 ? z.n / gesamt : 0
+    setze.run(metric, z.a, z.b, anteil, quelle, note)
+    ergebnis.push({ metric, note, von: z.a, bis: z.b, anteil })
+  }
+  return ergebnis
+}
+
+// ------------------------------------------------------------------ Proben
+
+/**
+ * Gegenproben. Die erste Gruppe prüft die eigene Zählung gegen die
+ * Gesamtzahlen, die F1DB selbst mitliefert – zwei unabhängige Wege zum selben
+ * Wert. Die zweite prüft Einzelfälle gegen die Rekordbücher.
+ */
+function pruefe(db) {
+  const fehler = []
+  const meldung = (ok, text) => {
+    if (!ok) fehler.push(text)
+    return ok
+  }
+
+  // Fremdschlüssel
+  const fk = db.prepare('PRAGMA foreign_key_check').all()
+  meldung(fk.length === 0, `${fk.length} verletzte Fremdschlüssel`)
+
+  // Je Rennen genau ein Sieger – außer bei geteiltem Auto
+  const mehrfachSieger = db
+    .prepare(
+      `SELECT race_id, COUNT(*) n, SUM(shared_car) geteilt
+         FROM race_result WHERE position = 1 GROUP BY race_id HAVING n > 1`,
+    )
+    .all()
+  const ohneErklaerung = mehrfachSieger.filter((r) => r.geteilt === 0)
+  meldung(
+    ohneErklaerung.length === 0,
+    `${ohneErklaerung.length} Rennen mit mehreren Siegern ohne shared_car-Kennzeichnung`,
+  )
+
+  // Startplatz 0 darf nicht überlebt haben
+  const nullPlatz = db.prepare('SELECT COUNT(*) n FROM race_result WHERE grid_position = 0').get().n
+  meldung(nullPlatz === 0, `${nullPlatz} Ergebniszeilen mit Startplatz 0 statt NULL`)
+
+  // Eigene Zählung gegen die Gesamtzahlen von F1DB
+  const abgleich = db
+    .prepare(
+      `SELECT d.id, d.full_name,
+              d.f1db_race_entries AS soll_nennungen,
+              d.f1db_race_starts  AS soll_starts,
+              d.f1db_race_wins    AS soll_siege,
+              d.f1db_pole_positions AS soll_poles,
+              d.f1db_fastest_laps AS soll_fl,
+              (SELECT COUNT(DISTINCT race_id) FROM race_result WHERE driver_id = d.id) AS ist_nennungen,
+              (SELECT COUNT(DISTINCT race_id) FROM race_result WHERE driver_id = d.id AND started = 1) AS ist_starts,
+              (SELECT COUNT(DISTINCT race_id) FROM race_result WHERE driver_id = d.id AND position = 1) AS ist_siege,
+              (SELECT COUNT(DISTINCT race_id) FROM race_result WHERE driver_id = d.id AND pole_position = 1) AS ist_poles,
+              (SELECT COUNT(DISTINCT race_id) FROM race_result WHERE driver_id = d.id AND fastest_lap = 1) AS ist_fl
+         FROM driver d
+        WHERE d.f1db_race_starts > 0`,
+    )
+    .all()
+
+  const abweichung = (feld) =>
+    abgleich.filter((z) => z['soll_' + feld] !== null && z['soll_' + feld] !== z['ist_' + feld])
+
+  for (const [feld, label] of [['nennungen', 'Nennungen'], ['starts', 'Starts'], ['siege', 'Siege'], ['poles', 'Pole-Positions'], ['fl', 'schnellste Runden']]) {
+    const ab = abweichung(feld)
+    meldung(
+      ab.length === 0,
+      `${label}: ${ab.length} von ${abgleich.length} Fahrern weichen von F1DB ab` +
+        (ab.length ? ` (z. B. ${ab.slice(0, 3).map((z) => `${z.full_name} ${z['ist_' + feld]}≠${z['soll_' + feld]}`).join(', ')})` : ''),
+    )
+  }
+
+  // Einzelfälle gegen die Rekordbücher
+  const STICHPROBEN = [
+    ['juan-manuel-fangio', { starts: 51, siege: 24, poles: 29 }],
+    ['jim-clark', { starts: 72, siege: 25, poles: 33 }],
+    ['ayrton-senna', { starts: 161, siege: 41, poles: 65 }],
+  ]
+  for (const [id, soll] of STICHPROBEN) {
+    const z = abgleich.find((x) => x.id === id)
+    if (!z) {
+      meldung(false, `Stichprobe ${id} nicht gefunden`)
+      continue
+    }
+    for (const [feld, wert] of Object.entries(soll)) {
+      meldung(z['ist_' + feld] === wert, `${z.full_name}: ${feld} ${z['ist_' + feld]} statt ${wert}`)
+    }
+  }
+
+  // Titelentscheidungen: F1DB markiert sie, unabhängig von der eigenen Rechnung
+  const entschieden = db
+    .prepare("SELECT year, round FROM race WHERE drivers_title_decider = 1 AND year IN (2020, 2021, 2023, 2024)")
+    .all()
+  const erwartet = { 2020: 14, 2021: 22, 2023: 17, 2024: 22 }
+  for (const [jahr, runde] of Object.entries(erwartet)) {
+    const treffer = entschieden.find((e) => e.year === Number(jahr))
+    meldung(treffer?.round === runde, `Titelentscheidung ${jahr}: Runde ${treffer?.round ?? '—'} statt ${runde}`)
+  }
+
+  return fehler
+}
+
+// -------------------------------------------------------------------- Lauf
+
+const t0 = Date.now()
+await fs.mkdir(path.dirname(ZIEL), { recursive: true })
+if (!CSV) CSV = await holeRelease()
+
+await fs.rm(ZIEL, { force: true })
+const db = new DatabaseSync(ZIEL)
+db.exec('PRAGMA journal_mode = WAL')
+db.exec(await fs.readFile(path.join(HIER, 'schema.sql'), 'utf8'))
+
+db.exec('BEGIN')
+const zaehler = await importiere(db)
+db.exec('COMMIT')
+
+const streich = markiereStreichresultate(db)
+const deckung = zaehleDeckung(db)
+const fehler = pruefe(db)
+
+console.log('\nImportiert:')
+for (const [t, n] of Object.entries(zaehler)) console.log(`  ${t.padEnd(28)} ${String(n).padStart(7)}`)
+
+console.log('\nSaisons mit Streichresultaten:', streich.length ? `${streich.length} (${streich[0]}–${streich.at(-1)})` : 'keine')
+
+console.log('\nDeckung:')
+for (const d of deckung) {
+  const spanne = d.von === null ? '—' : `${d.von}–${d.bis}`
+  console.log(`  ${d.note.padEnd(26)} ${spanne.padEnd(10)} ${(d.anteil * 100).toFixed(0).padStart(3)}% der Rennen`)
+}
+
+if (fehler.length) {
+  console.error('\nPRÜFUNG FEHLGESCHLAGEN:')
+  for (const f of fehler) console.error('  ✗ ' + f)
+  db.close()
+  await fs.rm(ZIEL, { force: true })
+  console.error('\nDatenbank wurde verworfen – lieber keine als eine mit falschen Zahlen.')
+  process.exit(1)
+}
+
+const { size } = await fs.stat(ZIEL)
+db.close()
+console.log(`\nAlle Prüfungen bestanden. ${path.relative(WURZEL, ZIEL)}, ${(size / 1024 / 1024).toFixed(1)} MB, ${((Date.now() - t0) / 1000).toFixed(1)} s.`)

@@ -126,28 +126,42 @@ ausschließlich 2023 und später ab.**
 Das ist der ehrliche Teil. Mehrere Punkte der Spezifikation sind für die
 Formel-1-Geschichte schlicht nicht verfügbar:
 
+Gemessen am Release v2026.14.0, ausgezählt als Anteil der Rennen je Jahrzehnt,
+für die das Feld belegt ist. Die 94 Prozent der 2020er sind die noch laufende
+Saison 2026, keine Lücke.
+
 | Datum | Verfügbar ab | Quelle | Anmerkung |
 |---|---|---|---|
-| Ergebnisse, Startplätze, Punkte | 1950 | F1DB | vollständig |
+| Ergebnisse, Punkte, Zielabstände | 1950 | F1DB | lückenlos |
+| Startplätze und Positionsgewinn | 1950 | F1DB | lückenlos |
+| **Pole-Positions** | **1950** | F1DB | lückenlos – getrennt vom Startplatz geführt |
+| **Schnellste Rennrunde** | **1950** | F1DB | lückenlos |
 | Wertungen (Fahrer/Konstrukteure) | 1950 / 1958 | F1DB | Konstrukteurs-WM erst ab 1958 |
-| Qualifying-Positionen | 1950 | F1DB | |
-| Qualifying-Zeiten Q1/Q2/Q3 | 2006 | F1DB | 2005 nur Q1/Q2, 1996–2004 eine Zeit, davor keine |
-| Schnellste Rennrunde | 2004 | F1DB | davor lückenhaft bis gar nicht |
-| Boxenstopps | 2011 | F1DB | gemessen: 2010 liefert null |
-| Positionsverlauf je Runde | 1996 | Jolpica | gemessen: 1995 liefert null |
+| Qualifying-Zeit | 1950 | F1DB | eine Zeit je Fahrer; ab 2006 stattdessen Q1/Q2/Q3 |
+| Q1/Q2/Q3 getrennt | 2006 | F1DB | davor gab es die Segmente nicht |
+| **Boxenstopps** | **1994** | F1DB | ab 2000 lückenlos |
+| Fahrer des Tages | 2016 | F1DB | Publikumsabstimmung, erst seit 2016 |
+| Positionsverlauf je Runde | 1996 | Jolpica | F1DB führt keine Rundendaten; 1995 liefert null Zeilen |
 | **Führungsrunden** | **1996** | abgeleitet aus Rundendaten | vor 1996 **nicht ermittelbar** |
-| **Führungs-Kilometer** | **1996** | Führungsrunden × Streckenlänge | Näherung, Streckenlänge ändert sich mit Layout |
+| **Führungs-Kilometer** | **1996** | Führungsrunden × `courseLength` | Streckenlänge steht je Rennen in F1DB |
 | **Reifenstints** | **2023** | OpenF1 | vorher **nicht verfügbar** |
 | **Safety-Car-Phasen** | **2023** | OpenF1 | vorher **nicht verfügbar** |
 | **Wetter** | **2023** | OpenF1 | vorher **nicht verfügbar** |
-| Fahrer des Tages | 2016 | F1DB | Publikumsabstimmung, erst seit 2016 |
 
-**Folgerung für die Spezifikation:** Führungsrunden, Führungs-km, Stints,
-Safety-Car und Wetter dürfen nicht als Kernkennzahlen eines Fahrerprofils oder
-einer Streckenseite geführt werden. Sie gehören in Abschnitte, die sich selbst
-als zeitlich begrenzt ausweisen. Ein Profil von Fangio, das „Führungsrunden:
-0“ zeigt, ist falsch – es muss „nicht überliefert“ heißen. Diese Regel gilt im
-Bestand bereits für schnellste Runden und ist konsequent auszuweiten.
+**Korrektur gegenüber der ersten Fassung dieses Dokuments.** Dort standen
+Pole-Positions ab 1996, schnellste Runden ab 2004 und Boxenstopps ab 2011.
+Das waren die Grenzen *der Jolpica-API*, an der die heutige Anwendung hängt –
+nicht die der Daten. F1DB führt alle drei seit 1950 beziehungsweise 1994.
+Fangio hat dort 29 Pole-Positions und 23 schnellste Runden, beides korrekt.
+Die Einschränkung im Karriere-Tab („schnellste Runden erst ab 2004“) entfällt
+mit dem Umstieg.
+
+**Folgerung für die Spezifikation:** Nur noch vier Kennzahlen sind zeitlich
+begrenzt – Führungsrunden und Führungs-Kilometer ab 1996, Stints, Safety-Car
+und Wetter ab 2023. Sie dürfen keine Kernkennzahlen eines Fahrerprofils sein,
+sondern gehören in Abschnitte, die sich selbst als zeitlich begrenzt
+ausweisen. Ein Profil von Fangio, das „Führungsrunden: 0“ zeigt, ist falsch –
+es muss „nicht überliefert“ heißen.
 
 ---
 
