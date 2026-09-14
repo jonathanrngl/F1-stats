@@ -12,7 +12,9 @@ Architektur und Begründungen: [`../docs/ARCHITEKTUR.md`](../docs/ARCHITEKTUR.md
 | 1 · Import F1DB, Validierung | **fertig** |
 | 2 · Statistik-Engine, Tests | **fertig** |
 | 3 · Seitengerüst Astro, Fahrerprofile | **fertig** |
-| 4 · Team-, Saison-, Renn-, Streckenseiten | offen |
+| 4 · Team-, Saison-, Renn-, Streckenseiten | **fertig** |
+| 5 · Rekorddatenbank | **fertig** |
+| 6 · Fahrer- und Teamkollegen-Vergleich | offen |
 
 ## Entwickeln
 

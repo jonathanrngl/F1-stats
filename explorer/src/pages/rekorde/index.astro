@@ -1,8 +1,342 @@
 ---
 import Seite from '../../layouts/Seite.astro'
+import { pfad, db } from '../../lib/db.js'
+import {
+  altersrekord, altersrekordMeister, groessteAufholjagden, laengsteKarrieren,
+  laengstePauseZwischenSiegen, laengsteSerien, meistePlaetzeGutgemacht, meistePodien,
+  meistePoles, meistePunkte, meisteSchnellsteRunden, meisteSiege, meisteStarts,
+  meisteTitel, teamRekorde,
+} from '../../engine/records.js'
+
+const d = db()
+const N = 10
+
+const nf = new Intl.NumberFormat('de-DE')
+const ganz = (v) => nf.format(Math.round(v))
+const jahreAlt = (v) => {
+  const j = Math.floor(v)
+  const tage = Math.round((v - j) * 365.25)
+  return `${j} J. ${tage} T.`
+}
+const jahreSpanne = (v) => `${nf.format(Math.round(v * 10) / 10)} Jahre`
+
+/*
+ * Jeder Block nennt seine eigene Einheit und, wo nötig, seine Einschränkung.
+ * Eine Bestenliste ohne Angabe, worüber sie zählt, ist eine Zahlenwand.
+ */
+const bloecke = [
+  {
+    titel: 'Meiste Siege',
+    liste: meisteSiege(d, N),
+    format: ganz,
+  },
+  {
+    titel: 'Meiste Podien',
+    liste: meistePodien(d, N),
+    format: ganz,
+  },
+  {
+    titel: 'Meiste Pole-Positions',
+    liste: meistePoles(d, N),
+    format: ganz,
+    hinweis: 'Schnellste Zeit im Qualifying – nicht der Startplatz, den Strafen verschieben.',
+  },
+  {
+    titel: 'Meiste Starts',
+    liste: meisteStarts(d, N),
+    format: ganz,
+    hinweis: 'Gezählt werden Starts, nicht Nennungen: Wer sich nicht qualifizierte, war nicht dabei.',
+  },
+  {
+    titel: 'Meiste schnellste Runden',
+    liste: meisteSchnellsteRunden(d, N),
+    format: ganz,
+  },
+  {
+    titel: 'Meiste Weltmeisterschaften',
+    liste: meisteTitel(d, N),
+    format: ganz,
+  },
+  {
+    titel: 'Meiste Punkte in Rennen',
+    liste: meistePunkte(d, N),
+    format: (v) => nf.format(Math.round(v)),
+    hinweis:
+      'Nur bedingt vergleichbar: Das Punktesystem hat sich seit 1950 mehr als ein Dutzend Mal geändert, und bis 1990 verfiel ein Teil der Punkte als Streichresultat.',
+  },
+]
+
+const serien = [
+  { titel: 'Längste Siegesserie', liste: laengsteSerien(d, 'siege', N) },
+  { titel: 'Längste Podiumsserie', liste: laengsteSerien(d, 'podien', N) },
+  { titel: 'Längste Punkteserie', liste: laengsteSerien(d, 'punkte', N) },
+  { titel: 'Längste Serie ohne Ausfall', liste: laengsteSerien(d, 'zielankuenfte', N) },
+]
+
+const alter = [
+  { titel: 'Jüngste Sieger', liste: altersrekord(d, 'sieg', 'jung', N) },
+  { titel: 'Älteste Sieger', liste: altersrekord(d, 'sieg', 'alt', N) },
+  { titel: 'Jüngste Polesetter', liste: altersrekord(d, 'pole', 'jung', N) },
+  { titel: 'Jüngste Weltmeister', liste: altersrekordMeister(d, 'jung', N) },
+  { titel: 'Älteste Weltmeister', liste: altersrekordMeister(d, 'alt', N) },
+]
+
+const aufholjagden = groessteAufholjagden(d, N)
+const plaetze = meistePlaetzeGutgemacht(d, N)
+const karrieren = laengsteKarrieren(d, N)
+const pausen = laengstePauseZwischenSiegen(d, N)
+
+const teamSiege = teamRekorde(d, 'siege', N)
+const teamTitel = teamRekorde(d, 'titel', N)
 ---
 
-<Seite titel="Bestmarken der Formel 1" beschreibung="Bestmarken der Formel 1 – in Arbeit.">
+<Seite
+  titel="Formel-1-Rekorde – Bestmarken seit 1950"
+  beschreibung="Meiste Siege, Podien und Pole-Positions, längste Serien, jüngste und älteste Rekordhalter – jeder Eintrag mit Verweis auf das Rennen."
+>
   <h1>Rekorde</h1>
-  <p class="lead">Diese Übersicht entsteht in Schritt 4.</p>
+  <p class="lead">
+    Bestmarken seit 1950, aus den Rennergebnissen gerechnet statt aus einer gepflegten Liste
+    abgeschrieben. Jeder Eintrag verweist auf den Fahrer und, wo es einen gibt, auf das Rennen.
+  </p>
+
+  <div class="raster">
+    {bloecke.map((b) => (
+      <section>
+        <h2>{b.titel}</h2>
+        {b.hinweis && <p class="hinweis">{b.hinweis}</p>}
+        <ol class="rangliste">
+          {b.liste.map((e) => (
+            <li>
+              <a href={pfad.fahrer(e.driverId)}>{e.name}</a>
+              <b>{b.format(e.wert)}</b>
+            </li>
+          ))}
+        </ol>
+      </section>
+    ))}
+  </div>
+
+  <h2 class="gruppe">Serien</h2>
+  <p class="lead">
+    Ununterbrochene Folgen über die Starts eines Fahrers. Rennen, die er ausließ, unterbrechen
+    keine Serie – er war nicht dabei, konnte also nichts verlieren.
+  </p>
+  <div class="raster">
+    {serien.map((s) => (
+      <section>
+        <h2>{s.titel}</h2>
+        <ol class="rangliste breit">
+          {s.liste.map((e) => (
+            <li>
+              <span>
+                <a href={pfad.fahrer(e.driverId)}>{e.name}</a>
+                <i>{e.rennen}</i>
+              </span>
+              <b>{e.wert}</b>
+            </li>
+          ))}
+        </ol>
+      </section>
+    ))}
+  </div>
+
+  <h2 class="gruppe">Alter</h2>
+  <p class="lead">
+    Fahrer ohne überliefertes Geburtsdatum fehlen in diesen Listen – ein fehlendes Datum ist
+    kein Alter null.
+  </p>
+  <div class="raster">
+    {alter.map((a) => (
+      <section>
+        <h2>{a.titel}</h2>
+        <ol class="rangliste breit">
+          {a.liste.map((e) => (
+            <li>
+              <span>
+                <a href={pfad.fahrer(e.driverId)}>{e.name}</a>
+                <i>{e.raceId ? <a class="leise" href={pfad.rennen(e.raceId)}>{e.rennen}</a> : e.rennen}</i>
+              </span>
+              <b>{jahreAlt(e.wert)}</b>
+            </li>
+          ))}
+        </ol>
+      </section>
+    ))}
+  </div>
+
+  <h2 class="gruppe">Aufholjagden und Karrieren</h2>
+  <div class="raster">
+    <section>
+      <h2>Siege von weit hinten</h2>
+      <p class="hinweis">Startplatz, von dem aus das Rennen gewonnen wurde.</p>
+      <ol class="rangliste breit">
+        {aufholjagden.map((e) => (
+          <li>
+            <span>
+              <a href={pfad.fahrer(e.driverId)}>{e.name}</a>
+              <i><a class="leise" href={pfad.rennen(e.raceId)}>{e.rennen}</a></i>
+            </span>
+            <b>P{e.wert}</b>
+          </li>
+        ))}
+      </ol>
+    </section>
+
+    <section>
+      <h2>Meiste Plätze in einem Rennen</h2>
+      <p class="hinweis">Startplatz minus Zielposition, nur gewertete Rennen.</p>
+      <ol class="rangliste breit">
+        {plaetze.map((e) => (
+          <li>
+            <span>
+              <a href={pfad.fahrer(e.driverId)}>{e.name}</a>
+              <i><a class="leise" href={pfad.rennen(e.raceId)}>{e.rennen}</a></i>
+            </span>
+            <b>+{e.wert}</b>
+          </li>
+        ))}
+      </ol>
+    </section>
+
+    <section>
+      <h2>Längste Karrieren</h2>
+      <p class="hinweis">Vom ersten bis zum letzten Start, Pausen eingeschlossen.</p>
+      <ol class="rangliste breit">
+        {karrieren.map((e) => (
+          <li>
+            <span>
+              <a href={pfad.fahrer(e.driverId)}>{e.name}</a>
+              <i>{e.rennen}</i>
+            </span>
+            <b>{jahreSpanne(e.wert)}</b>
+          </li>
+        ))}
+      </ol>
+    </section>
+
+    <section>
+      <h2>Längste Pause zwischen zwei Siegen</h2>
+      <ol class="rangliste breit">
+        {pausen.map((e) => (
+          <li>
+            <span>
+              <a href={pfad.fahrer(e.driverId)}>{e.name}</a>
+              <i><a class="leise" href={pfad.rennen(e.raceId)}>{e.rennen}</a></i>
+            </span>
+            <b>{jahreSpanne(e.wert)}</b>
+          </li>
+        ))}
+      </ol>
+    </section>
+  </div>
+
+  <h2 class="gruppe">Teams</h2>
+  <div class="raster">
+    <section>
+      <h2>Meiste Siege</h2>
+      <ol class="rangliste">
+        {teamSiege.map((t) => (
+          <li><a href={pfad.team(t.id)}>{t.name}</a><b>{t.wert}</b></li>
+        ))}
+      </ol>
+    </section>
+    <section>
+      <h2>Meiste Konstrukteurstitel</h2>
+      <ol class="rangliste">
+        {teamTitel.map((t) => (
+          <li><a href={pfad.team(t.id)}>{t.name}</a><b>{t.wert}</b></li>
+        ))}
+      </ol>
+    </section>
+  </div>
 </Seite>
+
+<style>
+  .raster {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(19rem, 100%), 1fr));
+    gap: 1.25rem 2rem;
+    margin-top: 1.5rem;
+  }
+
+  section { min-width: 0; }
+
+  h2 {
+    font-size: 1.02rem;
+    margin: 0 0 0.5rem;
+  }
+
+  h2.gruppe {
+    margin: 3rem 0 0;
+    padding-top: 1.25rem;
+    border-top: 2px solid var(--border);
+    font-size: 1.3rem;
+  }
+
+  h2.gruppe + .lead { margin-top: 0.4rem; }
+
+  .hinweis {
+    margin: 0 0 0.5rem;
+    font-size: 0.76rem;
+    color: var(--muted);
+    text-wrap: pretty;
+  }
+
+  .rangliste { margin: 0; padding: 0; list-style: none; counter-reset: rang; }
+
+  .rangliste li {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    padding: 0.38rem 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.88rem;
+  }
+
+  .rangliste li::before {
+    counter-increment: rang;
+    content: counter(rang);
+    min-width: 1.15rem;
+    flex: none;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+    font-size: 0.76rem;
+  }
+
+  .rangliste span { flex: 1; min-width: 0; display: grid; }
+  .rangliste > li > a { flex: 1; min-width: 0; }
+
+  .rangliste a {
+    color: var(--ink);
+    text-decoration: none;
+    font-weight: 550;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .rangliste a:hover { color: var(--accent); }
+
+  .rangliste i {
+    font-style: normal;
+    font-size: 0.75rem;
+    color: var(--muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .rangliste i a.leise { color: var(--muted); font-weight: 400; }
+  .rangliste i a.leise:hover { color: var(--accent); }
+
+  .rangliste b {
+    flex: none;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+    font-weight: 650;
+  }
+
+  /* Die erste Zeile jeder Liste ist der Rekord – sie trägt die Akzentfarbe. */
+  .rangliste li:first-child b { color: var(--accent); }
+</style>
