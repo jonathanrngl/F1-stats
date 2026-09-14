@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { beschreibe, uebersetze } from '../lib/frage.js'
 
 /*
  * Der Data Explorer.
@@ -66,6 +67,8 @@ export default function Explorer() {
   const [kennzahlen, setKennzahlen] = useState(STANDARD)
   const [sortiere, setSortiere] = useState('siege')
   const [absteigend, setAbsteigend] = useState(true)
+  const [frage, setFrage] = useState('')
+  const [uebersetzt, setUebersetzt] = useState(null)
   const [filter, setFilter] = useState({
     vonJahr: '', bisJahr: '', strecke: '', team: '', fahrer: '',
     minStarts: '', minSiege: '', minPodien: '',
@@ -172,6 +175,33 @@ export default function Explorer() {
 
   const setzeFilter = (k, v) => setFilter((f) => ({ ...f, [k]: v }))
 
+  /*
+   * Eine Frage anwenden heißt: die Bedienelemente stellen, nicht eine Antwort
+   * ausgeben. Was danach in der Tabelle steht, hat der Explorer über die
+   * echten Daten gerechnet – die Übersetzung kann höchstens die falsche Frage
+   * gestellt haben, und die steht sichtbar darüber.
+   */
+  const wendeFrageAn = (e) => {
+    e?.preventDefault()
+    if (!frage.trim() || !daten) return
+    const a = uebersetze(frage, {
+      strecken: daten.strecke.map((id, i) => ({ id, name: daten.streckenNamen[i] })),
+      teams: daten.team.map((id, i) => ({ id, name: daten.teamNamen[i] })),
+      fahrer: daten.fahrer.map((id, i) => ({ id, name: daten.fahrerNamen[i] })),
+    })
+    setDimension(a.dimension)
+    setKennzahlen(a.kennzahlen)
+    setSortiere(a.sortiere)
+    setAbsteigend(a.sortiere !== 'oZiel' && a.sortiere !== 'oStart')
+    setFilter({
+      vonJahr: '', bisJahr: '', strecke: '', team: '', fahrer: '',
+      minStarts: '', minSiege: '', minPodien: '',
+      nurSieger: false, nurVonHinten: false,
+      ...a.filter,
+    })
+    setUebersetzt(a)
+  }
+
   const kippeKennzahl = (k) =>
     setKennzahlen((alt) => {
       if (alt.includes(k)) return alt.length > 1 ? alt.filter((x) => x !== k) : alt
@@ -222,6 +252,43 @@ export default function Explorer() {
 
   return (
     <div className="explorer">
+      <form className="frage" onSubmit={wendeFrageAn}>
+        <label htmlFor="frage-feld">Frage stellen</label>
+        <div className="zeile">
+          <input
+            id="frage-feld"
+            type="search"
+            value={frage}
+            placeholder="Wer hat die meisten Siege in Monaco?"
+            onChange={(e) => setFrage(e.target.value)}
+          />
+          <button type="submit">Übersetzen</button>
+        </div>
+        {uebersetzt && (
+          <div className="verstanden">
+            <p>
+              <b>Verstanden als:</b>{' '}
+              {beschreibe(
+                uebersetzt,
+                Object.fromEntries(Object.entries(KENNZAHLEN).map(([k, v]) => [k, v.label])),
+                Object.fromEntries(Object.entries(DIMENSIONEN).map(([k, v]) => [k, v.label])),
+                {
+                  strecke: Object.fromEntries(daten.strecke.map((id, i) => [id, daten.streckenNamen[i]])),
+                  team: Object.fromEntries(daten.team.map((id, i) => [id, daten.teamNamen[i]])),
+                  fahrer: Object.fromEntries(daten.fahrer.map((id, i) => [id, daten.fahrerNamen[i]])),
+                },
+              )}
+            </p>
+            {uebersetzt.unverstanden.map((u) => <p className="luecke">{u}</p>)}
+            <p className="quelle">
+              Die Frage stellt nur die Filter ein. Gerechnet wird über alle{' '}
+              {daten.zeilen.toLocaleString('de-DE')} Ergebniszeilen – die Zahlen unten stammen
+              aus den Daten, nicht aus der Übersetzung.
+            </p>
+          </div>
+        )}
+      </form>
+
       <div className="steuerung">
         <fieldset>
           <legend>Gruppieren nach</legend>

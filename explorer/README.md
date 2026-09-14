@@ -19,6 +19,8 @@ Architektur und Begründungen: [`../docs/ARCHITEKTUR.md`](../docs/ARCHITEKTUR.md
 | 8 · WM-Punkteverlauf | **fertig** |
 | 9 · What-if: anderes Punktesystem | **fertig** |
 | 10 · Data Explorer mit Export | **fertig** |
+| 11 · Statistik-Suche in natürlicher Sprache | **fertig** |
+| 12 · Stints und Wetter (OpenF1, ab 2023) | offen |
 
 ## Entwickeln
 

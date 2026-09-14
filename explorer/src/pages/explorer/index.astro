@@ -174,3 +174,58 @@ const z = eine('SELECT COUNT(*) AS n FROM race_result')
     border-color: var(--danger-border);
   }
 </style>
+
+<style is:global>
+  .frage {
+    margin-bottom: 1rem;
+    padding: 0.9rem 1rem 1rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 0.6rem;
+  }
+
+  .frage > label {
+    display: block;
+    margin-bottom: 0.4rem;
+    font-size: 0.64rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .frage .zeile { display: flex; gap: 0.5rem; }
+
+  .frage input {
+    flex: 1;
+    min-width: 0;
+    padding: 0.55rem 0.75rem;
+    font: inherit;
+    color: var(--ink);
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 0.45rem;
+    appearance: none;
+  }
+
+  .frage input:focus { border-color: var(--accent); }
+
+  .frage button {
+    flex: none;
+    padding: 0.55rem 1rem;
+    font: inherit;
+    font-weight: 600;
+    color: var(--accent-ink);
+    background: var(--accent);
+    border: none;
+    border-radius: 0.45rem;
+    cursor: pointer;
+  }
+
+  .verstanden { margin-top: 0.75rem; font-size: 0.85rem; }
+  .verstanden p { margin: 0 0 0.3rem; color: var(--ink-2); }
+  .verstanden b { color: var(--ink); }
+  .verstanden .luecke { color: var(--warn); }
+  .verstanden .quelle { font-size: 0.78rem; color: var(--muted); text-wrap: pretty; }
+</style>
