@@ -21,24 +21,30 @@ Architektur und Begründungen: [`../docs/ARCHITEKTUR.md`](../docs/ARCHITEKTUR.md
 | 10 · Data Explorer mit Export | **fertig** |
 | 11 · Statistik-Suche in natürlicher Sprache | **fertig** |
 | 12 · Stints und Wetter (OpenF1, ab 2023) | offen |
+| 13 · Änderungen: Bewegung in den Rekordlisten | **fertig** |
 | 13 · Rennvorschau auf das nächste Rennen | **fertig** |
 
 ## Entwickeln
 
 ```bash
 npm run import   # Datenbank bauen (einmalig, 8 s)
-npm run dev      # http://localhost:4321
-npm run build    # 867 statische Seiten in ~9 s nach dist/
+npm run dev      # http://localhost:4321/F1-stats/
+npm run build    # 2384 statische Seiten in ~31 s nach dist/
 ```
 
-Der Build erzeugt fertiges HTML: 12 MB für 867 Seiten, eine einzige
-JavaScript-Datei in der gesamten Ausgabe. Eine Fahrerseite wiegt 18 KB und
-braucht kein JavaScript, um ihre Zahlen zu zeigen.
+Der Build erzeugt fertiges HTML: 2384 Seiten, fünf JavaScript-Dateien in der
+gesamten Ausgabe. Eine Fahrerseite wiegt 18 KB und braucht kein JavaScript, um
+ihre Zahlen zu zeigen.
+
+`npm run dev` bindet den Vorsatz `/F1-stats/` ein, unter dem die Seite auf
+GitHub Pages liegt. `npx astro preview` tut das nicht und liefert die Seiten
+ohne Stylesheet aus – zum Ansehen des Builds ist der Entwicklungsserver der
+verlässlichere Weg.
 
 ## Tests
 
 ```bash
-npm test        # 42 Prüfungen gegen die importierte Datenbank
+npm test        # 89 Prüfungen gegen die importierte Datenbank
 ```
 
 Der Massenabgleich rechnet Nennungen, Starts, Siege, Podien, Pole-Positions,
@@ -66,6 +72,35 @@ in jeder.
 
 `calculatePoles` nimmt die sportliche Bedeutung, `calculateStartsFromPole`
 steht daneben. F1DBs Flag dient nur dem Abgleich.
+
+## Wann ein Rekord fällt
+
+Die Seite `/aenderungen/` rechnet den Verlauf jeder Bestmarke aus den
+Ergebnissen nach: Alle 1163 gefahrenen Rennen laufen in zeitlicher Reihenfolge
+durch, und nach jedem steht fest, ob die Spitze sich bewegt hat. Es gibt keine
+gepflegte Liste von Rekordterminen, die jemand zu aktualisieren vergessen
+könnte – und der Endstand jeder Kette wird gegen die Rekordseite geprüft, die
+dieselbe Zahl mit einem `GROUP BY` ermittelt.
+
+Dabei fällt eine Eigenschaft auf, die man erst sieht, wenn man es so rechnet:
+**Jede Marke wächst in Einerschritten, also muss sie einstellen, wer sie
+brechen will.** Wer von 91 auf 92 will, stand vorher bei 91 – und damit auf der
+Marke. Überholen ohne vorheriges Gleichziehen gibt es nicht. Hamilton stellte
+Schumachers 91 Siege beim Eifel-Grand-Prix 2020 ein und brach sie vierzehn Tage
+später in Portugal.
+
+**Die Termine hängen an der Zählweise.** Hier wird in Starts gezählt, nicht in
+Nennungen. Räikkönen erreichte Barrichellos 322 Starts in Mugello 2020 und zog
+zwei Rennen später in Sotschi vorbei; seine 326. *Nennung* – die in den
+Rekordbüchern übliche Marke – fiel erst beim Eifel-Grand-Prix. Beide Angaben
+sind richtig, sie zählen Verschiedenes. Die Seite sagt das dazu.
+
+**Hochrechnungen sind als solche kenntlich.** Wie weit jemand von einer Marke
+entfernt ist, steht in den Daten. Wann er sie erreicht, nicht. Die
+Fortschreibung nimmt die Trefferquote der letzten drei Saisons; wer darin zu
+wenige Starts oder keinen Erfolg dieser Art hat, bekommt keine Zahl statt einer
+unendlichen. Hält ein noch aktiver Fahrer die Marke selbst, wächst sie weiter,
+während der Verfolger aufholt – auch das steht an der Zeile.
 
 ## Import
 

@@ -1,0 +1,690 @@
+---
+/**
+ * Bewegung in den Rekordlisten.
+ *
+ * Die Rekordseite beantwortet „wer hält die Marke?". Diese hier beantwortet
+ * „was hat sich bewegt, und was bewegt sich als Nächstes?" – die Frage, mit
+ * der man eine Saison verfolgt.
+ *
+ * Die Seite ist statisch: Alles darauf gilt für den Datenstand, der oben
+ * genannt ist, nicht für den Augenblick des Lesens. Deshalb steht das Rennen,
+ * auf dem gerechnet wurde, im Kopf und nicht im Kleingedruckten.
+ */
+import Seite from '../../layouts/Seite.astro'
+import { db, pfad } from '../../lib/db.js'
+import {
+  datenstand, inReichweite, juengsteAenderungen, laufendeSerien, rekordVerlaeufe,
+  saisonMarken, zahlwort,
+} from '../../engine/aenderungen.js'
+
+const stand = datenstand(db())
+const verlaeufe = rekordVerlaeufe(db())
+
+/*
+ * Zehn Jahre sind das Fenster für „zuletzt". Kürzer, und eine ruhige Phase
+ * ließe den Abschnitt leer; länger, und „zuletzt" wäre kein Wort mehr dafür.
+ * Die Ereignisse tragen ihr Datum, der Leser sieht die Spanne also selbst.
+ */
+const seit = stand ? `${stand.jahr - 10}-01-01` : undefined
+const { einzeln, ausbauten } = juengsteAenderungen(verlaeufe, { seit })
+
+const gefallen = einzeln.slice(0, 8)
+const laufendeAusbauten = ausbauten.filter((a) => a.laeuftNoch)
+const marken = saisonMarken(db(), stand)
+const aussichten = inReichweite(db(), verlaeufe, stand)
+const serien = laufendeSerien(db(), stand)
+
+const nf = new Intl.NumberFormat('de-DE')
+const datum = (s) =>
+  new Intl.DateTimeFormat('de-DE', { dateStyle: 'long', timeZone: 'UTC' }).format(
+    new Date(`${s}T12:00:00Z`),
+  )
+/** Eine Saison und ein Bruchteil – „5,7" sagt hier mehr als „6". */
+const ein = (n) => nf.format(Math.round(n * 10) / 10)
+const tageZwischen = (a, b) =>
+  Math.round((Date.parse(`${b}T12:00:00Z`) - Date.parse(`${a}T12:00:00Z`)) / 86400000)
+
+/** Wohin ein Halter verlinkt: Fahrer und Teams liegen in verschiedenen Bäumen. */
+const zielVon = (k, id) => (k.wer === 'team' ? pfad.team(id) : pfad.fahrer(id))
+
+const WORT = {
+  alleinVorn: { kurz: 'gebrochen', farbe: 'neu' },
+  eingestellt: { kurz: 'eingestellt', farbe: 'gleich' },
+}
+
+const { rennen: rennenGesamt } = db()
+  .prepare('SELECT COUNT(*) AS rennen FROM race WHERE EXISTS (SELECT 1 FROM race_result rr WHERE rr.race_id = race.id)')
+  .get()
+
+/** Ein Ereignis in einen Satz – die Formulierung trägt die Unterscheidung. */
+function satz(e) {
+  const wer = e.halter.map((h) => h.name).join(' und ')
+  /** Wer die Marke bisher hielt und sie nun nicht mehr allein hat. */
+  const alt = e.vorher.halter
+    .filter((h) => !e.halter.some((n) => n.id === h.id))
+    .map((h) => h.name)
+    .join(' und ')
+
+  if (e.art === 'eingestellt') {
+    return `${wer} erreicht ${zahlwort(e.wert, e.kategorie)} und teilt die Bestmarke${alt ? ` mit ${alt}` : ''}.`
+  }
+  return `${wer} zieht mit ${zahlwort(e.wert, e.kategorie, 'dativ')} allein vorbei${
+    alt ? ` – ${alt} verliert die geteilte Marke` : ''
+  }.`
+}
+---
+
+<Seite
+  titel="Änderungen – was sich in den Rekordlisten bewegt"
+  beschreibung="Welche Formel-1-Bestmarke zuletzt gefallen ist, was in dieser Saison noch erreichbar ist und wer den ewigen Rekorden am nächsten kommt."
+>
+  <h1>Änderungen</h1>
+  <p class="lead">
+    Rekordlisten sehen fest aus und sind es nicht. Diese Seite rechnet aus den Ergebnissen nach,
+    wann sich jede Bestmarke zuletzt bewegt hat – und wer ihr gerade am nächsten kommt.
+  </p>
+
+  {
+    stand && (
+      <p class="stand">
+        Stand nach dem <a href={pfad.rennen(stand.id)}>{stand.grandPrix} {stand.jahr}</a>,
+        {' '}{datum(stand.datum)} · Runde {stand.runde} von {stand.rennenImJahr}
+        {stand.offen > 0 && ` · noch ${stand.offen} Rennen offen`}
+      </p>
+    )
+  }
+
+  {!stand && <p class="hinweis">Es liegen keine Ergebnisse vor, auf denen sich rechnen ließe.</p>}
+
+  {/* ------------------------------------------------------ zuletzt gefallen */}
+
+  {
+    gefallen.length > 0 && (
+      <section>
+        <h2>Zuletzt gefallen</h2>
+        <p class="unter">
+          Jede Bestmarke wächst in Einerschritten. Wer sie brechen will, muss sie also erst
+          einstellen – bei jedem Bruch steht deshalb dabei, wann das geschah, oft Wochen zuvor.
+          Ein Eintrag ohne diesen Zusatz ist eine Marke, die derzeit geteilt wird.
+        </p>
+        <ol class="ereignisse">
+          {gefallen.map((e) => (
+            <li>
+              <div class="wann">
+                <b>{datum(e.datum)}</b>
+                <a href={pfad.rennen(e.rennen)}>{e.grandPrix} {e.jahr}</a>
+              </div>
+              <div class="was">
+                <span class={`etikett ${WORT[e.art].farbe}`}>{WORT[e.art].kurz}</span>
+                <b>{e.kategorie.titel}</b>
+                <p>{satz(e)}</p>
+                {e.zuvorEingestellt && (
+                  <p class="davor">
+                    Eingestellt {datum(e.zuvorEingestellt.datum)} beim{' '}
+                    <a href={pfad.rennen(e.zuvorEingestellt.rennen)}>
+                      {e.zuvorEingestellt.grandPrix} {e.zuvorEingestellt.jahr}
+                    </a>
+                    , {tageZwischen(e.zuvorEingestellt.datum, e.datum)} Tage zuvor.
+                  </p>
+                )}
+                <p class="spur">
+                  {e.vorher.wert > 0 ? `${nf.format(e.vorher.wert)} → ` : ''}
+                  {nf.format(e.wert)}
+                  {' · '}
+                  {e.halter.map((h, i) => (
+                    <>
+                      {i > 0 && ', '}
+                      <a href={zielVon(e.kategorie, h.id)}>{h.name}</a>
+                    </>
+                  ))}
+                  {e.wert !== e.rekordJetzt &&
+                    ` · steht heute bei ${nf.format(e.rekordJetzt)}`}
+                </p>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </section>
+    )
+  }
+
+  {/* --------------------------------------------------------- wird ausgebaut */}
+
+  {
+    laufendeAusbauten.length > 0 && (
+      <section>
+        <h2>Wird gerade ausgebaut</h2>
+        <p class="unter">
+          Wer eine Marke hält und noch fährt, vergrößert sie in jedem erfolgreichen Rennen. Das
+          steht hier gebündelt: nicht als eine Meldung je Rennen, sondern als ein Zuwachs.
+        </p>
+        <div class="tabelle">
+          <table>
+            <thead>
+              <tr>
+                <th>Bestmarke</th>
+                <th>Halter</th>
+                <th class="zahl">Zuwachs</th>
+                <th>Ausbau seit</th>
+                <th>Zuletzt</th>
+              </tr>
+            </thead>
+            <tbody>
+              {laufendeAusbauten.map((a) => (
+                <tr>
+                  <td>{a.kategorie.titel}</td>
+                  <td>
+                    {a.halter.map((h, i) => (
+                      <>
+                        {i > 0 && ', '}
+                        <a class="zeile" href={zielVon(a.kategorie, h.id)}>{h.name}</a>
+                      </>
+                    ))}
+                  </td>
+                  <td class="zahl">
+                    {nf.format(a.von)} → <b>{nf.format(a.bis)}</b>
+                    <span class="neben">in {a.schritte} Schritten</span>
+                  </td>
+                  <td>
+                    <a href={pfad.rennen(a.seit.rennen)}>{a.seit.grandPrix} {a.seit.jahr}</a>
+                  </td>
+                  <td>
+                    <a href={pfad.rennen(a.zuletzt.rennen)}>{a.zuletzt.grandPrix} {a.zuletzt.jahr}</a>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    )
+  }
+
+  {/* ------------------------------------------------------------ diese Saison */}
+
+  {
+    stand && marken.length > 0 && (
+      <section>
+        <h2>In dieser Saison noch erreichbar</h2>
+        <p class="unter">
+          Keine Hochrechnung, sondern eine Rechnung: So viele Erfolge fehlen, so viele Rennen sind
+          übrig. Was rechnerisch nicht mehr geht, steht hier gar nicht erst.
+        </p>
+        <ul class="karten">
+          {marken.map((m) => (
+            <li class="karte marke-karte">
+              <span class="titel">{m.art.titel}</span>
+              <p class="gross">
+                <a href={pfad.fahrer(m.fuehrender.id)}>{m.fuehrender.name}</a>
+                <span class="wert">{zahlwort(m.fuehrender.wert, m.art)}</span>
+              </p>
+              <p class="spur">
+                Bestmarke <span class="fett">{m.rekord.wert}</span> –{' '}
+                <a href={pfad.fahrer(m.rekord.id)}>{m.rekord.name}</a> {m.rekord.jahr}
+              </p>
+              <p class={m.brechenMoeglich ? 'urteil moeglich' : 'urteil knapp'}>
+                {m.haeltSchon
+                  ? `Liegt bereits auf der Bestmarke; jeder weitere Erfolg ist ein neuer Rekord.`
+                  : m.brechenMoeglich
+                    ? `Noch ${m.fehltZumBrechen} nötig, um sie zu brechen – bei ${stand.offen} offenen Rennen.`
+                    : `Einstellen ist mit ${m.fehltZumEinstellen} weiteren noch möglich, brechen bei ${stand.offen} offenen Rennen nicht mehr.`}
+              </p>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )
+  }
+
+  {/* ------------------------------------------------------- ewige Bestmarken */}
+
+  {
+    aussichten.length > 0 && (
+      <section>
+        <h2>Den ewigen Bestmarken am nächsten</h2>
+        <p class="unter">
+          Je Bestmarke der nächste Verfolger. Der Abstand ist eine Tatsache, die Hochrechnung
+          daneben ist keine – sie schreibt nur das Tempo der letzten drei Saisons fort und
+          unterstellt, dass er weiterfährt.
+        </p>
+        <div class="tabelle">
+          <table>
+            <thead>
+              <tr>
+                <th>Fahrer</th>
+                <th>Bestmarke</th>
+                <th class="zahl">Stand</th>
+                <th class="zahl">Fehlt</th>
+                <th>Bei diesem Tempo</th>
+              </tr>
+            </thead>
+            <tbody>
+              {aussichten.map((a) => (
+                <tr class={a.naechstesRennen ? 'dringend' : undefined}>
+                  <td>
+                    <a class="zeile" href={pfad.fahrer(a.fahrer.id)}>{a.fahrer.name}</a>
+                    {a.alter !== null && <span class="neben">{Math.floor(a.alter)} Jahre</span>}
+                  </td>
+                  <td>
+                    {a.kategorie.titel}
+                    <span class="neben">
+                      {nf.format(a.rekord)} ·{' '}
+                      {a.halter.map((h, i) => (
+                        <>
+                          {i > 0 && ', '}
+                          <a href={zielVon(a.kategorie, h.id)}>{h.name}</a>
+                        </>
+                      ))}
+                      {a.halterAktiv && ' – fährt noch, die Marke wächst weiter'}
+                    </span>
+                  </td>
+                  <td class="zahl">{nf.format(a.eigene)}</td>
+                  <td class="zahl">
+                    <b>{nf.format(a.fehlt)}</b>
+                    {a.naechstesRennen && <span class="neben">nächstes Rennen</span>}
+                  </td>
+                  <td>
+                    {a.hochrechnung.value === null ? (
+                      <span class="luecke">{a.hochrechnung.caveat}</span>
+                    ) : (
+                      <>
+                        {nf.format(a.hochrechnung.value)} Rennen
+                        <span class="neben">
+                          ≈ {ein(a.saisonNoetig)} Saisons
+                          {a.alterAmZiel !== null &&
+                            ` – dann wäre er ${Math.round(a.alterAmZiel)}`}
+                        </span>
+                      </>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    )
+  }
+
+  {/* ------------------------------------------------------------ laufende Serien */}
+
+  {
+    serien.length > 0 && (
+      <section>
+        <h2>Laufende Serien</h2>
+        <p class="unter">
+          Serien, die am letzten Start ihres Fahrers noch offen waren. Ein ausgelassenes Rennen
+          unterbricht nicht – wer nicht dabei war, konnte nichts verlieren.
+        </p>
+        <div class="tabelle">
+          <table>
+            <thead>
+              <tr>
+                <th>Fahrer</th>
+                <th>Serie</th>
+                <th class="zahl">Länge</th>
+                <th>Bestmarke</th>
+              </tr>
+            </thead>
+            <tbody>
+              {serien.map((s) => (
+                <tr>
+                  <td><a class="zeile" href={pfad.fahrer(s.id)}>{s.name}</a></td>
+                  <td>{s.art.titel}</td>
+                  <td class="zahl"><b>{s.laenge}</b></td>
+                  <td>
+                    {s.rekord}
+                    <span class="neben">
+                      {s.rekordHalter.map((h, i) => (
+                        <>
+                          {i > 0 && ', '}
+                          <a href={pfad.fahrer(h.id)}>{h.name}</a>
+                        </>
+                      ))}
+                      {' · '}
+                      {s.haeltRekord ? 'eingestellt' : `noch ${s.fehlt} bis zum Rekord`}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    )
+  }
+
+  {/* ------------------------------------------------------------------ Methode */}
+
+  <section>
+    <h2>Wie das gerechnet ist</h2>
+    <div class="methode">
+      <p>
+        Der Verlauf jeder Bestmarke entsteht aus den Ergebnissen selbst: Alle
+        {' '}{nf.format(rennenGesamt)} gefahrenen Rennen seit 1950 laufen in zeitlicher
+        Reihenfolge durch, und nach jedem steht fest, ob die Spitze sich bewegt hat. Es gibt keine
+        gepflegte Liste von Rekordterminen, die jemand zu aktualisieren vergessen könnte.
+      </p>
+      <p>
+        <b>Gezählt wird in Starts, nicht in Nennungen.</b> Das verschiebt einzelne Termine
+        gegenüber den Rekordbüchern, die oft Nennungen zählen. Räikkönen etwa erreichte
+        Barrichellos 322 Starts in Mugello 2020 und zog zwei Rennen später in Sotschi vorbei –
+        seine 326. <i>Nennung</i>, die dort üblicherweise genannte Marke, fiel erst beim
+        Eifel-Grand-Prix. Beide Angaben sind richtig; sie zählen Verschiedenes.
+      </p>
+      <p>
+        <b>Eine Hochrechnung ist keine Vorhersage.</b> Sie nimmt die Trefferquote der letzten drei
+        Saisons und schreibt sie fort. Wer in diesem Zeitraum zu wenige Starts hat oder keinen
+        einzigen Erfolg dieser Art, bekommt keine Zahl – „unendlich viele Rennen" wäre eine
+        Scheingenauigkeit. Hält ein aktiver Fahrer die Marke selbst, wächst sie weiter, während
+        der Verfolger aufholt; das steht an der betreffenden Zeile.
+      </p>
+      <p>
+        Die ewige Punktewertung fehlt hier bewusst. Die Punktesysteme haben sich mehr als ein
+        Dutzend Mal geändert – ein solcher Rekord misst vor allem das System.
+      </p>
+      <p class="weiter">
+        Die vollständigen Listen stehen unter <a href={pfad.seite('/rekorde/')}>Rekorde</a>,
+        das nächste Rennen unter <a href={pfad.seite('/vorschau/')}>Vorschau</a>.
+      </p>
+    </div>
+  </section>
+</Seite>
+
+<style>
+  h2 {
+    margin: 2.75rem 0 0;
+    font-size: 1.15rem;
+    letter-spacing: -0.01em;
+  }
+
+  .stand {
+    margin: 1rem 0 0;
+    font-size: 0.88rem;
+    color: var(--muted);
+  }
+
+  .unter {
+    max-width: 46rem;
+    margin: 0.4rem 0 0;
+    font-size: 0.88rem;
+    color: var(--muted);
+    text-wrap: pretty;
+  }
+
+  .hinweis {
+    margin-top: 1.5rem;
+    padding: 0.9rem 1rem;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 0.6rem;
+  }
+
+  /* ---------------------------------------------------------- Ereignisliste */
+
+  .ereignisse {
+    margin: 1.25rem 0 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 0.6rem;
+  }
+
+  .ereignisse li {
+    display: grid;
+    grid-template-columns: minmax(0, 9.5rem) minmax(0, 1fr);
+    gap: 0.25rem 1rem;
+    padding: 0.85rem 1rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0.6rem;
+  }
+
+  .wann {
+    display: grid;
+    gap: 0.15rem;
+    align-content: start;
+    font-size: 0.82rem;
+  }
+
+  .wann b {
+    color: var(--ink);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .wann a {
+    color: var(--muted);
+    text-decoration: none;
+  }
+
+  .wann a:hover {
+    color: var(--accent);
+  }
+
+  .was > b {
+    display: block;
+    margin-top: 0.15rem;
+    color: var(--ink);
+    font-weight: 650;
+  }
+
+  .was p {
+    margin: 0.3rem 0 0;
+    font-size: 0.9rem;
+    color: var(--ink-2);
+    text-wrap: pretty;
+  }
+
+  .was .davor {
+    font-size: 0.83rem;
+    color: var(--muted);
+  }
+
+  .was .davor a {
+    color: var(--ink-2);
+    text-decoration: none;
+  }
+
+  .was .davor a:hover {
+    color: var(--accent);
+  }
+
+  /*
+   * Nicht `.marke`: So heißt in theme.css der Schriftzug der Kopfleiste, und
+   * der ist global. Ein `display: flex` von dort machte aus dieser Plakette
+   * eine Zeile.
+   */
+  .etikett {
+    display: inline-block;
+    padding: 0.1rem 0.45rem;
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    border-radius: 999px;
+  }
+
+  .etikett.neu {
+    color: var(--accent);
+    background: var(--accent-wash);
+  }
+
+  .etikett.gleich {
+    color: var(--muted);
+    background: var(--surface-3);
+  }
+
+  /*
+   * Zwei Selektoren statt `!important`: `.was p` und `.karte span` aus
+   * theme.css sind spezifischer als ein einzelner Klassenname, und Astros
+   * Bereichsstile heben die Spezifität nicht an.
+   */
+  .was .spur,
+  .karte .spur {
+    font-size: 0.82rem;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .spur a {
+    color: var(--ink-2);
+    text-decoration: none;
+  }
+
+  .spur a:hover {
+    color: var(--accent);
+  }
+
+  /* --------------------------------------------------------- Saisonmarken */
+
+  .marke-karte .titel {
+    display: block;
+    font-size: 0.82rem;
+    color: var(--muted);
+    font-weight: 600;
+  }
+
+  .gross {
+    margin: 0.35rem 0 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.4rem;
+  }
+
+  .gross a {
+    color: var(--ink);
+    font-weight: 650;
+    text-decoration: none;
+  }
+
+  .gross a:hover {
+    color: var(--accent);
+  }
+
+  .gross .wert {
+    font-size: 0.85rem;
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .marke-karte .spur {
+    margin: 0.3rem 0 0;
+  }
+
+  .spur .fett {
+    color: var(--ink-2);
+    font-weight: 650;
+  }
+
+  .urteil {
+    margin: 0.55rem 0 0;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border);
+    font-size: 0.82rem;
+    text-wrap: pretty;
+  }
+
+  .urteil.moeglich {
+    color: var(--good);
+  }
+
+  .urteil.knapp {
+    color: var(--muted);
+  }
+
+  /* ------------------------------------------------------------- Tabellen */
+
+  .zahl {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /*
+   * Rennverweise in Tabellenzellen ruhig halten. In der Standardfarbe stünden
+   * in „Ausbau seit" und „Zuletzt" zwei Spalten voller roter, unterstrichener
+   * Links nebeneinander – der Blick fände dann keinen Anfang mehr.
+   */
+  .tabelle td a:not(.zeile) {
+    color: var(--ink-2);
+    text-decoration: none;
+  }
+
+  .tabelle td a:not(.zeile):hover {
+    color: var(--accent);
+  }
+
+  td .neben {
+    display: block;
+    font-size: 0.76rem;
+    color: var(--muted);
+    text-wrap: pretty;
+  }
+
+  td .neben a {
+    color: var(--muted);
+    text-decoration: none;
+  }
+
+  td .neben a:hover {
+    color: var(--accent);
+  }
+
+  tr.dringend td {
+    background: var(--accent-wash);
+  }
+
+  .luecke {
+    font-size: 0.82rem;
+    color: var(--warn);
+    text-wrap: pretty;
+  }
+
+  /* -------------------------------------------------------------- Methode */
+
+  .methode {
+    max-width: 46rem;
+    margin-top: 1.25rem;
+    padding: 1rem 1.15rem;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 0.6rem;
+  }
+
+  .methode p {
+    margin: 0 0 0.75rem;
+    font-size: 0.86rem;
+    color: var(--ink-2);
+    text-wrap: pretty;
+  }
+
+  .methode p:last-child {
+    margin-bottom: 0;
+  }
+
+  .methode b {
+    color: var(--ink);
+  }
+
+  .weiter {
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border);
+    color: var(--muted) !important;
+  }
+
+  /* ---------------------------------------------------------- schmale Sicht */
+
+  @media (max-width: 34rem) {
+    .ereignisse li {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 0.35rem;
+    }
+
+    .wann {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.15rem 0.5rem;
+    }
+  }
+</style>

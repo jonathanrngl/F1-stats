@@ -56,7 +56,7 @@ jobs:
         working-directory: explorer
         run: npm run import
 
-      # 42 Pruefungen gegen die importierte Datenbank. Lieber kein Deploy als
+      # 89 Pruefungen gegen die importierte Datenbank. Lieber kein Deploy als
       # einer mit falschen Zahlen.
       - name: Statistik-Engine pruefen
         working-directory: explorer
