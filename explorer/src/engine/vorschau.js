@@ -139,14 +139,23 @@ function letztesRennenVor(db, jahr) {
   )
 }
 
+/*
+ * Das Team kommt aus dem letzten Rennen der Saison, in dem der Fahrer
+ * überhaupt gefahren ist – nicht aus dem Bezugsrennen selbst. Wer dort
+ * aussetzte oder ersetzt wurde, stünde sonst ohne Team da, obwohl er in der
+ * Wertung steht.
+ */
 function fahrerStand(db, raceId, anzahl = 10) {
   return db
     .prepare(
       `SELECT s.driver_id AS id, d.full_name AS name, s.position, s.points AS punkte,
               (SELECT k.name
                  FROM race_result rr
+                 JOIN race r2 ON r2.id = rr.race_id
                  JOIN constructor k ON k.id = rr.constructor_id
-                WHERE rr.race_id = s.race_id AND rr.driver_id = s.driver_id
+                WHERE rr.driver_id = s.driver_id
+                  AND r2.year = (SELECT year FROM race WHERE id = s.race_id)
+                ORDER BY r2.round DESC
                 LIMIT 1) AS team
          FROM race_driver_standing s
          JOIN driver d ON d.id = s.driver_id
@@ -311,6 +320,9 @@ export function rekordeInReichweite(db, rennen, dasFeld) {
     }
   }
 
+  /** „1 Sieg", nicht „1 Siegen" – die Zahl bestimmt die Form. */
+  const siegWort = (n) => (n === 1 ? '1 Sieg' : `${n} Siegen`)
+
   // ---- Bestmarke auf dieser Strecke
   const aufStrecke = siegeAufStrecke(db, rennen.streckeId)
   const spitze = aufStrecke[0]?.anzahl ?? 0
@@ -325,15 +337,15 @@ export function rekordeInReichweite(db, rennen, dasFeld) {
           name: name.get(z.id),
           text:
             gleichauf > 1
-              ? `Teilt sich mit ${z.anzahl} Siegen die Bestmarke hier – ein weiterer macht sie zu seiner allein.`
-              : `Hält mit ${z.anzahl} Siegen die Bestmarke hier und könnte sie ausbauen.`,
+              ? `Teilt sich mit ${siegWort(z.anzahl)} die Bestmarke hier – ein weiterer macht sie zu seiner allein.`
+              : `Hält mit ${siegWort(z.anzahl)} die Bestmarke hier und könnte sie ausbauen.`,
         })
       } else if (z.anzahl === spitze - 1) {
         treffer.push({
           art: 'strecke',
           fahrer: z.id,
           name: name.get(z.id),
-          text: `Mit ${z.anzahl} Siegen einen hinter der Bestmarke von ${spitze} – ein Sieg stellt sie ein.`,
+          text: `Mit ${siegWort(z.anzahl)} einen hinter der Bestmarke von ${spitze} – ein Sieg stellt sie ein.`,
         })
       }
     }

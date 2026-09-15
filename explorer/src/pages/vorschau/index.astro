@@ -31,7 +31,11 @@ const polesetter = rennen ? circuitLeaders(db(), rennen.streckeId, 'poles', 6) :
 const teamsHier = rennen ? circuitTeamLeaders(db(), rennen.streckeId, 6) : []
 const zahlenHier = rennen ? circuitStats(db(), rennen.streckeId) : null
 const spezialisten = rennen ? circuitSpecialists(db(), rennen.streckeId) : []
-const letzteHier = rennen ? circuitRaces(db(), rennen.streckeId).slice(0, 5) : []
+// Ohne Sieger ist ein Rennen nicht gefahren - darunter das anstehende selbst,
+// das sonst als Zeile aus Gedankenstrichen in der eigenen Vorschau stuende.
+const letzteHier = rennen
+  ? circuitRaces(db(), rennen.streckeId).filter((r) => r.siegerId).slice(0, 5)
+  : []
 
 const heimat = rennen ? land(rennen.demonym, rennen.land, rennen.ioc) : null
 
@@ -121,7 +125,7 @@ const titel = rennen ? `${rennen.grandPrix} ${rennen.jahr} – Vorschau` : 'Renn
               ? 'Heute. '
               : `Das Datum liegt ${Math.abs(tageBis)} Tage zurück – zu diesem Rennen liegt noch kein Ergebnis vor. `}
         Alle Zahlen auf dieser Seite stehen auf dem Datenstand vom {datum(heute)}
-        {stand && !stand.vorsaison && `, also nach dem ${stand.bezug.grandPrix} (Lauf ${stand.bezug.runde})`}.
+        {stand && !stand.vorsaison && `, also nach Lauf ${stand.bezug.runde} (${stand.bezug.grandPrix})`}.
         {rennen.offiziell && <> Offiziell: <i>{rennen.offiziell}</i>.</>}
       </p>
 
@@ -265,8 +269,8 @@ const titel = rennen ? `${rennen.grandPrix} ${rennen.jahr} – Vorschau` : 'Renn
           <p class="notiz">
             {stand.vorsaison
               ? `Die Saison ${rennen.jahr} hat noch kein Ergebnis. Gezeigt ist der Endstand ${stand.bezug.jahr}.`
-              : `Nach dem ${stand.bezug.grandPrix} vom ${datum(stand.bezug.datum)}.`}
-            {' '}Noch {stand.offen} {stand.offen === 1 ? 'Rennen' : 'Rennen'} in dieser Saison
+              : `Nach Lauf ${stand.bezug.runde} (${stand.bezug.grandPrix}) vom ${datum(stand.bezug.datum)}.`}
+            {' '}Noch {stand.offen} Rennen in dieser Saison
             {stand.sprints > 0 && ` (davon ${stand.sprints} mit Sprint)`},
             also höchstens {stand.maxFuerEinenFahrer} Punkte für einen einzelnen Fahrer.
           </p>
