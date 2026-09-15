@@ -71,6 +71,9 @@ benannt.slice(0, 5).forEach((f, i) => {
   }
 })
 
+/* Vorsatz der Seite: auf GitHub Pages "/F1-stats", beim Entwickeln leer. */
+const BASIS = import.meta.env.BASE_URL.replace(/\/$/, '')
+
 const nf = new Intl.NumberFormat('de-DE')
 ---
 
@@ -114,7 +117,7 @@ const nf = new Intl.NumberFormat('de-DE')
     {benannt.map((f, i) => (
       <li>
         <span class="strich" style={`background: var(--s${i + 1})`}></span>
-        <a href={`/fahrer/${f.id}/`}>{f.name}</a>
+        <a href={`${BASIS}/fahrer/${f.id}/`}>{f.name}</a>
         <b>{nf.format(f.punkte.at(-1) ?? 0)}</b>
       </li>
     ))}

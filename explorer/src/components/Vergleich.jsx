@@ -13,6 +13,9 @@ import { useEffect, useMemo, useState } from 'react'
  * bilden, aus Durchschnitten nicht.
  */
 
+/* Vorsatz der Seite: auf GitHub Pages "/F1-stats", beim Entwickeln leer. */
+const BASIS = import.meta.env.BASE_URL.replace(/\/$/, '')
+
 const nf = new Intl.NumberFormat('de-DE')
 const ein = (v) => (v === null || v === undefined ? '–' : nf.format(Math.round(v * 10) / 10))
 const zwei = (v) => (v === null || v === undefined ? '–' : nf.format(Math.round(v * 100) / 100))
@@ -115,7 +118,7 @@ export default function Vergleich({ index }) {
     setLaedt(true)
     Promise.all(
       fehlend.map((id) =>
-        fetch(`/api/v1/drivers/${id}.json`).then((r) => {
+        fetch(`${BASIS}/api/v1/drivers/${id}.json`).then((r) => {
           if (!r.ok) throw new Error(`Profil ${id} nicht gefunden.`)
           return r.json()
         }),
@@ -252,7 +255,7 @@ export default function Vergleich({ index }) {
             {beide.map((p, i) => (
               <div key={p.id} className={`kopfkarte s${i}`}>
                 <span className="kuerzel">{p.land.code}</span>
-                <a href={`/fahrer/${p.id}/`}>{p.name}</a>
+                <a href={`${BASIS}/fahrer/${p.id}/`}>{p.name}</a>
                 <i>
                   {werte[i].von ? `${werte[i].von}–${werte[i].bis}` : 'keine Rennen im Zeitraum'}
                   {werte[i].teams.length > 0 && ` · ${werte[i].teams.slice(0, 3).join(', ')}`}

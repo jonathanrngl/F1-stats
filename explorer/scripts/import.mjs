@@ -107,13 +107,38 @@ async function holeRelease() {
 
   const ziel = path.join(tmp, 'csv')
   await fs.rm(ziel, { recursive: true, force: true })
-  // tar liegt auf Windows seit Jahren bei und kann ZIP entpacken.
   await fs.mkdir(ziel, { recursive: true })
-  execFileSync('tar', ['-xf', zip, '-C', ziel], { stdio: 'pipe' })
+  entpacke(zip, ziel)
 
   const { size } = await fs.stat(zip)
   console.log(`  ${(size / 1024 / 1024).toFixed(1)} MB entpackt nach ${path.relative(WURZEL, ziel)}`)
   return ziel
+}
+
+/**
+ * ZIP entpacken, ohne Abhängigkeit.
+ *
+ * Auf Windows liegt `tar` als bsdtar bei und kann ZIP. Auf Linux ist `tar`
+ * GNU tar und kann es nicht – dort entpackt `unzip`. Welches Werkzeug
+ * vorhanden ist, entscheidet der Versuch, nicht eine Abfrage der Plattform:
+ * Auf einem Linux mit bsdtar oder einem Windows mit unzip stimmte sie sonst
+ * nicht.
+ */
+function entpacke(zip, ziel) {
+  const versuche = [
+    ['tar', ['-xf', zip, '-C', ziel]],
+    ['unzip', ['-q', '-o', zip, '-d', ziel]],
+  ]
+  const fehler = []
+  for (const [werkzeug, args] of versuche) {
+    try {
+      execFileSync(werkzeug, args, { stdio: 'pipe' })
+      return
+    } catch (e) {
+      fehler.push(`${werkzeug}: ${e.stderr?.toString().trim() || e.message}`)
+    }
+  }
+  throw new Error(`Das Release liess sich nicht entpacken.\n  ${fehler.join('\n  ')}`)
 }
 
 // ----------------------------------------------------------------- Import

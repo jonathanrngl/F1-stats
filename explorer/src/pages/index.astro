@@ -28,12 +28,12 @@ const nf = new Intl.NumberFormat('de-DE')
   </p>
 
   <ul class="karten">
-    <li><a class="karte" href="/fahrer/"><b>Fahrer</b><span>{nf.format(zahlen.fahrer)} Profile mit Karriere, Serien und Teamkollegen</span></a></li>
-    <li><a class="karte" href="/teams/"><b>Teams</b><span>{zahlen.teams} Konstrukteure samt Vorgängern</span></a></li>
-    <li><a class="karte" href="/saisons/"><b>Saisons</b><span>Wertungen, Kalender und Verlauf je Jahr</span></a></li>
-    <li><a class="karte" href="/rennen/"><b>Rennen</b><span>{nf.format(zahlen.rennen)} Einzelergebnisse</span></a></li>
-    <li><a class="karte" href="/strecken/"><b>Strecken</b><span>{zahlen.strecken} Kurse und wer dort stark war</span></a></li>
-    <li><a class="karte" href="/rekorde/"><b>Rekorde</b><span>Bestmarken mit Verweis auf das Rennen</span></a></li>
+    <li><a class="karte" href={pfad.seite('/fahrer/')}><b>Fahrer</b><span>{nf.format(zahlen.fahrer)} Profile mit Karriere, Serien und Teamkollegen</span></a></li>
+    <li><a class="karte" href={pfad.seite('/teams/')}><b>Teams</b><span>{zahlen.teams} Konstrukteure samt Vorgängern</span></a></li>
+    <li><a class="karte" href={pfad.seite('/saisons/')}><b>Saisons</b><span>Wertungen, Kalender und Verlauf je Jahr</span></a></li>
+    <li><a class="karte" href={pfad.seite('/rennen/')}><b>Rennen</b><span>{nf.format(zahlen.rennen)} Einzelergebnisse</span></a></li>
+    <li><a class="karte" href={pfad.seite('/strecken/')}><b>Strecken</b><span>{zahlen.strecken} Kurse und wer dort stark war</span></a></li>
+    <li><a class="karte" href={pfad.seite('/rekorde/')}><b>Rekorde</b><span>Bestmarken mit Verweis auf das Rennen</span></a></li>
   </ul>
 
   <h2 style="margin-top:2.5rem">Zuletzt</h2>

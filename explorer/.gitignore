@@ -1,4 +1,6 @@
-data/
+# Nur die importierte Datenbank im Projektwurzelverzeichnis, nicht jedes
+# Verzeichnis namens data - src/pages/data/ liefert den Datenwuerfel aus.
+/data/
 node_modules/
 dist/
 .astro/

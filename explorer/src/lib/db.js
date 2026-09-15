@@ -63,12 +63,22 @@ export const slug = (s) =>
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '')
 
+/*
+ * Der Vorsatz, unter dem die Seite liegt. Auf GitHub Pages ist das
+ * "/F1-stats/", beim Entwickeln schlicht "/". Ohne ihn zeigte jeder Verweis
+ * an das Repo-Verzeichnis vorbei auf die Wurzel der Domain. Der Rückfall auf
+ * "/" greift, falls diese Datei einmal außerhalb von Astro geladen wird.
+ */
+const BASIS = (import.meta.env?.BASE_URL ?? '/').replace(/\/$/, '')
+
 export const pfad = {
-  fahrer: (id) => `/fahrer/${id}/`,
-  team: (id) => `/teams/${id}/`,
-  saison: (jahr) => `/saisons/${jahr}/`,
-  rennen: (id) => `/rennen/${id}/`,
-  strecke: (id) => `/strecken/${id}/`,
+  fahrer: (id) => `${BASIS}/fahrer/${id}/`,
+  team: (id) => `${BASIS}/teams/${id}/`,
+  saison: (jahr) => `${BASIS}/saisons/${jahr}/`,
+  rennen: (id) => `${BASIS}/rennen/${id}/`,
+  strecke: (id) => `${BASIS}/strecken/${id}/`,
+  /** Für Verweise, die nicht auf einen Datensatz zeigen: Übersichten, Startseite. */
+  seite: (weg = '/') => `${BASIS}${weg}`,
 }
 
 // ------------------------------------------------------------------ Listen

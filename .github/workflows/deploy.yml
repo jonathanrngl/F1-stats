@@ -1,4 +1,8 @@
-# Baut die Seite bei jedem Push auf main und veroeffentlicht sie auf GitHub Pages.
+# Baut beide Anwendungen bei jedem Push auf main und veroeffentlicht sie
+# gemeinsam auf GitHub Pages:
+#
+#   /F1-stats/            der Explorer (Astro, aus der importierten Datenbank)
+#   /F1-stats/klassisch/  die bisherige React-Anwendung
 name: Deploy
 
 on:
@@ -23,19 +27,56 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # node:sqlite braucht Node 22 oder neuer - der Import und die
+      # Statistik-Engine benutzen es ohne native Abhaengigkeit.
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: npm
 
-      - run: npm ci
-      - run: npm run lint
-      - run: npm run build
+      # ------------------------------------------------ klassische Anwendung
+      - name: Klassische Anwendung bauen
+        run: |
+          npm ci
+          npm run lint
+          npm run build
+
+      # ------------------------------------------------------------ Explorer
+      - name: Explorer-Abhaengigkeiten
+        working-directory: explorer
+        run: npm ci
+
+      # Die Datenbank ist nicht eingecheckt; sie entsteht aus dem aktuellen
+      # F1DB-Release. Der Import schreibt nichts, wenn eine Pruefung fehlschlaegt.
+      - name: Datenbank importieren
+        working-directory: explorer
+        run: npm run import
+
+      # 42 Pruefungen gegen die importierte Datenbank. Lieber kein Deploy als
+      # einer mit falschen Zahlen.
+      - name: Statistik-Engine pruefen
+        working-directory: explorer
+        run: npm test
+
+      - name: Explorer bauen
+        working-directory: explorer
+        run: npm run build
+
+      # --------------------------------------------------- zusammenlegen
+      - name: Seite zusammenlegen
+        run: |
+          mkdir -p site
+          cp -r explorer/dist/. site/
+          mkdir -p site/klassisch
+          cp -r dist/. site/klassisch/
+          # Astro legt seine Bundles nach _astro/. Der Pages-Deploy laeuft ohne
+          # Jekyll, das Verzeichnisse mit Unterstrich verschluckt - die Datei
+          # stellt das auch dann sicher, wenn sich das einmal aendert.
+          touch site/.nojekyll
 
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: site
 
   deploy:
     needs: build

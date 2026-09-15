@@ -119,21 +119,28 @@ verschwände sonst im selben Moment, in dem man ihn lesen will.
 
 ## Veröffentlichen
 
-Die Seite wird bei jedem Push auf `main` gebaut und auf GitHub Pages
-veröffentlicht – siehe `.github/workflows/deploy.yml`. Der Build läuft auf dem
-Runner, deshalb liegt im Repo kein fertiges `dist`.
+Bei jedem Push auf `main` baut `.github/workflows/deploy.yml` beide
+Anwendungen und legt sie gemeinsam auf GitHub Pages ab:
+
+| Adresse | Anwendung |
+|---|---|
+| `/F1-stats/` | der Explorer aus `explorer/` |
+| `/F1-stats/klassisch/` | die bisherige Anwendung aus `src/` |
 
 Einmalig im Repo einzustellen: **Settings → Pages → Build and deployment →
 Source: GitHub Actions**. Die Einstellung *Deploy from a branch* passt hier
 nicht, weil im Repo nur der Quelltext liegt und nicht die gebaute Seite.
 
-`base: './'` in `vite.config.ts` erzeugt relative Asset-Pfade. Derselbe Build
-läuft dadurch unter `jonathanrngl.github.io/F1-stats/` wie auch im Wurzel-
-verzeichnis einer eigenen Domain. Die App hat kein Client-Routing, daher
-braucht es kein 404-Fallback.
+Der Explorer braucht vor dem Bauen seine Datenbank. Der Workflow importiert
+sie aus dem aktuellen F1DB-Release und lässt die 42 Prüfungen laufen, bevor
+gebaut wird – schlägt eine fehl, wird nichts veröffentlicht. Die Seite zeigt
+damit nach jedem Push den Datenstand des jüngsten Releases.
 
-Das Teilprojekt in `explorer/` wird nicht mitveröffentlicht: Es braucht vor dem
-Bauen einen Datenimport (`npm run import`) und hat ein eigenes Tooling.
+Beide Anwendungen kennen den Unterpfad, unter dem sie liegen. Der Explorer
+nimmt ihn aus `base` in `explorer/astro.config.mjs`; jeder seiteninterne
+Verweis geht über `import.meta.env.BASE_URL`, gebündelt in `pfad` in
+`explorer/src/lib/db.js`. Die klassische Anwendung benutzt `base: './'` und
+damit durchweg relative Pfade – sie läuft in jedem Unterverzeichnis.
 
 ## Hinweis
 

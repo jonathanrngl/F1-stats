@@ -29,7 +29,18 @@ const NAV = [
   { pfad: '/explorer/', label: 'Explorer' },
 ]
 
-const hier = Astro.url.pathname
+/*
+ * Der Vorsatz, unter dem die Seite liegt: auf GitHub Pages "/F1-stats/", beim
+ * Entwickeln "/". Jeder seiteninterne Verweis trägt ihn.
+ */
+const BASIS = import.meta.env.BASE_URL.replace(/\/$/, '')
+
+/*
+ * Astro.url.pathname enthält den Vorsatz, die Einträge in NAV nicht. Erst
+ * abschneiden, dann vergleichen – sonst wäre unter /F1-stats/ nie ein Punkt
+ * aktiv.
+ */
+const hier = Astro.url.pathname.slice(BASIS.length) || '/'
 /** Aktiv ist auch die Übersicht, wenn man auf einer ihrer Unterseiten steht. */
 const istAktiv = (pfad: string) => hier === pfad || hier.startsWith(pfad)
 ---
@@ -38,7 +49,7 @@ const istAktiv = (pfad: string) => hier === pfad || hier.startsWith(pfad)
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/svg+xml" href={`${BASIS}/favicon.svg`} />
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)" />
     <title>{titel}</title>
@@ -51,13 +62,13 @@ const istAktiv = (pfad: string) => hier === pfad || hier.startsWith(pfad)
   <body>
     <header class="kopf">
       <div class="wrap">
-        <a class="marke" href="/">
+        <a class="marke" href={`${BASIS}/`}>
           <b>Formel 1</b><span>Statistiken</span>
         </a>
         <nav class="hauptnav" aria-label="Hauptnavigation">
           {
             NAV.map((n) => (
-              <a href={n.pfad} aria-current={istAktiv(n.pfad) ? 'page' : undefined}>
+              <a href={`${BASIS}${n.pfad}`} aria-current={istAktiv(n.pfad) ? 'page' : undefined}>
                 {n.label}
               </a>
             ))
@@ -77,6 +88,9 @@ const istAktiv = (pfad: string) => hier === pfad || hier.startsWith(pfad)
         Daten von <a href="https://github.com/f1db/f1db">F1DB</a>, Creative Commons BY 4.0.
         Kein offizielles Angebot der Formel 1. F1, FORMULA ONE und Formel 1 sind Marken der
         Formula One Licensing BV.
+        <br />
+        Die bisherige Anwendung liegt weiterhin unter
+        <a href={`${BASIS}/klassisch/`}>klassisch</a>.
       </div>
     </footer>
   </body>

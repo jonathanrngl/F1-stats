@@ -58,6 +58,9 @@ const KENNZAHLEN = {
   },
 }
 
+/* Vorsatz der Seite: auf GitHub Pages "/F1-stats", beim Entwickeln leer. */
+const BASIS = import.meta.env.BASE_URL.replace(/\/$/, '')
+
 const STANDARD = ['starts', 'siege', 'podien', 'poles', 'punkte']
 
 export default function Explorer() {
@@ -76,7 +79,7 @@ export default function Explorer() {
   })
 
   useEffect(() => {
-    fetch('/data/wuerfel.json')
+    fetch(`${BASIS}/data/wuerfel.json`)
       .then((r) => {
         if (!r.ok) throw new Error('Der Datenwürfel konnte nicht geladen werden.')
         return r.json()
