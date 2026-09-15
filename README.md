@@ -117,6 +117,24 @@ unter dem Graphen statt schwebend daneben, und ein angetippter Wert bleibt
 stehen: Beim Abheben des Fingers feuert der Browser `pointerleave`, der Wert
 verschwände sonst im selben Moment, in dem man ihn lesen will.
 
+## Veröffentlichen
+
+Die Seite wird bei jedem Push auf `main` gebaut und auf GitHub Pages
+veröffentlicht – siehe `.github/workflows/deploy.yml`. Der Build läuft auf dem
+Runner, deshalb liegt im Repo kein fertiges `dist`.
+
+Einmalig im Repo einzustellen: **Settings → Pages → Build and deployment →
+Source: GitHub Actions**. Die Einstellung *Deploy from a branch* passt hier
+nicht, weil im Repo nur der Quelltext liegt und nicht die gebaute Seite.
+
+`base: './'` in `vite.config.ts` erzeugt relative Asset-Pfade. Derselbe Build
+läuft dadurch unter `jonathanrngl.github.io/F1-stats/` wie auch im Wurzel-
+verzeichnis einer eigenen Domain. Die App hat kein Client-Routing, daher
+braucht es kein 404-Fallback.
+
+Das Teilprojekt in `explorer/` wird nicht mitveröffentlicht: Es braucht vor dem
+Bauen einen Datenimport (`npm run import`) und hat ein eigenes Tooling.
+
 ## Hinweis
 
 Kein offizielles Angebot der Formel 1. F1, FORMULA ONE und Formel 1 sind Marken
