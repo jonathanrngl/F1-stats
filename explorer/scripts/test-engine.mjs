@@ -22,6 +22,12 @@ import {
   calculateTrackPerformance, calculateWinRate, calculateWins, driverRaces,
 } from '../src/engine/driver.js'
 import { longestStreak, mean, rate } from '../src/engine/metric.js'
+import {
+  datenstand, inReichweite, juengsteAenderungen, laufendeSerien, rekordVerlaeufe, saisonMarken,
+} from '../src/engine/aenderungen.js'
+import {
+  meistePodien, meistePoles, meisteSchnellsteRunden, meisteSiege, meisteStarts, teamRekorde,
+} from '../src/engine/records.js'
 
 const HIER = path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1'))
 const DB = path.join(HIER, '..', 'data', 'f1.sqlite')
@@ -223,6 +229,153 @@ console.log(`   ✓ Fangio: ${punkteFangio} Rennpunkte, ${wmFangio} davon gewert
 // DNF-Quote zwischen 0 und 1
 const dnf = calculateDNFRate(senna)
 pruefe('Ausfallquote im gültigen Bereich', dnf.value > 0 && dnf.value < 1, `${dnf.value}`)
+
+// -------------------------------------------------- 4. Verlauf der Bestmarken
+
+console.log('\n4. Verlauf der Bestmarken')
+
+const verlaeufe = rekordVerlaeufe(db)
+
+/*
+ * Derselbe Wert auf zwei Wegen: Die Rekordseite fragt die Datenbank mit einem
+ * GROUP BY, der Verlauf zählt 1172 Rennen einzeln durch. Weichen sie ab, ist
+ * eine der beiden Zählweisen falsch – und dann widersprächen sich zwei Seiten
+ * derselben Anwendung, ohne dass es jemandem auffiele.
+ */
+const AUS_REKORDEN = {
+  siege: () => meisteSiege(db, 1)[0].wert,
+  poles: () => meistePoles(db, 1)[0].wert,
+  podien: () => meistePodien(db, 1)[0].wert,
+  schnellste: () => meisteSchnellsteRunden(db, 1)[0].wert,
+  starts: () => meisteStarts(db, 1)[0].wert,
+  teamSiege: () => teamRekorde(db, 'siege', 1)[0].wert,
+  teamPoles: () => teamRekorde(db, 'poles', 1)[0].wert,
+}
+
+for (const v of verlaeufe) {
+  const soll = AUS_REKORDEN[v.kategorie.id]()
+  gleich(`Verlauf trifft Rekordliste: ${v.kategorie.id}`, v.rekord, soll)
+  pruefe(`${v.kategorie.id}: Marke hat mindestens einen Halter`, v.halter.length > 0)
+
+  /* Eine Bestmarke kann nur steigen, und jedes Ereignis muss dort ansetzen,
+   * wo das vorige aufhörte – sonst fehlte ein Schritt in der Kette. */
+  let vorigerWert = 0
+  let lueckenlos = true
+  for (const e of v.ereignisse) {
+    if (e.wert < vorigerWert || e.vorher.wert !== vorigerWert) lueckenlos = false
+    vorigerWert = e.wert
+  }
+  pruefe(`${v.kategorie.id}: Kette lückenlos und monoton`, lueckenlos)
+  gleich(`${v.kategorie.id}: Kette endet auf dem Rekord`, vorigerWert, v.rekord)
+}
+console.log(`   ✓ ${verlaeufe.length} Bestmarken nachgerechnet, Ketten geschlossen`)
+
+/*
+ * Zwei datierte Ereignisse gegen die Rekordbücher. Beide sind in Starts
+ * gezählt; Hamiltons Siege sind davon unberührt, Alonsos Starts nicht – dort
+ * nennen die Bücher den Termin der 350. Nennung, nicht des 350. Starts.
+ */
+const siegeVerlauf = verlaeufe.find((v) => v.kategorie.id === 'siege')
+const hamilton91 = siegeVerlauf.ereignisse.find((e) => e.wert === 91 && e.art === 'eingestellt')
+const hamilton92 = siegeVerlauf.ereignisse.find((e) => e.wert === 92)
+
+pruefe('Hamilton stellt Schumachers 91 Siege ein', !!hamilton91)
+gleich('… am 11. Oktober 2020 (Eifel)', hamilton91?.datum, '2020-10-11')
+gleich('… und bricht die Marke am 25. Oktober 2020 (Portugal)', hamilton92?.datum, '2020-10-25')
+gleich('… und zwar als geteilte Marke, nicht als Ausbau', hamilton92?.art, 'alleinVorn')
+console.log('   ✓ Hamilton 91 eingestellt (Eifel 2020), 92 gebrochen (Portugal 2020)')
+
+/* Jeder Bruch einer geteilten Marke folgt auf einen Wert, den zuvor mehrere
+ * hielten – sonst wäre „alleinVorn" die falsche Einordnung gewesen. */
+let brueche = 0
+let brueche_sauber = true
+for (const v of verlaeufe) {
+  v.ereignisse.forEach((e, i) => {
+    if (e.art !== 'alleinVorn') return
+    brueche++
+    const davor = v.ereignisse[i - 1]
+    if (!davor || davor.wert !== e.wert - 1 || e.vorher.halter.length < 2) brueche_sauber = false
+  })
+}
+pruefe(`alle ${brueche} Rekordbrüche folgen auf eine geteilte Marke`, brueche_sauber)
+pruefe('es gibt überhaupt Rekordbrüche', brueche > 0, `${brueche}`)
+
+// -------------------------------------------------- 5. Aussichten
+
+console.log('\n5. Aussichten – Saison, ewige Marken, Serien')
+
+const standJetzt = datenstand(db)
+pruefe('Datenstand vorhanden', !!standJetzt)
+
+const markenJetzt = saisonMarken(db, standJetzt)
+pruefe(
+  'keine Saisonmarke, die rechnerisch nicht mehr erreichbar ist',
+  markenJetzt.every((m) => m.fehltZumEinstellen <= standJetzt.offen),
+  markenJetzt.map((m) => `${m.art.id}: ${m.fehltZumEinstellen}/${standJetzt.offen}`).join(', '),
+)
+pruefe(
+  'brechbar heißt: Bedarf passt in die offenen Rennen',
+  markenJetzt.every((m) => m.brechenMoeglich === m.fehltZumBrechen <= standJetzt.offen),
+)
+
+const aussichtenJetzt = inReichweite(db, verlaeufe, standJetzt)
+pruefe('Aussichten vorhanden', aussichtenJetzt.length > 0)
+pruefe(
+  'niemand verfolgt eine Marke, die er selbst hält',
+  aussichtenJetzt.every((a) => a.eigene < a.rekord && a.fehlt >= 1),
+)
+pruefe(
+  'Hochrechnung ist eine positive ganze Zahl oder begründet keine',
+  aussichtenJetzt.every(
+    (a) =>
+      (a.hochrechnung.value === null && typeof a.hochrechnung.caveat === 'string') ||
+      (Number.isInteger(a.hochrechnung.value) && a.hochrechnung.value > 0),
+  ),
+)
+pruefe(
+  'ein noch aktiver Rekordhalter ist als solcher markiert',
+  aussichtenJetzt.every((a) => typeof a.halterAktiv === 'boolean'),
+)
+console.log(`   ✓ ${markenJetzt.length} Saisonmarken, ${aussichtenJetzt.length} Aussichten`)
+
+const serienJetzt = laufendeSerien(db, standJetzt)
+pruefe(
+  'keine laufende Serie ist länger als die Bestmarke ihrer Art',
+  serienJetzt.every((s) => s.laenge <= s.rekord),
+  serienJetzt.map((s) => `${s.name} ${s.laenge}/${s.rekord}`).join(', '),
+)
+pruefe(
+  'Abstand zur Serienbestmarke passt zur Länge',
+  serienJetzt.every((s) => s.fehlt === Math.max(0, s.rekord - s.laenge + 1)),
+)
+
+/* Die gebündelten Ausbauten dürfen keinen Schritt verschlucken: Der Zuwachs
+ * eines Laufs ist genau die Zahl seiner Schritte. */
+const { ausbauten: alleAusbauten } = juengsteAenderungen(verlaeufe, { seit: '1950-01-01' })
+pruefe(
+  'gebündelte Ausbauten verlieren keinen Schritt',
+  alleAusbauten.every((a) => a.bis - a.von === a.schritte),
+  alleAusbauten.find((a) => a.bis - a.von !== a.schritte)?.kategorie?.id ?? '',
+)
+
+/* Ein Bruch trägt sein Gleichziehen bei sich, und dieses darf nicht zusätzlich
+ * als eigener Eintrag auftauchen – sonst stünde dieselbe Geschichte zweimal. */
+const { einzeln: alleEinzeln } = juengsteAenderungen(verlaeufe, { seit: '2000-01-01' })
+const angehaengt = alleEinzeln.filter((e) => e.zuvorEingestellt)
+pruefe('mindestens ein Bruch trägt sein Gleichziehen', angehaengt.length > 0)
+pruefe(
+  'das angehängte Gleichziehen liegt eine Marke tiefer und davor',
+  angehaengt.every(
+    (e) => e.zuvorEingestellt.wert === e.wert - 1 && e.zuvorEingestellt.datum <= e.datum,
+  ),
+)
+pruefe(
+  'kein angehängtes Gleichziehen steht zusätzlich für sich',
+  angehaengt.every(
+    (e) => !alleEinzeln.some((x) => x.art === 'eingestellt' && x.rennen === e.zuvorEingestellt.rennen && x.kategorie.id === e.kategorie.id),
+  ),
+)
+console.log(`   ✓ ${serienJetzt.length} laufende Serien, ${alleAusbauten.length} Ausbauläufe`)
 
 db.close()
 
