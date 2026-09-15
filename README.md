@@ -136,6 +136,10 @@ sie aus dem aktuellen F1DB-Release und lässt die 42 Prüfungen laufen, bevor
 gebaut wird – schlägt eine fehl, wird nichts veröffentlicht. Die Seite zeigt
 damit nach jedem Push den Datenstand des jüngsten Releases.
 
+Zusätzlich läuft der Workflow einmal täglich um 4 Uhr UTC. Die Rennvorschau
+nennt das nächste Rennen und den Stand der Meisterschaft; beides veraltet
+ohne Neubau, weil die Seite statisch ist.
+
 Beide Anwendungen kennen den Unterpfad, unter dem sie liegen. Der Explorer
 nimmt ihn aus `base` in `explorer/astro.config.mjs`; jeder seiteninterne
 Verweis geht über `import.meta.env.BASE_URL`, gebündelt in `pfad` in

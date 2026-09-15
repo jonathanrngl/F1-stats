@@ -8,6 +8,11 @@ name: Deploy
 on:
   push:
     branches: [main]
+  # Die Rennvorschau zeigt das naechste Rennen und den Stand der WM. Beides
+  # veraltet ohne Neubau, denn die Seite ist statisch. Einmal taeglich reicht:
+  # Das F1DB-Release kommt nach jedem Rennwochenende, nicht haeufiger.
+  schedule:
+    - cron: '0 4 * * *'
   workflow_dispatch:
 
 permissions:

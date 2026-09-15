@@ -21,6 +21,7 @@ Architektur und Begründungen: [`../docs/ARCHITEKTUR.md`](../docs/ARCHITEKTUR.md
 | 10 · Data Explorer mit Export | **fertig** |
 | 11 · Statistik-Suche in natürlicher Sprache | **fertig** |
 | 12 · Stints und Wetter (OpenF1, ab 2023) | offen |
+| 13 · Rennvorschau auf das nächste Rennen | **fertig** |
 
 ## Entwickeln
 

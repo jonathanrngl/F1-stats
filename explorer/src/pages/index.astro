@@ -28,6 +28,7 @@ const nf = new Intl.NumberFormat('de-DE')
   </p>
 
   <ul class="karten">
+    <li><a class="karte" href={pfad.seite('/vorschau/')}><b>Vorschau</b><span>Das nächste Rennen: Strecke, WM-Stand und Marken in Reichweite</span></a></li>
     <li><a class="karte" href={pfad.seite('/fahrer/')}><b>Fahrer</b><span>{nf.format(zahlen.fahrer)} Profile mit Karriere, Serien und Teamkollegen</span></a></li>
     <li><a class="karte" href={pfad.seite('/teams/')}><b>Teams</b><span>{zahlen.teams} Konstrukteure samt Vorgängern</span></a></li>
     <li><a class="karte" href={pfad.seite('/saisons/')}><b>Saisons</b><span>Wertungen, Kalender und Verlauf je Jahr</span></a></li>
@@ -42,7 +43,7 @@ const nf = new Intl.NumberFormat('de-DE')
       <li>
         <a class="karte" href={pfad.saison(s.jahr)}>
           <b>{s.jahr}</b>
-          <span>{s.meister ?? 'läuft noch'}{s.teamMeister ? ` · ${s.teamMeister}` : ''}</span>
+          <span>{s.meister ?? 'läuft noch'}{s.teamMeister ? ` · Team-WM: ${s.teamMeister}` : ''}</span>
         </a>
       </li>
     ))}
