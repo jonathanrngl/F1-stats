@@ -30,6 +30,9 @@
 
   /* Gegenrichtung zum Rot: Plätze gewonnen, Auto hielt durch, Titel noch drin. */
   --good: light-dark(#0f7a52, #2fbf88);
+  /* Weder gut noch schlecht, aber bemerkenswert: eine Platzierung, die sich
+     unter einem anderen Punktesystem verschiebt. */
+  --warn: light-dark(#a56100, #e0a54a);
   --good-wash: light-dark(rgba(15, 122, 82, 0.1), rgba(47, 191, 136, 0.16));
 
   --danger-fg: light-dark(#b80500, #ff8b83);

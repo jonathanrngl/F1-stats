@@ -12,7 +12,15 @@ Architektur und Begründungen: [`../docs/ARCHITEKTUR.md`](../docs/ARCHITEKTUR.md
 | 1 · Import F1DB, Validierung | **fertig** |
 | 2 · Statistik-Engine, Tests | **fertig** |
 | 3 · Seitengerüst Astro, Fahrerprofile | **fertig** |
-| 4 · Team-, Saison-, Renn-, Streckenseiten | offen |
+| 4 · Team-, Saison-, Renn-, Streckenseiten | **fertig** |
+| 5 · Rekorddatenbank | **fertig** |
+| 6 · JSON-API und Fahrervergleich | **fertig** |
+| 7 · Lader für Rundendaten | **fertig**, Nachladen offen |
+| 8 · WM-Punkteverlauf | **fertig** |
+| 9 · What-if: anderes Punktesystem | **fertig** |
+| 10 · Data Explorer mit Export | **fertig** |
+| 11 · Statistik-Suche in natürlicher Sprache | **fertig** |
+| 12 · Stints und Wetter (OpenF1, ab 2023) | offen |
 
 ## Entwickeln
 

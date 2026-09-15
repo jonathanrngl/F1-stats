@@ -625,9 +625,23 @@ Makulatur.
 | 11 | Natürlichsprachliche Suche als Abfrage-Übersetzer | Modell formuliert Filter, rechnet nicht |
 | 12 | What-if-Rechnungen auf `points_award` | anderes Punktesystem, ohne DNF, … |
 
-Schritt 7 ist der teuerste: 1172 Rennen ab 1996 sind rund 700 Anfragen an
-Jolpica, bei 500 pro Stunde also gut anderthalb Stunden einmaliger Lauf. Das
-Ergebnis wird eingecheckt, nicht bei jedem Build neu geholt.
+**Korrektur zu Schritt 7.** Hier stand, der Lauf koste „rund 700 Anfragen,
+bei 500 pro Stunde also gut anderthalb Stunden". Das war um den Faktor zehn
+falsch: Jolpica paginiert Rundendaten nicht nach Rennen, sondern nach
+Zeitnahmen – Fahrer mal Runde. Ein modernes Rennen sind rund 1.100 Zeilen und
+damit zwölf Anfragen, nicht eine.
+
+Nachgerechnet an den importierten Daten: 591 Rennen ab 1996, 36.025 gefahrene
+Runden, im Schnitt 20,6 Starter. Das sind 741.225 Zeitnahmen und rund 7.100
+Anfragen – **etwa 14 Stunden**, nicht anderthalb.
+
+Folge für den Plan: Der vollständige Bestand braucht einen Lauf über Nacht.
+`scripts/lade-runden.mjs --entscheidungen` lädt stattdessen nur die 30
+Rennen seit 1996, in denen ein Titel fiel – 360 Anfragen, gut eine halbe
+Stunde. Das trägt den Positionsverlauf für genau die Rennen, bei denen er
+interessant ist, und der Rest kann später folgen. Die `coverage`-Tabelle
+hält fest, welche Rennen belegt sind; die Oberfläche zeigt den Verlauf nur
+dort.
 
 ---
 
