@@ -15,13 +15,13 @@ const index = fahrerIndex()
 ---
 
 <Seite
-  titel="Fahrervergleich – zwei Karrieren nebeneinander"
-  beschreibung="Zwei Formel-1-Fahrer im direkten Vergleich: Siege, Podien, Quoten und Durchschnitte, für die ganze Karriere oder einen frei gewählten Zeitraum."
+  titel="Driver comparison – two careers side by side"
+  beschreibung="Two Formula 1 drivers head to head: wins, podiums, rates and averages, across a full career or a period of your own choosing."
 >
-  <h1>Vergleich</h1>
+  <h1>Comparison</h1>
   <p class="lead">
-    Zwei Fahrer nebeneinander – über die ganze Karriere oder einen Zeitraum deiner Wahl. Waren
-    sie einmal Teamkollegen, steht die direkte Bilanz darunter: gleiches Auto, gleiche Rennen.
+    Two drivers side by side – across their full careers or a period of your choosing. If they
+    were ever team-mates, the direct head-to-head sits below: same car, same races.
   </p>
 
   <Vergleich index={index} client:load />
@@ -252,6 +252,42 @@ const index = fahrerIndex()
 
   .vgl .fehler { color: var(--danger-fg); background: var(--danger-bg); border-color: var(--danger-border); }
   .vgl .hinweis { border-left: 3px solid var(--axis); }
+
+  /* Der leere Zustand: kein Hinweis auf eine Sackgasse, sondern der Einstieg. */
+  .vgl .anstoss {
+    margin: 1.75rem 0 0.75rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .vgl .paarungen {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(15rem, 100%), 1fr));
+    gap: 0.6rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .vgl .paarungen button {
+    display: block;
+    width: 100%;
+    padding: 0.8rem 0.95rem;
+    font: inherit;
+    text-align: left;
+    color: inherit;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0.6rem;
+    cursor: pointer;
+  }
+
+  .vgl .paarungen button:hover { border-color: var(--accent); }
+  .vgl .paarungen b { display: block; color: var(--ink); font-weight: 650; }
+  .vgl .paarungen span { font-size: 0.82rem; color: var(--muted); }
 
   .duell { margin-top: 3rem; padding-top: 1.5rem; border-top: 2px solid var(--border); }
   .duell h2 { font-size: 1.15rem; margin: 0 0 0.5rem; }

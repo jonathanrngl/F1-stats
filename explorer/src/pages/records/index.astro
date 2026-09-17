@@ -11,14 +11,14 @@ import {
 const d = db()
 const N = 10
 
-const nf = new Intl.NumberFormat('de-DE')
+const nf = new Intl.NumberFormat('en-GB')
 const ganz = (v) => nf.format(Math.round(v))
 const jahreAlt = (v) => {
   const j = Math.floor(v)
   const tage = Math.round((v - j) * 365.25)
-  return `${j} J. ${tage} T.`
+  return `${j}y ${tage}d`
 }
-const jahreSpanne = (v) => `${nf.format(Math.round(v * 10) / 10)} Jahre`
+const jahreSpanne = (v) => `${nf.format(Math.round(v * 10) / 10)} years`
 
 /*
  * Jeder Block nennt seine eigene Einheit und, wo nötig, seine Einschränkung.
@@ -26,59 +26,59 @@ const jahreSpanne = (v) => `${nf.format(Math.round(v * 10) / 10)} Jahre`
  */
 const bloecke = [
   {
-    titel: 'Meiste Siege',
+    titel: 'Most wins',
     liste: meisteSiege(d, N),
     format: ganz,
   },
   {
-    titel: 'Meiste Podien',
+    titel: 'Most podiums',
     liste: meistePodien(d, N),
     format: ganz,
   },
   {
-    titel: 'Meiste Pole-Positions',
+    titel: 'Most pole positions',
     liste: meistePoles(d, N),
     format: ganz,
-    hinweis: 'Schnellste Zeit im Qualifying – nicht der Startplatz, den Strafen verschieben.',
+    hinweis: 'Fastest time in qualifying – not the grid position, which penalties shift.',
   },
   {
-    titel: 'Meiste Starts',
+    titel: 'Most starts',
     liste: meisteStarts(d, N),
     format: ganz,
-    hinweis: 'Gezählt werden Starts, nicht Nennungen: Wer sich nicht qualifizierte, war nicht dabei.',
+    hinweis: 'Starts are counted, not entries: a driver who did not qualify was not in the race.',
   },
   {
-    titel: 'Meiste schnellste Runden',
+    titel: 'Most fastest laps',
     liste: meisteSchnellsteRunden(d, N),
     format: ganz,
   },
   {
-    titel: 'Meiste Weltmeisterschaften',
+    titel: 'Most World Championships',
     liste: meisteTitel(d, N),
     format: ganz,
   },
   {
-    titel: 'Meiste Punkte in Rennen',
+    titel: 'Most points scored in races',
     liste: meistePunkte(d, N),
     format: (v) => nf.format(Math.round(v)),
     hinweis:
-      'Nur bedingt vergleichbar: Das Punktesystem hat sich seit 1950 mehr als ein Dutzend Mal geändert, und bis 1990 verfiel ein Teil der Punkte als Streichresultat.',
+      'Comparable only up to a point: the points system has changed more than a dozen times since 1950, and until 1990 some of the points lapsed as dropped scores.',
   },
 ]
 
 const serien = [
-  { titel: 'Längste Siegesserie', liste: laengsteSerien(d, 'siege', N) },
-  { titel: 'Längste Podiumsserie', liste: laengsteSerien(d, 'podien', N) },
-  { titel: 'Längste Punkteserie', liste: laengsteSerien(d, 'punkte', N) },
-  { titel: 'Längste Serie ohne Ausfall', liste: laengsteSerien(d, 'zielankuenfte', N) },
+  { titel: 'Longest winning streak', liste: laengsteSerien(d, 'siege', N) },
+  { titel: 'Longest podium streak', liste: laengsteSerien(d, 'podien', N) },
+  { titel: 'Longest points-scoring streak', liste: laengsteSerien(d, 'punkte', N) },
+  { titel: 'Longest finishing streak', liste: laengsteSerien(d, 'zielankuenfte', N) },
 ]
 
 const alter = [
-  { titel: 'Jüngste Sieger', liste: altersrekord(d, 'sieg', 'jung', N) },
-  { titel: 'Älteste Sieger', liste: altersrekord(d, 'sieg', 'alt', N) },
-  { titel: 'Jüngste Polesetter', liste: altersrekord(d, 'pole', 'jung', N) },
-  { titel: 'Jüngste Weltmeister', liste: altersrekordMeister(d, 'jung', N) },
-  { titel: 'Älteste Weltmeister', liste: altersrekordMeister(d, 'alt', N) },
+  { titel: 'Youngest winners', liste: altersrekord(d, 'sieg', 'jung', N) },
+  { titel: 'Oldest winners', liste: altersrekord(d, 'sieg', 'alt', N) },
+  { titel: 'Youngest pole-sitters', liste: altersrekord(d, 'pole', 'jung', N) },
+  { titel: 'Youngest World Champions', liste: altersrekordMeister(d, 'jung', N) },
+  { titel: 'Oldest World Champions', liste: altersrekordMeister(d, 'alt', N) },
 ]
 
 const aufholjagden = groessteAufholjagden(d, N)
@@ -91,13 +91,13 @@ const teamTitel = teamRekorde(d, 'titel', N)
 ---
 
 <Seite
-  titel="Formel-1-Rekorde – Bestmarken seit 1950"
-  beschreibung="Meiste Siege, Podien und Pole-Positions, längste Serien, jüngste und älteste Rekordhalter – jeder Eintrag mit Verweis auf das Rennen."
+  titel="Formula 1 records – the records set since 1950"
+  beschreibung="Most wins, podiums and pole positions, longest streaks, youngest and oldest record holders – every entry linked to the race."
 >
-  <h1>Rekorde</h1>
+  <h1>Records</h1>
   <p class="lead">
-    Bestmarken seit 1950, aus den Rennergebnissen gerechnet statt aus einer gepflegten Liste
-    abgeschrieben. Jeder Eintrag verweist auf den Fahrer und, wo es einen gibt, auf das Rennen.
+    Records since 1950, computed from the race results rather than copied out of a curated
+    list. Every entry links to the driver and, where there is one, to the race.
   </p>
 
   <div class="raster">
@@ -117,10 +117,10 @@ const teamTitel = teamRekorde(d, 'titel', N)
     ))}
   </div>
 
-  <h2 class="gruppe">Serien</h2>
+  <h2 class="gruppe">Streaks</h2>
   <p class="lead">
-    Ununterbrochene Folgen über die Starts eines Fahrers. Rennen, die er ausließ, unterbrechen
-    keine Serie – er war nicht dabei, konnte also nichts verlieren.
+    Unbroken runs across a driver's starts. Races he sat out do not break a streak – he was not
+    there, so he had nothing to lose.
   </p>
   <div class="raster">
     {serien.map((s) => (
@@ -141,10 +141,10 @@ const teamTitel = teamRekorde(d, 'titel', N)
     ))}
   </div>
 
-  <h2 class="gruppe">Alter</h2>
+  <h2 class="gruppe">Age</h2>
   <p class="lead">
-    Fahrer ohne überliefertes Geburtsdatum fehlen in diesen Listen – ein fehlendes Datum ist
-    kein Alter null.
+    Drivers whose date of birth is not recorded are missing from these lists – a missing date is
+    not an age of zero.
   </p>
   <div class="raster">
     {alter.map((a) => (
@@ -165,11 +165,11 @@ const teamTitel = teamRekorde(d, 'titel', N)
     ))}
   </div>
 
-  <h2 class="gruppe">Aufholjagden und Karrieren</h2>
+  <h2 class="gruppe">Comeback drives and careers</h2>
   <div class="raster">
     <section>
-      <h2>Siege von weit hinten</h2>
-      <p class="hinweis">Startplatz, von dem aus das Rennen gewonnen wurde.</p>
+      <h2>Wins from the back of the grid</h2>
+      <p class="hinweis">The grid position the race was won from.</p>
       <ol class="rangliste breit">
         {aufholjagden.map((e) => (
           <li>
@@ -184,8 +184,8 @@ const teamTitel = teamRekorde(d, 'titel', N)
     </section>
 
     <section>
-      <h2>Meiste Plätze in einem Rennen</h2>
-      <p class="hinweis">Startplatz minus Zielposition, nur gewertete Rennen.</p>
+      <h2>Most positions gained in a race</h2>
+      <p class="hinweis">Grid position minus finishing position, classified races only.</p>
       <ol class="rangliste breit">
         {plaetze.map((e) => (
           <li>
@@ -200,8 +200,8 @@ const teamTitel = teamRekorde(d, 'titel', N)
     </section>
 
     <section>
-      <h2>Längste Karrieren</h2>
-      <p class="hinweis">Vom ersten bis zum letzten Start, Pausen eingeschlossen.</p>
+      <h2>Longest careers</h2>
+      <p class="hinweis">From the first start to the last, breaks included.</p>
       <ol class="rangliste breit">
         {karrieren.map((e) => (
           <li>
@@ -216,7 +216,7 @@ const teamTitel = teamRekorde(d, 'titel', N)
     </section>
 
     <section>
-      <h2>Längste Pause zwischen zwei Siegen</h2>
+      <h2>Longest gap between wins</h2>
       <ol class="rangliste breit">
         {pausen.map((e) => (
           <li>
@@ -234,7 +234,7 @@ const teamTitel = teamRekorde(d, 'titel', N)
   <h2 class="gruppe">Teams</h2>
   <div class="raster">
     <section>
-      <h2>Meiste Siege</h2>
+      <h2>Most wins</h2>
       <ol class="rangliste">
         {teamSiege.map((t) => (
           <li><a href={pfad.team(t.id)}>{t.name}</a><b>{t.wert}</b></li>
@@ -242,7 +242,7 @@ const teamTitel = teamRekorde(d, 'titel', N)
       </ol>
     </section>
     <section>
-      <h2>Meiste Konstrukteurstitel</h2>
+      <h2>Most constructors' titles</h2>
       <ol class="rangliste">
         {teamTitel.map((t) => (
           <li><a href={pfad.team(t.id)}>{t.name}</a><b>{t.wert}</b></li>

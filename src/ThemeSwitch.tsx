@@ -13,9 +13,9 @@ type Theme = 'system' | 'light' | 'dark'
 
 const KEY = 'f1:theme'
 const OPTIONS: { id: Theme; label: string; title: string }[] = [
-  { id: 'light', label: 'Hell', title: 'Helle Darstellung' },
-  { id: 'dark', label: 'Dunkel', title: 'Dunkle Darstellung' },
-  { id: 'system', label: 'Auto', title: 'Der Systemeinstellung folgen' },
+  { id: 'light', label: 'Light', title: 'Light appearance' },
+  { id: 'dark', label: 'Dark', title: 'Dark appearance' },
+  { id: 'system', label: 'Auto', title: 'Follow the system setting' },
 ]
 
 function stored(): Theme {
@@ -43,7 +43,7 @@ export default function ThemeSwitch() {
   }, [theme])
 
   return (
-    <div className="theme-switch" role="radiogroup" aria-label="Darstellung">
+    <div className="theme-switch" role="radiogroup" aria-label="Appearance">
       {OPTIONS.map((o) => (
         <button
           key={o.id}

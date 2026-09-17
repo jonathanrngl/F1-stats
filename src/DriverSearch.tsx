@@ -125,8 +125,8 @@ export default function DriverSearch({
       <input
         type="search"
         value={query}
-        placeholder="Fahrer suchen – Name oder Kürzel"
-        aria-label="Fahrer suchen"
+        placeholder="Search for a driver – name or code"
+        aria-label="Search for a driver"
         autoFocus={autoFocus}
         autoComplete="off"
         role="combobox"
@@ -165,7 +165,7 @@ export default function DriverSearch({
                 <span className="such-name">
                   {d.givenName} {d.familyName}
                 </span>
-                {d.dateOfBirth && <span className="such-jahr">*{d.dateOfBirth.slice(0, 4)}</span>}
+                {d.dateOfBirth && <span className="such-jahr">b. {d.dateOfBirth.slice(0, 4)}</span>}
               </li>
             )
           })}
@@ -173,7 +173,7 @@ export default function DriverSearch({
       )}
 
       {query.trim().length >= 2 && treffer.length === 0 && (
-        <p className="such-leer">Kein Fahrer gefunden.</p>
+        <p className="such-leer">No driver found.</p>
       )}
     </div>
   )

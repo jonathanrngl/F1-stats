@@ -15,6 +15,10 @@
  * Absicht: Die Schnittstelle steht damit fest, und ein späterer LLM-Endpunkt
  * ersetzt nur `uebersetze` – alles danach bleibt gleich. Er müsste dasselbe
  * liefern: eine Abfrage, keine Antwort.
+ *
+ * Die Muster erkennen englische Fragen, seit die Oberfläche englisch ist. Der
+ * Kommentar bleibt deutsch, weil der Quelltext es tut; die Zeichenketten, die
+ * der Leser zu sehen bekommt, sind es nicht.
  */
 
 /** Was eine übersetzte Frage ergibt – dieselbe Form, die der Explorer versteht. */
@@ -31,13 +35,13 @@ export const LEERE_ABFRAGE = {
 
 /*
  * Zahlwörter in gefalteter Schreibweise: Die Frage läuft durch `falte`, das
- * Umlaute auflöst – aus „fünf" wird „funf". Die Schlüssel müssen deshalb so
- * aussehen, wie sie nach der Faltung ankommen, sonst greift der Filter nicht.
+ * diakritische Zeichen auflöst und kleinschreibt. Die Schlüssel müssen deshalb
+ * so aussehen, wie sie nach der Faltung ankommen.
  */
 const ZAHLWORT = {
-  ein: 1, eine: 1, einen: 1, zwei: 2, drei: 3, vier: 4, funf: 5,
-  sechs: 6, sieben: 7, acht: 8, neun: 9, zehn: 10, elf: 11, zwolf: 12,
-  funfzehn: 15, zwanzig: 20, dreissig: 30, funfzig: 50,
+  one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8,
+  nine: 9, ten: 10, eleven: 11, twelve: 12, fifteen: 15, twenty: 20,
+  thirty: 30, forty: 40, fifty: 50, a: 1, an: 1,
 }
 
 const falte = (s) =>
@@ -61,109 +65,140 @@ export function uebersetze(frage, verzeichnis) {
 
   // -------------------------------------------------- Worüber gruppiert wird
 
-  if (/\b(team|teams|konstrukteur|konstrukteure|rennstall)\b/.test(q)) {
+  /*
+   * „since 2000" oder „from 1990 to 2000" nennt ein Jahr, meint aber keine
+   * Gruppierung nach Saison – sonst kippte jede Zeitspanne die Auswertung.
+   */
+  const nenntZeitraum = /\b(since|from|between|after|before)\b/.test(q)
+
+  if (/\b(team|teams|constructor|constructors|outfit)\b/.test(q)) {
     a.dimension = 'team'
-    merke('Gruppierung: Team', 'das Wort „Team" oder „Konstrukteur"')
-  } else if (/\b(saison|saisons|jahr|jahre)\b/.test(q) && !/\bseit\b|\bvon\b|\bzwischen\b/.test(q)) {
+    merke('Grouping: team', 'the word “team” or “constructor”')
+  } else if (/\b(season|seasons|year|years)\b/.test(q) && !nenntZeitraum) {
     a.dimension = 'saison'
-    merke('Gruppierung: Saison', 'das Wort „Saison" oder „Jahr"')
-  } else if (/\b(strecke|strecken|kurs|rennstrecke)\b/.test(q)) {
+    merke('Grouping: season', 'the word “season” or “year”')
+  } else if (/\b(circuit|circuits|track|tracks|venue|venues)\b/.test(q)) {
     a.dimension = 'strecke'
-    merke('Gruppierung: Strecke', 'das Wort „Strecke"')
+    merke('Grouping: circuit', 'the word “circuit” or “track”')
   } else {
-    merke('Gruppierung: Fahrer', 'Vorgabe, wenn nichts anderes genannt ist')
+    merke('Grouping: driver', 'the default when nothing else is named')
   }
 
   // -------------------------------------------------- Was gezählt wird
 
-  const kennzahl = (muster, k, label) => {
+  const kennzahl = (muster, k, label, wort) => {
     if (!muster.test(q)) return false
     if (!a.kennzahlen.includes(k)) a.kennzahlen.push(k)
     a.sortiere = k
-    merke(`Sortiert nach ${label}`, `das Wort „${muster.source.replace(/\\b|\(|\)|\|.*/g, '')}"`)
+    merke(`Sorted by ${label}`, `the word “${wort}”`)
     return true
   }
 
   // Reihenfolge zählt: Die zuletzt erkannte Kennzahl bestimmt die Sortierung,
   // deshalb stehen die spezifischeren Begriffe unten.
-  kennzahl(/\bstarts?\b|\bteilnahmen?\b/, 'starts', 'Starts')
-  kennzahl(/\bpunkte?\b/, 'punkte', 'Punkten')
-  kennzahl(/\bausfall|\bausfaelle|\bdnf\b/, 'ausfaelle', 'Ausfällen')
-  kennzahl(/\bschnellste runden?\b/, 'schnellste', 'schnellsten Runden')
-  kennzahl(/\bpodi(um|en|este?)\b/, 'podien', 'Podien')
-  kennzahl(/\bpoles?\b|\bpole.?position/, 'poles', 'Pole-Positions')
-  kennzahl(/\bsiege?\b|\bgewonnen\b|\bsieger\b|\bgewinner\b/, 'siege', 'Siegen')
-  if (/\baufgeholt\b|\bgutgemacht\b|\bpositionen gut/.test(q)) {
+  kennzahl(/\bstarts?\b|\bappearances?\b|\bentries\b/, 'starts', 'starts', 'starts')
+  kennzahl(/\bpoints?\b/, 'punkte', 'points', 'points')
+  kennzahl(/\bretirements?\b|\bretired\b|\bdnfs?\b/, 'ausfaelle', 'retirements', 'retirements')
+  kennzahl(/\bfastest laps?\b/, 'schnellste', 'fastest laps', 'fastest lap')
+  kennzahl(/\bpodiums?\b|\bpodium finishes\b/, 'podien', 'podiums', 'podium')
+  kennzahl(/\bpoles?\b|\bpole.?positions?\b/, 'poles', 'pole positions', 'pole')
+  kennzahl(/\bwins?\b|\bwon\b|\bwinners?\b|\bvictor(y|ies)\b/, 'siege', 'wins', 'win')
+
+  if (/\bgained\b|\bmade up\b|\bpositions? gained\b|\bovertook\b/.test(q)) {
     if (!a.kennzahlen.includes('gutgemacht')) a.kennzahlen.push('gutgemacht')
     a.sortiere = 'gutgemacht'
-    merke('Sortiert nach gutgemachten Plätzen', 'das Wort „aufgeholt" oder „gutgemacht"')
+    merke('Sorted by positions gained', 'the word “gained” or “made up”')
   }
 
   // -------------------------------------------------- Zeitraum
 
-  const spanne = /\b(?:von|zwischen)\s*(\d{4})\s*(?:bis|-|–|und)\s*(\d{4})/.exec(q)
-  const seit = /\bseit\s*(\d{4})/.exec(q)
+  const spanne = /\b(?:from|between)\s*(\d{4})\s*(?:to|-|–|and|until)\s*(\d{4})/.exec(q)
+  const seit = /\b(?:since|after|from)\s*(\d{4})/.exec(q)
   const einzeln = /\b(19\d{2}|20\d{2})\b/.exec(q)
 
   if (spanne) {
     a.filter.vonJahr = spanne[1]
     a.filter.bisJahr = spanne[2]
-    merke(`Zeitraum ${spanne[1]}–${spanne[2]}`, 'die beiden Jahreszahlen')
+    merke(`Period ${spanne[1]}–${spanne[2]}`, 'the two years given')
   } else if (seit) {
     a.filter.vonJahr = seit[1]
-    merke(`Ab ${seit[1]}`, 'das Wort „seit"')
+    merke(`From ${seit[1]} onwards`, 'the word “since”')
   } else if (einzeln) {
     a.filter.vonJahr = einzeln[1]
     a.filter.bisJahr = einzeln[1]
-    merke(`Nur ${einzeln[1]}`, 'die genannte Jahreszahl')
+    merke(`${einzeln[1]} only`, 'the year given')
   }
 
   // -------------------------------------------------- Strecke, Team, Fahrer
 
-  /** Längster Name zuerst, damit „Red Bull Ring" nicht als „Red Bull" gilt. */
+  /*
+   * Namen suchen, längster zuerst, damit „Red Bull Ring" nicht als „Red Bull"
+   * gilt. Das genügt aber nur innerhalb einer Liste: „wins at the Red Bull
+   * Ring" traf früher die Strecke *und* das Team, weil beide Listen dieselbe
+   * Stelle im Text lasen. Ein Treffer wird deshalb aus `rest` gestrichen,
+   * bevor die nächste Liste drübergeht.
+   */
+  let rest = q
   const suchen = (liste, feld, label) => {
     const sortiert = [...liste].sort((x, y) => y.name.length - x.name.length)
     for (const e of sortiert) {
       const n = falte(e.name)
-      if (n.length >= 4 && q.includes(n)) {
+      if (n.length >= 4 && rest.includes(n)) {
         a.filter[feld] = e.id
-        merke(`${label}: ${e.name}`, `der Name kommt in der Frage vor`)
+        rest = rest.split(n).join(' ')
+        merke(`${label}: ${e.name}`, 'the name appears in the question')
         return true
       }
     }
     return false
   }
 
-  suchen(verzeichnis.strecken ?? [], 'strecke', 'Strecke')
+  suchen(verzeichnis.strecken ?? [], 'strecke', 'Circuit')
   suchen(verzeichnis.teams ?? [], 'team', 'Team')
 
   // -------------------------------------------------- Mindestwerte
 
   const mindest = (muster, feld, label) => {
+    /* Das erste Muster gewinnt: Es ist das genauere, weil „at least" darin steht. */
+    if (a.filter[feld] !== undefined) return
     const m = muster.exec(q)
     if (!m) return
     const wert = ZAHLWORT[m[1]] ?? Number(m[1])
     if (!Number.isFinite(wert)) return
     a.filter[feld] = String(wert)
-    merke(`Mindestens ${wert} ${label}`, 'das Wort „mindestens"')
+    merke(`At least ${wert} ${label}`, 'the words “at least”')
   }
-  mindest(/mindestens\s+(\w+)\s+siege/, 'minSiege', 'Siege')
-  mindest(/mindestens\s+(\w+)\s+podi/, 'minPodien', 'Podien')
-  mindest(/mindestens\s+(\w+)\s+(?:starts|rennen)/, 'minStarts', 'Starts')
+
+  /*
+   * „at least five wins and twenty podiums" nennt das „at least" nur einmal.
+   * Deshalb zwei Muster je Kennzahl: eines mit dem Wort davor, eines für das
+   * angehängte Glied. Ohne das zweite fiele die Hälfte der Bedingung still
+   * unter den Tisch – und die Zahl wäre allgemeiner, als der Leser denkt.
+   */
+  const NACHGESTELLT = '(?:and|,)\\s+(\\w+)\\s+'
+  mindest(/at least\s+(\w+)\s+wins?/, 'minSiege', 'wins')
+  mindest(new RegExp(`${NACHGESTELLT}wins?\\b`), 'minSiege', 'wins')
+  mindest(/at least\s+(\w+)\s+podiums?/, 'minPodien', 'podiums')
+  mindest(new RegExp(`${NACHGESTELLT}podiums?\\b`), 'minPodien', 'podiums')
+  mindest(/at least\s+(\w+)\s+(?:starts|races)/, 'minStarts', 'starts')
+  mindest(new RegExp(`${NACHGESTELLT}(?:starts|races)\\b`), 'minStarts', 'starts')
 
   // -------------------------------------------------- Besondere Schalter
 
-  if (/von (?:weit )?hinten|au(?:ss|ß)erhalb der (?:ersten )?(?:top.?)?(?:10|zehn)|hinter(?:en)? startpl/.test(q)) {
+  if (/from (?:the )?back|outside the (?:first |top.?)?(?:10|ten)|from the rear|lower (?:half of the )?grid/.test(q)) {
     a.filter.nurVonHinten = true
-    merke('Nur Siege von jenseits Startplatz 10', 'die Formulierung „von hinten" oder „außerhalb der ersten zehn"')
+    merke(
+      'Only wins from beyond grid position 10',
+      'the phrase “from the back” or “outside the top ten”',
+    )
   }
 
   // -------------------------------------------------- Was übrig blieb
 
   if (a.erkannt.length <= 1) {
     a.unverstanden.push(
-      'Aus dieser Frage ließ sich kaum etwas ableiten. Nenne, worüber gezählt werden soll ' +
-        '(Fahrer, Team, Saison, Strecke) und was (Siege, Podien, Poles, Punkte).',
+      'Almost nothing could be derived from this question. Name what should be counted over ' +
+        '(drivers, teams, seasons, circuits) and what should be counted (wins, podiums, poles, points).',
     )
   }
 
@@ -177,8 +212,8 @@ export function uebersetze(frage, verzeichnis) {
  * glaubt – das ist der eigentliche Zweck der ganzen Übung.
  */
 export function beschreibe(abfrage, kennzahlNamen, dimensionNamen, namen = {}) {
-  const teile = [`Gruppiert nach ${dimensionNamen[abfrage.dimension]}`]
-  teile.push(`sortiert nach ${kennzahlNamen[abfrage.sortiere]}`)
+  const teile = [`Grouped by ${dimensionNamen[abfrage.dimension]}`]
+  teile.push(`sorted by ${kennzahlNamen[abfrage.sortiere]}`)
   const f = abfrage.filter
 
   /*
@@ -186,16 +221,16 @@ export function beschreibe(abfrage, kennzahlNamen, dimensionNamen, namen = {}) {
    * Filter verschweigt, ist schlimmer als gar keine – der Leser hielte die
    * Zahl dann für allgemeiner, als sie ist.
    */
-  if (f.strecke) teile.push(`nur ${namen.strecke?.[f.strecke] ?? f.strecke}`)
-  if (f.team) teile.push(`nur ${namen.team?.[f.team] ?? f.team}`)
-  if (f.fahrer) teile.push(`nur ${namen.fahrer?.[f.fahrer] ?? f.fahrer}`)
-  if (f.vonJahr && f.bisJahr && f.vonJahr === f.bisJahr) teile.push(`nur ${f.vonJahr}`)
-  else if (f.vonJahr && f.bisJahr) teile.push(`${f.vonJahr} bis ${f.bisJahr}`)
-  else if (f.vonJahr) teile.push(`ab ${f.vonJahr}`)
-  if (f.minSiege) teile.push(`mindestens ${f.minSiege} Siege`)
-  if (f.minPodien) teile.push(`mindestens ${f.minPodien} Podien`)
-  if (f.minStarts) teile.push(`mindestens ${f.minStarts} Starts`)
-  if (f.nurSieger) teile.push('nur Siege')
-  if (f.nurVonHinten) teile.push('nur Siege von jenseits Startplatz 10')
+  if (f.strecke) teile.push(`${namen.strecke?.[f.strecke] ?? f.strecke} only`)
+  if (f.team) teile.push(`${namen.team?.[f.team] ?? f.team} only`)
+  if (f.fahrer) teile.push(`${namen.fahrer?.[f.fahrer] ?? f.fahrer} only`)
+  if (f.vonJahr && f.bisJahr && f.vonJahr === f.bisJahr) teile.push(`${f.vonJahr} only`)
+  else if (f.vonJahr && f.bisJahr) teile.push(`${f.vonJahr} to ${f.bisJahr}`)
+  else if (f.vonJahr) teile.push(`from ${f.vonJahr} onwards`)
+  if (f.minSiege) teile.push(`at least ${f.minSiege} wins`)
+  if (f.minPodien) teile.push(`at least ${f.minPodien} podiums`)
+  if (f.minStarts) teile.push(`at least ${f.minStarts} starts`)
+  if (f.nurSieger) teile.push('wins only')
+  if (f.nurVonHinten) teile.push('only wins from beyond grid position 10')
   return teile.join(', ') + '.'
 }

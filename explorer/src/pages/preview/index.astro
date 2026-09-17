@@ -39,12 +39,12 @@ const letzteHier = rennen
 
 const heimat = rennen ? land(rennen.demonym, rennen.land, rennen.ioc) : null
 
-const nf = new Intl.NumberFormat('de-DE')
+const nf = new Intl.NumberFormat('en-GB')
 const ein = (n) => (n === null || n === undefined ? '–' : nf.format(Math.round(n * 10) / 10))
-const proz = (m) => (!m || m.value === null ? '–' : `${Math.round(m.value * 100)} %`)
+const proz = (m) => (!m || m.value === null ? '–' : `${Math.round(m.value * 100)}%`)
 const datum = (s) =>
   s
-    ? new Intl.DateTimeFormat('de-DE', { dateStyle: 'long', timeZone: 'UTC' }).format(
+    ? new Intl.DateTimeFormat('en-GB', { dateStyle: 'long', timeZone: 'UTC' }).format(
         new Date(`${s}T12:00:00Z`),
       )
     : '–'
@@ -54,8 +54,8 @@ const tageBis = rennen
   ? Math.round((Date.parse(`${rennen.datum}T12:00:00Z`) - Date.parse(`${heute}T12:00:00Z`)) / 86400000)
   : null
 
-const ART = { RACE: 'Permanente Rennstrecke', STREET: 'Stadtkurs', ROAD: 'Straßenkurs' }
-const RICHTUNG = { CLOCKWISE: 'im Uhrzeigersinn', ANTI_CLOCKWISE: 'gegen den Uhrzeigersinn' }
+const ART = { RACE: 'Permanent circuit', STREET: 'Street circuit', ROAD: 'Road course' }
+const RICHTUNG = { CLOCKWISE: 'clockwise', ANTI_CLOCKWISE: 'anti-clockwise' }
 
 /*
  * Kann der Fahrertitel hier schon fallen? Nur wenn der Vorsprung auf Platz 2
@@ -76,26 +76,26 @@ const rekordeNachFahrer = rekorde.reduce((karte, r) => {
   return karte
 }, new Map())
 
-const titel = rennen ? `${rennen.grandPrix} ${rennen.jahr} – Vorschau` : 'Rennvorschau'
+const titel = rennen ? `${rennen.grandPrix} ${rennen.jahr} – preview` : 'Race preview'
 ---
 
 <Seite
   titel={titel}
   beschreibung={
     rennen
-      ? `Vorschau auf den ${rennen.grandPrix} ${rennen.jahr} in ${rennen.ort}: Strecke, WM-Stand und Marken in Reichweite.`
-      : 'Vorschau auf das nächste Formel-1-Rennen.'
+      ? `Preview of the ${rennen.grandPrix} ${rennen.jahr} at ${rennen.ort}: the circuit, the championship standings and the marks within reach.`
+      : 'Preview of the next Formula 1 race.'
   }
 >
   {!rennen && (
     <>
-      <h1>Keine Vorschau</h1>
+      <h1>No preview</h1>
       <p class="lead">
-        In den Daten steht kein Rennen, das noch aussteht. Entweder ist die Saison zu Ende und
-        der Kalender des nächsten Jahres noch nicht veröffentlicht, oder der Datenstand vom
-        {' '}{datum(heute)} ist älter als das letzte Rennen.
+        No race is still outstanding in the data. Either the season is over and next year’s
+        calendar has not been published yet, or the data, as at
+        {' '}{datum(heute)}, is older than the most recent race.
       </p>
-      <p><a href={pfad.seite('/saisons/')}>Zu den Saisons</a></p>
+      <p><a href={pfad.seite('/seasons/')}>To the seasons</a></p>
     </>
   )}
 
@@ -107,7 +107,7 @@ const titel = rennen ? `${rennen.grandPrix} ${rennen.jahr} – Vorschau` : 'Renn
           <h1>{rennen.grandPrix} {rennen.jahr}</h1>
           <p class="lead">
             {[
-              `Lauf ${rennen.runde} von ${rennen.rennenImJahr}`,
+              `Round ${rennen.runde} of ${rennen.rennenImJahr}`,
               rennen.strecke,
               rennen.ort,
               datum(rennen.datum),
@@ -118,24 +118,24 @@ const titel = rennen ? `${rennen.grandPrix} ${rennen.jahr} – Vorschau` : 'Renn
 
       <p class="hinweis">
         {tageBis > 1
-          ? `Noch ${tageBis} Tage. `
+          ? `${tageBis} days to go. `
           : tageBis === 1
-            ? 'Morgen. '
+            ? 'Tomorrow. '
             : tageBis === 0
-              ? 'Heute. '
-              : `Das Datum liegt ${Math.abs(tageBis)} Tage zurück – zu diesem Rennen liegt noch kein Ergebnis vor. `}
-        Alle Zahlen auf dieser Seite stehen auf dem Datenstand vom {datum(heute)}
-        {stand && !stand.vorsaison && `, also nach Lauf ${stand.bezug.runde} (${stand.bezug.grandPrix})`}.
-        {rennen.offiziell && <> Offiziell: <i>{rennen.offiziell}</i>.</>}
+              ? 'Today. '
+              : `That date is ${Math.abs(tageBis)} days in the past – no result for this race has arrived yet. `}
+        Every number on this page stands on the data as at {datum(heute)}
+        {stand && !stand.vorsaison && `, that is after round ${stand.bezug.runde} (${stand.bezug.grandPrix})`}.
+        {rennen.offiziell && <> Officially: <i>{rennen.offiziell}</i>.</>}
       </p>
 
       <section>
-        <h2>Die Strecke</h2>
+        <h2>The circuit</h2>
         <ul class="kacheln">
-          <li><b>{ein(rennen.streckenlaenge ?? rennen.laenge)} km</b><span>Rundenlänge</span></li>
-          <li><b>{rennen.streckenkurven ?? rennen.kurven ?? '–'}</b><span>Kurven</span></li>
-          <li><b>{rennen.runden ?? '–'}</b><span>geplante Runden</span></li>
-          <li><b>{rennen.distanz ? `${ein(rennen.distanz)} km` : '–'}</b><span>Renndistanz</span></li>
+          <li><b>{ein(rennen.streckenlaenge ?? rennen.laenge)} km</b><span>Lap length</span></li>
+          <li><b>{rennen.streckenkurven ?? rennen.kurven ?? '–'}</b><span>Corners</span></li>
+          <li><b>{rennen.runden ?? '–'}</b><span>Scheduled laps</span></li>
+          <li><b>{rennen.distanz ? `${ein(rennen.distanz)} km` : '–'}</b><span>Race distance</span></li>
         </ul>
         <p class="notiz">
           {[
@@ -143,40 +143,40 @@ const titel = rennen ? `${rennen.grandPrix} ${rennen.jahr} – Vorschau` : 'Renn
             ART[rennen.art] ?? null,
             RICHTUNG[rennen.richtung] ?? null,
             historie?.rennen
-              ? `${historie.rennen} Formel-1-Rennen hier, ${historie.von}–${historie.bis}`
-              : 'Zum ersten Mal im Formel-1-Kalender',
-            rennen.mitSprint ? 'Wochenende mit Sprint' : null,
+              ? `${historie.rennen} Formula 1 races here, ${historie.von}–${historie.bis}`
+              : 'First time on the Formula 1 calendar',
+            rennen.mitSprint ? 'Sprint weekend' : null,
           ].filter(Boolean).join(' · ')}
         </p>
 
         {historie?.rennen > 0 && (
           <ul class="kacheln">
-            <li><b>{proz(zahlenHier?.ausfallquote)}</b><span>Starts ohne Wertung</span></li>
-            <li><b>{proz(zahlenHier?.poleZuSieg)}</b><span>Pole wurde Sieg</span></li>
+            <li><b>{proz(zahlenHier?.ausfallquote)}</b><span>Starts without a classification</span></li>
+            <li><b>{proz(zahlenHier?.poleZuSieg)}</b><span>Pole converted to a win</span></li>
             <li>
               <b>{ein(zahlenHier?.mittlererSiegerStart?.value)}</b>
-              <span>Ø Startplatz des Siegers</span>
+              <span>Ø winner’s grid position</span>
             </li>
           </ul>
         )}
 
         {zahlenHier?.groessteAufholjagd && (
           <p class="notiz">
-            Weiteste Aufholjagd zum Sieg hier:
+            Furthest charge to victory here:
             {' '}<a href={pfad.fahrer(zahlenHier.groessteAufholjagd.id)}>
               {zahlenHier.groessteAufholjagd.name}
             </a>{' '}
-            {zahlenHier.groessteAufholjagd.year} von Startplatz {zahlenHier.groessteAufholjagd.start}.
+            {zahlenHier.groessteAufholjagd.year}, from grid position {zahlenHier.groessteAufholjagd.start}.
           </p>
         )}
       </section>
 
       {historie?.rennen > 0 && (
         <section>
-          <h2>Wer hier stark war</h2>
+          <h2>Who has been strong here</h2>
           <div class="spalten">
             <section>
-              <h3>Meiste Siege</h3>
+              <h3>Most wins</h3>
               <ol class="rangliste">
                 {sieger.map((s) => (
                   <li>
@@ -187,7 +187,7 @@ const titel = rennen ? `${rennen.grandPrix} ${rennen.jahr} – Vorschau` : 'Renn
               </ol>
             </section>
             <section>
-              <h3>Meiste Pole-Positions</h3>
+              <h3>Most pole positions</h3>
               <ol class="rangliste">
                 {polesetter.map((s) => (
                   <li>
@@ -198,7 +198,7 @@ const titel = rennen ? `${rennen.grandPrix} ${rennen.jahr} – Vorschau` : 'Renn
               </ol>
             </section>
             <section>
-              <h3>Erfolgreichste Teams</h3>
+              <h3>Most successful teams</h3>
               <ol class="rangliste">
                 {teamsHier.map((t) => (
                   <li>
@@ -212,19 +212,19 @@ const titel = rennen ? `${rennen.grandPrix} ${rennen.jahr} – Vorschau` : 'Renn
 
           {spezialisten.length > 0 && (
             <>
-              <h3 class="weit">Streckenspezialisten</h3>
+              <h3 class="weit">Circuit specialists</h3>
               <p class="notiz">
-                Mittlere Zielposition hier, verglichen mit der desselben Fahrers überall sonst.
-                Wer überall gewinnt, ist hier kein Spezialist.
+                Average finishing position here, set against the same driver’s average everywhere else.
+                A driver who wins everywhere is no specialist here.
               </p>
               <div class="tabelle">
                 <table>
                   <thead>
                     <tr>
-                      <th>Fahrer</th>
-                      <th class="num">hier</th>
-                      <th class="num">sonst</th>
-                      <th class="num">Differenz</th>
+                      <th>Driver</th>
+                      <th class="num">Here</th>
+                      <th class="num">Elsewhere</th>
+                      <th class="num">Difference</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -242,11 +242,11 @@ const titel = rennen ? `${rennen.grandPrix} ${rennen.jahr} – Vorschau` : 'Renn
             </>
           )}
 
-          <h3 class="weit">Zuletzt hier</h3>
+          <h3 class="weit">Most recent races here</h3>
           <div class="tabelle">
             <table>
               <thead>
-                <tr><th class="num">Jahr</th><th>Sieger</th><th>Team</th><th class="num">von Startplatz</th></tr>
+                <tr><th class="num">Year</th><th>Winner</th><th>Team</th><th class="num">From grid</th></tr>
               </thead>
               <tbody>
                 {letzteHier.map((r) => (
@@ -265,31 +265,31 @@ const titel = rennen ? `${rennen.grandPrix} ${rennen.jahr} – Vorschau` : 'Renn
 
       {stand && (
         <section>
-          <h2>Stand der Meisterschaft</h2>
+          <h2>Championship standings</h2>
           <p class="notiz">
             {stand.vorsaison
-              ? `Die Saison ${rennen.jahr} hat noch kein Ergebnis. Gezeigt ist der Endstand ${stand.bezug.jahr}.`
-              : `Nach Lauf ${stand.bezug.runde} (${stand.bezug.grandPrix}) vom ${datum(stand.bezug.datum)}.`}
-            {' '}Noch {stand.offen} Rennen in dieser Saison
-            {stand.sprints > 0 && ` (davon ${stand.sprints} mit Sprint)`},
-            also höchstens {stand.maxFuerEinenFahrer} Punkte für einen einzelnen Fahrer.
+              ? `The ${rennen.jahr} season has no result yet. Shown are the final ${stand.bezug.jahr} standings.`
+              : `After round ${stand.bezug.runde} (${stand.bezug.grandPrix}) on ${datum(stand.bezug.datum)}.`}
+            {' '}{stand.offen} races remain this season
+            {stand.sprints > 0 && ` (${stand.sprints} of them with a sprint)`},
+            so at most {stand.maxFuerEinenFahrer} points for any single driver.
           </p>
 
           {titelMoeglich && (
             <p class="hinweis stark">
-              Der Fahrertitel kann hier fallen: {fuehrender.name} führt mit {ein(vorsprung)} Punkten
-              Vorsprung, und nach diesem Rennen sind nur noch {stand.maxDanach} zu holen. Ob es
-              tatsächlich reicht, hängt am Ausgang – die Zahl sagt nur, dass es rechnerisch geht.
+              The drivers’ title can be settled here: {fuehrender.name} leads by {ein(vorsprung)} points,
+              and after this race only {stand.maxDanach} remain to be won. Whether that actually
+              settles it depends on the result – the number says only that it is arithmetically possible.
             </p>
           )}
 
           <div class="spalten">
             <section>
-              <h3>Fahrer</h3>
+              <h3>Drivers</h3>
               <div class="tabelle">
                 <table>
                   <thead>
-                    <tr><th class="num">#</th><th>Fahrer</th><th>Team</th><th class="num">Punkte</th></tr>
+                    <tr><th class="num">#</th><th>Driver</th><th>Team</th><th class="num">Points</th></tr>
                   </thead>
                   <tbody>
                     {stand.fahrer.map((f) => (
@@ -306,10 +306,10 @@ const titel = rennen ? `${rennen.grandPrix} ${rennen.jahr} – Vorschau` : 'Renn
             </section>
 
             <section>
-              <h3>Konstrukteure</h3>
+              <h3>Constructors</h3>
               <div class="tabelle">
                 <table>
-                  <thead><tr><th class="num">#</th><th>Team</th><th class="num">Punkte</th></tr></thead>
+                  <thead><tr><th class="num">#</th><th>Team</th><th class="num">Points</th></tr></thead>
                   <tbody>
                     {stand.teams.map((t) => (
                       <tr>
@@ -327,18 +327,18 @@ const titel = rennen ? `${rennen.grandPrix} ${rennen.jahr} – Vorschau` : 'Renn
       )}
 
       <section>
-        <h2>Marken in Reichweite</h2>
+        <h2>Marks within reach</h2>
         {rekordeNachFahrer.size === 0 ? (
           <p class="notiz">
-            Bei diesem Rennen steht keine runde Zahl und keine Bestmarke auf der Kippe –
-            jedenfalls keine, die ein einzelnes Wochenende bewegen kann.
+            No round number and no record is in the balance at this race –
+            at least none that a single weekend could move.
           </p>
         ) : (
           <>
             <p class="notiz">
-              Nur was dieses eine Rennen bewegen kann: runde Zahlen in der Karriere, die
-              Bestmarke auf dieser Strecke und ewige Wertungen, in denen einer fehlt.
-              Gerechnet für die {dasFeld.length} Fahrer, die zuletzt am Start standen.
+              Only what this one race can move: round numbers in a career, the record at this
+              circuit, and all-time lists where a single result is missing.
+              Calculated for the {dasFeld.length} drivers who were on the grid most recently.
             </p>
             <ul class="marken">
               {[...rekordeNachFahrer.entries()].map(([id, eintrag]) => (

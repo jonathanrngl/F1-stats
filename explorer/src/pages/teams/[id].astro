@@ -25,9 +25,9 @@ const titel = calculateTeamChampionships(db(), id)
 const fahrer = calculateTeamDrivers(db(), id)
 const abstammung = calculateLineage(db(), id)
 
-const nf = new Intl.NumberFormat('de-DE')
+const nf = new Intl.NumberFormat('en-GB')
 const ein = (n) => (n === null || n === undefined ? '–' : nf.format(Math.round(n * 10) / 10))
-const proz = (m) => (m.value === null ? '–' : `${Math.round(m.value * 100)} %`)
+const proz = (m) => (m.value === null ? '–' : `${Math.round(m.value * 100)}%`)
 const wert = (m) => (m.value === null ? '–' : nf.format(m.value))
 const zeitraum =
   rennen.length === 0
@@ -38,8 +38,8 @@ const zeitraum =
 ---
 
 <Seite
-  titel={`${team.name} – Statistik und Geschichte`}
-  beschreibung={`${team.name}: ${calculateTeamStarts(rennen).value} Rennen, ${calculateTeamWins(rennen).value} Siege, ${titel.titles.value} Konstrukteurstitel (${zeitraum}).`}
+  titel={`${team.name} – statistics and history`}
+  beschreibung={`${team.name}: ${calculateTeamStarts(rennen).value} races, ${calculateTeamWins(rennen).value} wins, ${titel.titles.value} constructors' titles (${zeitraum}).`}
 >
   <header class="profil">
     <span class="kuerzel gross" title={heimat.name}>{heimat.code}</span>
@@ -54,29 +54,29 @@ const zeitraum =
   </header>
 
   <ul class="kacheln">
-    <li><b>{wert(calculateTeamStarts(rennen))}</b><span>Rennen</span></li>
-    <li><b>{wert(calculateTeamWins(rennen))}</b><span>Siege</span></li>
-    <li><b>{wert(calculateOneTwos(rennen))}</b><span>Doppelsiege</span><i>beide Autos vorn</i></li>
-    <li><b>{wert(calculateTeamPodiums(rennen))}</b><span>Podestrennen</span></li>
-    <li><b>{wert(calculateTeamPoles(rennen))}</b><span>Pole-Positions</span></li>
+    <li><b>{wert(calculateTeamStarts(rennen))}</b><span>Races</span></li>
+    <li><b>{wert(calculateTeamWins(rennen))}</b><span>Wins</span></li>
+    <li><b>{wert(calculateOneTwos(rennen))}</b><span>One-twos</span><i>both cars at the front</i></li>
+    <li><b>{wert(calculateTeamPodiums(rennen))}</b><span>Races with a podium</span></li>
+    <li><b>{wert(calculateTeamPoles(rennen))}</b><span>Pole positions</span></li>
     <li>
-      <b>{wert(titel.titles)}</b><span>Konstrukteurstitel</span>
-      <i>bester Platz {titel.best.value ? 'P' + titel.best.value : '–'}</i>
+      <b>{wert(titel.titles)}</b><span>Constructors' titles</span>
+      <i>best championship finish {titel.best.value ? 'P' + titel.best.value : '–'}</i>
     </li>
   </ul>
 
   {abstammung.length > 1 && (
     <section>
-      <h2>Rennstall im Wandel</h2>
+      <h2>The team through its name changes</h2>
       <p class="lead">
-        Derselbe Rennstall unter wechselndem Namen. F1DB führt diese Abstammung mit – ohne sie
-        wäre jede Team-Historie an jedem Verkauf zu Ende.
+        The same team under a succession of names. F1DB tracks this lineage – without it, every
+        team's history would end at every sale.
       </p>
       <ol class="kette">
         {abstammung.map((a) => (
           <li class={a.id === id ? 'hier' : ''}>
             <a href={pfad.team(a.id)}>{a.name}</a>
-            <span>{a.von}{a.bis ? `–${a.bis}` : '–heute'}</span>
+            <span>{a.von}{a.bis ? `–${a.bis}` : '–present'}</span>
           </li>
         ))}
       </ol>
@@ -84,31 +84,31 @@ const zeitraum =
   )}
 
   <section>
-    <h2>Zahlen</h2>
+    <h2>Numbers</h2>
     <ul class="daten">
-      <li><span>Ø Startplatz</span><b>{ein(calculateTeamAverageStart(rennen).value)}</b></li>
-      <li><span>Ø Zielposition</span><b>{ein(calculateTeamAverageFinish(rennen).value)}</b></li>
-      <li><span>Autos ins Ziel</span><b>{proz(calculateTeamReliability(rennen))}</b></li>
-      <li><span>Schnellste Runden</span><b>{wert(calculateTeamFastestLaps(rennen))}</b></li>
-      <li><span>Punkte in Rennen</span><b>{ein(calculateTeamPoints(rennen).value)}</b></li>
-      <li><span>Eingesetzte Fahrer</span><b>{fahrer.length}</b></li>
+      <li><span>Avg grid position</span><b>{ein(calculateTeamAverageStart(rennen).value)}</b></li>
+      <li><span>Avg finish</span><b>{ein(calculateTeamAverageFinish(rennen).value)}</b></li>
+      <li><span>Cars finishing</span><b>{proz(calculateTeamReliability(rennen))}</b></li>
+      <li><span>Fastest laps</span><b>{wert(calculateTeamFastestLaps(rennen))}</b></li>
+      <li><span>Points scored in races</span><b>{ein(calculateTeamPoints(rennen).value)}</b></li>
+      <li><span>Drivers fielded</span><b>{fahrer.length}</b></li>
     </ul>
     <p class="fussnote">
-      „Rennen“ zählt Wochenenden, nicht Autos – sonst hätte jedes Zweiwagenteam doppelt so viele
-      Starts wie Rennen. „Autos ins Ziel“ zählt dagegen Autos: Jedes ist ein eigener Versuch der
-      Technik.
+      “Races” counts weekends, not cars – otherwise every two-car team would have twice as many
+      starts as races. “Cars finishing”, by contrast, counts cars: each one is a separate test of
+      the engineering.
     </p>
   </section>
 
   {titel.seasons.length > 0 && (
     <section>
-      <h2>Saison für Saison</h2>
+      <h2>Season by season</h2>
       <div class="tabelle">
         <table>
           <thead>
             <tr>
-              <th>Saison</th><th class="num">WM-Platz</th><th class="num">Punkte</th>
-              <th class="num">Siege</th><th>Fahrer</th>
+              <th>Season</th><th class="num">Championship position</th><th class="num">Points</th>
+              <th class="num">Wins</th><th>Drivers</th>
             </tr>
           </thead>
           <tbody>
@@ -134,13 +134,13 @@ const zeitraum =
   )}
 
   <section>
-    <h2>Fahrer</h2>
+    <h2>Drivers</h2>
     <div class="tabelle">
       <table>
         <thead>
           <tr>
-            <th>Fahrer</th><th>Jahre</th><th class="num">Starts</th>
-            <th class="num">Siege</th><th class="num">Punkte</th>
+            <th>Driver</th><th>Years</th><th class="num">Starts</th>
+            <th class="num">Wins</th><th class="num">Points</th>
           </tr>
         </thead>
         <tbody>

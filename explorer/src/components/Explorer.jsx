@@ -17,11 +17,11 @@ import { beschreibe, uebersetze } from '../lib/frage.js'
 
 /** Worüber gruppiert wird. `schluessel` liefert je Zeile den Gruppenwert. */
 const DIMENSIONEN = {
-  fahrer: { label: 'Fahrer', spalte: 'fahrer', namen: 'fahrerNamen', ids: 'fahrer', link: (id) => `/fahrer/${id}/` },
-  team: { label: 'Team', spalte: 'team', namen: 'teamNamen', ids: 'team', link: (id) => `/teams/${id}/` },
-  saison: { label: 'Saison', spalte: 'jahr', link: (id) => `/saisons/${id}/` },
-  strecke: { label: 'Strecke', spalte: 'strecke', namen: 'streckenNamen', ids: 'strecke', link: (id) => `/strecken/${id}/` },
-  gp: { label: 'Grand Prix', spalte: 'gp', namen: 'gpNamen', ids: 'gp' },
+  fahrer: { label: 'Driver', einzahl: 'driver', mehrzahl: 'drivers', spalte: 'fahrer', namen: 'fahrerNamen', ids: 'fahrer', link: (id) => `/drivers/${id}/` },
+  team: { label: 'Team', einzahl: 'team', mehrzahl: 'teams', spalte: 'team', namen: 'teamNamen', ids: 'team', link: (id) => `/teams/${id}/` },
+  saison: { label: 'Season', einzahl: 'season', mehrzahl: 'seasons', spalte: 'jahr', link: (id) => `/seasons/${id}/` },
+  strecke: { label: 'Circuit', einzahl: 'circuit', mehrzahl: 'circuits', spalte: 'strecke', namen: 'streckenNamen', ids: 'strecke', link: (id) => `/circuits/${id}/` },
+  gp: { label: 'Grand Prix', einzahl: 'Grand Prix', mehrzahl: 'Grands Prix', spalte: 'gp', namen: 'gpNamen', ids: 'gp' },
 }
 
 /**
@@ -33,26 +33,26 @@ const DIMENSIONEN = {
  */
 const KENNZAHLEN = {
   starts: { label: 'Starts', zaehle: (r) => (r.gestartet ? 1 : 0) },
-  siege: { label: 'Siege', zaehle: (r) => (r.platz === 1 ? 1 : 0) },
-  podien: { label: 'Podien', zaehle: (r) => (r.gewertet && r.platz >= 1 && r.platz <= 3 ? 1 : 0) },
+  siege: { label: 'Wins', zaehle: (r) => (r.platz === 1 ? 1 : 0) },
+  podien: { label: 'Podiums', zaehle: (r) => (r.gewertet && r.platz >= 1 && r.platz <= 3 ? 1 : 0) },
   poles: { label: 'Poles', zaehle: (r) => (r.quali === 1 ? 1 : 0) },
-  schnellste: { label: 'Schnellste Runden', zaehle: (r) => r.schnellste },
-  punkte: { label: 'Punkte', zaehle: (r) => r.punkte / 10, format: (v) => v.toFixed(1).replace('.', ',') },
-  ausfaelle: { label: 'Ausfälle', zaehle: (r) => (r.gestartet && !r.gewertet ? 1 : 0) },
+  schnellste: { label: 'Fastest laps', zaehle: (r) => r.schnellste },
+  punkte: { label: 'Points', zaehle: (r) => r.punkte / 10, format: (v) => v.toFixed(1) },
+  ausfaelle: { label: 'Retirements', zaehle: (r) => (r.gestartet && !r.gewertet ? 1 : 0) },
   oZiel: {
-    label: 'Ø Zielposition',
+    label: 'Avg finish',
     zaehle: (r) => (r.gewertet && r.platz > 0 ? r.platz : 0),
     nenner: (r) => (r.gewertet && r.platz > 0 ? 1 : 0),
-    format: (v) => v.toFixed(1).replace('.', ','),
+    format: (v) => v.toFixed(1),
   },
   oStart: {
-    label: 'Ø Startplatz',
+    label: 'Avg grid position',
     zaehle: (r) => (r.gestartet && r.start > 0 ? r.start : 0),
     nenner: (r) => (r.gestartet && r.start > 0 ? 1 : 0),
-    format: (v) => v.toFixed(1).replace('.', ','),
+    format: (v) => v.toFixed(1),
   },
   gutgemacht: {
-    label: 'Plätze gutgemacht',
+    label: 'Positions gained',
     zaehle: (r) => (r.gewertet && r.platz > 0 && r.start > 0 ? r.start - r.platz : 0),
     format: (v) => (v > 0 ? '+' : '') + Math.round(v),
   },
@@ -81,7 +81,7 @@ export default function Explorer() {
   useEffect(() => {
     fetch(`${BASIS}/data/wuerfel.json`)
       .then((r) => {
-        if (!r.ok) throw new Error('Der Datenwürfel konnte nicht geladen werden.')
+        if (!r.ok) throw new Error('The data cube could not be loaded.')
         return r.json()
       })
       .then(setDaten)
@@ -211,7 +211,7 @@ export default function Explorer() {
       return [...alt, k]
     })
 
-  /** Export als CSV – mit Semikolon, damit Excel im deutschen Gebiet mitspielt. */
+  /** Export als CSV – mit Komma, dem Trennzeichen des englischen Gebietsschemas. */
   const exportiere = (art) => {
     if (!ergebnis) return
     const dim = DIMENSIONEN[dimension]
@@ -222,9 +222,9 @@ export default function Explorer() {
       const kopf = [dim.label, ...kennzahlen.map((k) => KENNZAHLEN[k].label)]
       const zeilen = ergebnis.reihen.map((r) => [
         r.name,
-        ...kennzahlen.map((k) => (r.werte[k] === null ? '' : String(r.werte[k]).replace('.', ','))),
+        ...kennzahlen.map((k) => (r.werte[k] === null ? '' : String(r.werte[k]))),
       ])
-      inhalt = [kopf, ...zeilen].map((z) => z.map((f) => `"${String(f).replace(/"/g, '""')}"`).join(';')).join('\n')
+      inhalt = [kopf, ...zeilen].map((z) => z.map((f) => `"${String(f).replace(/"/g, '""')}"`).join(',')).join('\n')
       typ = 'text/csv;charset=utf-8'
       name = 'f1-explorer.csv'
     } else {
@@ -249,28 +249,28 @@ export default function Explorer() {
   }
 
   if (fehler) return <p className="fehler">{fehler}</p>
-  if (!daten) return <p className="status">Lade den Datenbestand … (130 KB, einmalig)</p>
+  if (!daten) return <p className="status">Loading the dataset … (130 KB, once only)</p>
 
   const dim = DIMENSIONEN[dimension]
 
   return (
     <div className="explorer">
       <form className="frage" onSubmit={wendeFrageAn}>
-        <label htmlFor="frage-feld">Frage stellen</label>
+        <label htmlFor="frage-feld">Ask a question</label>
         <div className="zeile">
           <input
             id="frage-feld"
             type="search"
             value={frage}
-            placeholder="Wer hat die meisten Siege in Monaco?"
+            placeholder="Who has the most wins at Monaco?"
             onChange={(e) => setFrage(e.target.value)}
           />
-          <button type="submit">Übersetzen</button>
+          <button type="submit">Translate</button>
         </div>
         {uebersetzt && (
           <div className="verstanden">
             <p>
-              <b>Verstanden als:</b>{' '}
+              <b>Understood as:</b>{' '}
               {beschreibe(
                 uebersetzt,
                 Object.fromEntries(Object.entries(KENNZAHLEN).map(([k, v]) => [k, v.label])),
@@ -284,9 +284,9 @@ export default function Explorer() {
             </p>
             {uebersetzt.unverstanden.map((u) => <p className="luecke">{u}</p>)}
             <p className="quelle">
-              Die Frage stellt nur die Filter ein. Gerechnet wird über alle{' '}
-              {daten.zeilen.toLocaleString('de-DE')} Ergebniszeilen – die Zahlen unten stammen
-              aus den Daten, nicht aus der Übersetzung.
+              The question only sets the controls. The calculation runs over all{' '}
+              {daten.zeilen.toLocaleString('en-GB')} result rows – the figures below come
+              from the data, not from the translation.
             </p>
           </div>
         )}
@@ -294,7 +294,7 @@ export default function Explorer() {
 
       <div className="steuerung">
         <fieldset>
-          <legend>Gruppieren nach</legend>
+          <legend>Group by</legend>
           <div className="chips">
             {Object.entries(DIMENSIONEN).map(([k, d]) => (
               <button
@@ -310,7 +310,7 @@ export default function Explorer() {
         </fieldset>
 
         <fieldset>
-          <legend>Kennzahlen</legend>
+          <legend>Metrics</legend>
           <div className="chips">
             {Object.entries(KENNZAHLEN).map(([k, z]) => (
               <button
@@ -326,22 +326,22 @@ export default function Explorer() {
         </fieldset>
 
         <fieldset>
-          <legend>Filter</legend>
+          <legend>Filters</legend>
           <div className="felder">
             <label>
-              Jahr von
+              Year from
               <input type="number" min="1950" max="2030" value={filter.vonJahr}
                 onChange={(e) => setzeFilter('vonJahr', e.target.value)} placeholder="1950" />
             </label>
             <label>
-              bis
+              to
               <input type="number" min="1950" max="2030" value={filter.bisJahr}
                 onChange={(e) => setzeFilter('bisJahr', e.target.value)} placeholder="2026" />
             </label>
             <label>
-              Strecke
+              Circuit
               <select value={filter.strecke} onChange={(e) => setzeFilter('strecke', e.target.value)}>
-                <option value="">alle</option>
+                <option value="">all</option>
                 {daten.strecke.map((id, i) => (
                   <option key={id} value={id}>{daten.streckenNamen[i]}</option>
                 ))}
@@ -350,24 +350,24 @@ export default function Explorer() {
             <label>
               Team
               <select value={filter.team} onChange={(e) => setzeFilter('team', e.target.value)}>
-                <option value="">alle</option>
+                <option value="">all</option>
                 {daten.team.map((id, i) => (
                   <option key={id} value={id}>{daten.teamNamen[i]}</option>
                 ))}
               </select>
             </label>
             <label>
-              min. Starts
+              min. starts
               <input type="number" min="0" value={filter.minStarts}
                 onChange={(e) => setzeFilter('minStarts', e.target.value)} />
             </label>
             <label>
-              min. Siege
+              min. wins
               <input type="number" min="0" value={filter.minSiege}
                 onChange={(e) => setzeFilter('minSiege', e.target.value)} />
             </label>
             <label>
-              min. Podien
+              min. podiums
               <input type="number" min="0" value={filter.minPodien}
                 onChange={(e) => setzeFilter('minPodien', e.target.value)} />
             </label>
@@ -376,12 +376,12 @@ export default function Explorer() {
             <label>
               <input type="checkbox" checked={filter.nurSieger}
                 onChange={(e) => setzeFilter('nurSieger', e.target.checked)} />
-              nur Siege
+              wins only
             </label>
             <label>
               <input type="checkbox" checked={filter.nurVonHinten}
                 onChange={(e) => setzeFilter('nurVonHinten', e.target.checked)} />
-              nur Siege von jenseits Startplatz 10
+              wins from outside the top ten on the grid only
             </label>
           </div>
         </fieldset>
@@ -389,10 +389,10 @@ export default function Explorer() {
 
       <div className="kopfzeile">
         <p>
-          <b>{ergebnis.reihen.length.toLocaleString('de-DE')}</b> {dim.label.toLowerCase()}
-          {ergebnis.reihen.length === 1 ? '' : dimension === 'saison' ? '' : ''} aus{' '}
-          <b>{ergebnis.betrachtet.toLocaleString('de-DE')}</b> von{' '}
-          {ergebnis.gesamt.toLocaleString('de-DE')} Ergebniszeilen
+          <b>{ergebnis.reihen.length.toLocaleString('en-GB')}</b>{' '}
+          {ergebnis.reihen.length === 1 ? dim.einzahl : dim.mehrzahl} from{' '}
+          <b>{ergebnis.betrachtet.toLocaleString('en-GB')}</b> of{' '}
+          {ergebnis.gesamt.toLocaleString('en-GB')} result rows
         </p>
         <div className="export">
           <button type="button" onClick={() => exportiere('csv')}>CSV</button>
@@ -429,14 +429,14 @@ export default function Explorer() {
             {ergebnis.reihen.slice(0, 200).map((r) => (
               <tr key={r.id}>
                 <td>
-                  {dim.link ? <a href={dim.link(r.id)}>{r.name}</a> : r.name}
+                  {dim.link ? <a href={`${BASIS}${dim.link(r.id)}`}>{r.name}</a> : r.name}
                 </td>
                 {kennzahlen.map((k) => {
                   const v = r.werte[k]
                   const f = KENNZAHLEN[k].format
                   return (
                     <td key={k} className="num">
-                      {v === null ? '–' : f ? f(v) : v.toLocaleString('de-DE')}
+                      {v === null ? '–' : f ? f(v) : v.toLocaleString('en-GB')}
                     </td>
                   )
                 })}
@@ -448,12 +448,12 @@ export default function Explorer() {
 
       {ergebnis.reihen.length > 200 && (
         <p className="hinweis">
-          Angezeigt sind die ersten 200 von {ergebnis.reihen.length.toLocaleString('de-DE')}{' '}
-          Zeilen. Der Export enthält alle.
+          Showing the first 200 of {ergebnis.reihen.length.toLocaleString('en-GB')}{' '}
+          rows. The export contains all of them.
         </p>
       )}
       {ergebnis.reihen.length === 0 && (
-        <p className="hinweis">Keine Zeile erfüllt diese Bedingungen.</p>
+        <p className="hinweis">No row meets these conditions.</p>
       )}
     </div>
   )

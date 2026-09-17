@@ -390,62 +390,10 @@ export function titleRace(
 /*
  * Die API liefert den Grund auf Englisch. Für die jüngeren Jahre ist er zu
  * "Retired" zusammengefasst, ältere Saisons nennen ihn genau ("Halfshaft",
- * "Fuel pump"). Übersetzt wird, was häufig vorkommt; alles andere bleibt
- * stehen, wie es kommt – lieber englisch als falsch geraten.
+ * "Fuel pump"). Er wird unverändert übernommen – die Ansicht spricht dieselbe
+ * Sprache wie die Quelle, eine Übersetzungstabelle wäre nur eine Fehlerquelle
+ * mehr.
  */
-const REASONS: Record<string, string> = {
-  Accident: 'Unfall',
-  Collision: 'Kollision',
-  'Collision damage': 'Kollisionsschaden',
-  Engine: 'Motor',
-  Gearbox: 'Getriebe',
-  Transmission: 'Getriebe',
-  Clutch: 'Kupplung',
-  Hydraulics: 'Hydraulik',
-  Electrical: 'Elektrik',
-  Suspension: 'Aufhängung',
-  Brakes: 'Bremsen',
-  Differential: 'Differential',
-  Overheating: 'Überhitzung',
-  Mechanical: 'Technik',
-  Tyre: 'Reifen',
-  Puncture: 'Reifenschaden',
-  Driveshaft: 'Antriebswelle',
-  Halfshaft: 'Antriebswelle',
-  'Fuel pump': 'Benzinpumpe',
-  'Fuel system': 'Kraftstoffsystem',
-  'Fuel leak': 'Kraftstoffleck',
-  'Out of fuel': 'Kein Sprit mehr',
-  'Oil leak': 'Ölleck',
-  'Oil pressure': 'Öldruck',
-  'Water leak': 'Wasserleck',
-  'Water pump': 'Wasserpumpe',
-  Radiator: 'Kühler',
-  Wheel: 'Rad',
-  Steering: 'Lenkung',
-  Throttle: 'Gaszug',
-  Exhaust: 'Auspuff',
-  Turbo: 'Turbolader',
-  Battery: 'Batterie',
-  Ignition: 'Zündung',
-  'Spun off': 'Dreher',
-  Retired: 'Aufgegeben',
-  Withdrew: 'Zurückgezogen',
-  Disqualified: 'Disqualifiziert',
-  'Did not start': 'Nicht gestartet',
-  'Did not qualify': 'Nicht qualifiziert',
-  'Did not prequalify': 'Vorqualifikation verpasst',
-  'Not classified': 'Nicht gewertet',
-  Injury: 'Verletzung',
-  Illness: 'Krankheit',
-  Fire: 'Feuer',
-  Vibrations: 'Vibrationen',
-  Handling: 'Fahrverhalten',
-  'Power Unit': 'Antriebseinheit',
-  'Power loss': 'Leistungsverlust',
-  Damage: 'Schaden',
-  Debris: 'Trümmerteile',
-}
 
 export interface Reason {
   reason: string
@@ -458,8 +406,7 @@ export function retirementReasons(races: RaceResults[]): Reason[] {
   for (const race of races) {
     for (const r of perDriver(race.results)) {
       if (isClassified(r)) continue
-      const label = REASONS[r.status] ?? r.status
-      counts.set(label, (counts.get(label) ?? 0) + 1)
+      counts.set(r.status, (counts.get(r.status) ?? 0) + 1)
     }
   }
   return [...counts]

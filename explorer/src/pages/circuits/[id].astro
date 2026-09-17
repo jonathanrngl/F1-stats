@@ -26,15 +26,15 @@ const zahlen = circuitStats(db(), id)
 const spezialisten = circuitSpecialists(db(), id)
 const layouts = circuitLayouts(db(), id)
 
-const nf = new Intl.NumberFormat('de-DE')
+const nf = new Intl.NumberFormat('en-GB')
 const ein = (n) => (n === null || n === undefined ? '–' : nf.format(Math.round(n * 10) / 10))
-const proz = (m) => (m.value === null ? '–' : `${Math.round(m.value * 100)} %`)
+const proz = (m) => (m.value === null ? '–' : `${Math.round(m.value * 100)}%`)
 const zeitraum = rennen.length ? `${rennen.at(-1).year}–${rennen[0].year}` : '–'
 ---
 
 <Seite
-  titel={`${strecke.name} – Formel-1-Statistik der Strecke`}
-  beschreibung={`${rennen.length} Formel-1-Rennen in ${strecke.place_name} (${zeitraum}).`}
+  titel={`${strecke.name} – Formula 1 circuit statistics`}
+  beschreibung={`${rennen.length} Formula 1 races in ${strecke.place_name} (${zeitraum}).`}
 >
   <header class="profil">
     <span class="kuerzel gross" title={heimat.name}>{heimat.code}</span>
@@ -43,29 +43,29 @@ const zeitraum = rennen.length ? `${rennen.at(-1).year}–${rennen[0].year}` : '
       <p class="lead">
         {[strecke.place_name, heimat.name, zeitraum,
           strecke.length_km ? `${ein(strecke.length_km)} km` : null,
-          strecke.turns ? `${strecke.turns} Kurven` : null]
+          strecke.turns ? `${strecke.turns} corners` : null]
           .filter(Boolean).join(' · ')}
       </p>
     </div>
   </header>
 
   <ul class="kacheln">
-    <li><b>{rennen.length}</b><span>Rennen</span></li>
-    <li><b>{proz(zahlen.ausfallquote)}</b><span>Starts ohne Wertung</span></li>
-    <li><b>{proz(zahlen.poleZuSieg)}</b><span>Pole wurde Sieg</span></li>
-    <li><b>{ein(zahlen.mittlererSiegerStart.value)}</b><span>Ø Startplatz des Siegers</span></li>
+    <li><b>{rennen.length}</b><span>Races</span></li>
+    <li><b>{proz(zahlen.ausfallquote)}</b><span>Starts not classified</span></li>
+    <li><b>{proz(zahlen.poleZuSieg)}</b><span>Pole-to-win conversion</span></li>
+    <li><b>{ein(zahlen.mittlererSiegerStart.value)}</b><span>Avg grid position of the winner</span></li>
   </ul>
 
   {zahlen.groessteAufholjagd && (
     <p class="hinweis">
-      Größte Aufholjagd: <a href={pfad.fahrer(zahlen.groessteAufholjagd.id)}>{zahlen.groessteAufholjagd.name}</a>
-      gewann {zahlen.groessteAufholjagd.year} von Startplatz {zahlen.groessteAufholjagd.start}.
+      Biggest comeback drive: <a href={pfad.fahrer(zahlen.groessteAufholjagd.id)}>{zahlen.groessteAufholjagd.name}</a>
+      won in {zahlen.groessteAufholjagd.year} from P{zahlen.groessteAufholjagd.start} on the grid.
     </p>
   )}
 
   <div class="spalten">
     <section>
-      <h2>Meiste Siege</h2>
+      <h2>Most wins</h2>
       <ol class="rangliste">
         {sieger.map((s) => (
           <li>
@@ -78,7 +78,7 @@ const zeitraum = rennen.length ? `${rennen.at(-1).year}–${rennen[0].year}` : '
 
     {polesetter.length > 0 && (
       <section>
-        <h2>Meiste Pole-Positions</h2>
+        <h2>Most pole positions</h2>
         <ol class="rangliste">
           {polesetter.map((s) => (
             <li>
@@ -91,7 +91,7 @@ const zeitraum = rennen.length ? `${rennen.at(-1).year}–${rennen[0].year}` : '
     )}
 
     <section>
-      <h2>Erfolgreichste Teams</h2>
+      <h2>Most successful teams</h2>
       <ol class="rangliste">
         {teams.map((t) => (
           <li>
@@ -105,18 +105,19 @@ const zeitraum = rennen.length ? `${rennen.at(-1).year}–${rennen[0].year}` : '
 
   {spezialisten.length > 0 && (
     <section>
-      <h2>Streckenspezialisten</h2>
+      <h2>Circuit specialists</h2>
       <p class="lead">
-        Verglichen wird die mittlere Zielposition hier mit der desselben Fahrers überall sonst.
-        Wer hier deutlich besser abschneidet, kann die Strecke – unabhängig davon, wie gut sein
-        Auto war. Mindestens drei Starts hier und drei anderswo.
+        The comparison is between a driver's average finishing position here and the same
+        driver's average everywhere else. Anyone markedly better here has the measure of the
+        circuit – regardless of how good their car was. At least three starts here and three
+        elsewhere.
       </p>
       <div class="tabelle">
         <table>
           <thead>
             <tr>
-              <th>Fahrer</th><th class="num">Starts hier</th><th class="num">Siege</th>
-              <th class="num">Ø hier</th><th class="num">Ø sonst</th><th class="num">Vorteil</th>
+              <th>Driver</th><th class="num">Starts here</th><th class="num">Wins</th>
+              <th class="num">Avg here</th><th class="num">Avg elsewhere</th><th class="num">Edge</th>
             </tr>
           </thead>
           <tbody>
@@ -138,20 +139,20 @@ const zeitraum = rennen.length ? `${rennen.at(-1).year}–${rennen[0].year}` : '
 
   {layouts.length > 1 && (
     <section>
-      <h2>Streckenführungen</h2>
+      <h2>Layouts</h2>
       <p class="lead">
-        Der Kurs wurde umgebaut. Rundenzeiten über eine Layoutgrenze hinweg zu vergleichen,
-        ist unzulässig.
+        The circuit has been rebuilt. Comparing lap times across a change of layout
+        is not valid.
       </p>
       <div class="tabelle">
         <table>
-          <thead><tr><th>Zeitraum</th><th class="num">Länge</th><th class="num">Kurven</th><th class="num">Rennen</th></tr></thead>
+          <thead><tr><th>Period</th><th class="num">Length</th><th class="num">Corners</th><th class="num">Races</th></tr></thead>
           <tbody>
             {layouts.map((l) => (
               <tr>
                 <td>
-                  {l.von ? (l.von === l.bis ? l.von : `${l.von}–${l.bis}`) : 'nie gefahren'}
-                  {l.aktuell === 1 && <span class="jetzt">heute</span>}
+                  {l.von ? (l.von === l.bis ? l.von : `${l.von}–${l.bis}`) : 'never raced'}
+                  {l.aktuell === 1 && <span class="jetzt">today</span>}
                 </td>
                 <td class="num">{l.laenge ? `${ein(l.laenge)} km` : '–'}</td>
                 <td class="num">{l.kurven ?? '–'}</td>
@@ -165,10 +166,10 @@ const zeitraum = rennen.length ? `${rennen.at(-1).year}–${rennen[0].year}` : '
   )}
 
   <section>
-    <h2>Alle Rennen</h2>
+    <h2>All races</h2>
     <div class="tabelle">
       <table>
-        <thead><tr><th>Jahr</th><th>Rennen</th><th>Sieger</th><th>Team</th><th class="num">Von Platz</th></tr></thead>
+        <thead><tr><th>Year</th><th>Race</th><th>Winner</th><th>Team</th><th class="num">From grid</th></tr></thead>
         <tbody>
           {rennen.map((r) => (
             <tr>

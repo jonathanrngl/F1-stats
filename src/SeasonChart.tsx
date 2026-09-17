@@ -63,7 +63,7 @@ export default function SeasonChart({
   rounds,
   yLabel,
   invert = false,
-  emptyLabel = 'Keine Daten',
+  emptyLabel = 'No data',
 }: {
   series: ChartSeries[]
   rounds: ChartRound[]
@@ -170,7 +170,7 @@ export default function SeasonChart({
         width={W}
         height={H}
         role="img"
-        aria-label={`${yLabel} über ${n} Rennen, ${series.length} Fahrer. Die vollständigen Zahlen stehen in den Tabellen.`}
+        aria-label={`${yLabel} across ${n} races for ${series.length} drivers. The full figures are in the tables.`}
       >
         {yTicks.map((value) => (
           <g key={value}>
@@ -282,7 +282,7 @@ export default function SeasonChart({
           height={plotH}
           fill="transparent"
           tabIndex={0}
-          aria-label="Rennen mit den Pfeiltasten durchgehen"
+          aria-label="Step through the races with the arrow keys"
           onPointerDown={pointerRound}
           onPointerMove={pointerRound}
           /* Nur der Mauszeiger räumt den Auszug beim Verlassen weg. Ein Finger

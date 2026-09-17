@@ -12,38 +12,37 @@ const zahlen = eine(`
          (SELECT MAX(year) FROM season)     AS bis`)
 
 const saisons = saisonListe().slice(0, 6)
-const nf = new Intl.NumberFormat('de-DE')
+const nf = new Intl.NumberFormat('en-GB')
 ---
 
 <Seite
-  titel="Formel 1 Statistiken – jede Saison seit 1950"
-  beschreibung={`Ergebnisse, Wertungen und Auswertungen aus ${zahlen.rennen} Rennen zwischen ${zahlen.von} und ${zahlen.bis}.`}
+  titel="Formula 1 statistics – every season since 1950"
+  beschreibung={`Results, standings and analysis from ${zahlen.rennen} races between ${zahlen.von} and ${zahlen.bis}.`}
 >
-  <h1>Formel 1, vollständig</h1>
+  <h1>Formula 1, in full</h1>
   <p class="lead">
-    {nf.format(zahlen.rennen)} Rennen zwischen {zahlen.von} und {zahlen.bis}, {nf.format(zahlen.fahrer)}
-    Fahrer, {zahlen.teams} Teams, {zahlen.strecken} Strecken. Jede Zahl auf dieser Seite
-    entsteht aus {nf.format(zahlen.ergebnisse)} Ergebniszeilen – nicht aus einer gepflegten
-    Rekordliste.
+    {nf.format(zahlen.rennen)} races between {zahlen.von} and {zahlen.bis}, {nf.format(zahlen.fahrer)} drivers, {zahlen.teams} teams, {zahlen.strecken} circuits.
+    Every number on this site comes from {nf.format(zahlen.ergebnisse)} result rows – not from a
+    curated list of records.
   </p>
 
   <ul class="karten">
-    <li><a class="karte" href={pfad.seite('/vorschau/')}><b>Vorschau</b><span>Das nächste Rennen: Strecke, WM-Stand und Marken in Reichweite</span></a></li>
-    <li><a class="karte" href={pfad.seite('/fahrer/')}><b>Fahrer</b><span>{nf.format(zahlen.fahrer)} Profile mit Karriere, Serien und Teamkollegen</span></a></li>
-    <li><a class="karte" href={pfad.seite('/teams/')}><b>Teams</b><span>{zahlen.teams} Konstrukteure samt Vorgängern</span></a></li>
-    <li><a class="karte" href={pfad.seite('/saisons/')}><b>Saisons</b><span>Wertungen, Kalender und Verlauf je Jahr</span></a></li>
-    <li><a class="karte" href={pfad.seite('/rennen/')}><b>Rennen</b><span>{nf.format(zahlen.rennen)} Einzelergebnisse</span></a></li>
-    <li><a class="karte" href={pfad.seite('/strecken/')}><b>Strecken</b><span>{zahlen.strecken} Kurse und wer dort stark war</span></a></li>
-    <li><a class="karte" href={pfad.seite('/rekorde/')}><b>Rekorde</b><span>Bestmarken mit Verweis auf das Rennen</span></a></li>
+    <li><a class="karte" href={pfad.seite('/preview/')}><b>Preview</b><span>The next race: circuit, championship standings and records within reach</span></a></li>
+    <li><a class="karte" href={pfad.seite('/drivers/')}><b>Drivers</b><span>{nf.format(zahlen.fahrer)} profiles with career, streaks and team-mates</span></a></li>
+    <li><a class="karte" href={pfad.seite('/teams/')}><b>Teams</b><span>{zahlen.teams} constructors, with their predecessors</span></a></li>
+    <li><a class="karte" href={pfad.seite('/seasons/')}><b>Seasons</b><span>Standings, calendar and progression for each year</span></a></li>
+    <li><a class="karte" href={pfad.seite('/races/')}><b>Races</b><span>{nf.format(zahlen.rennen)} individual results</span></a></li>
+    <li><a class="karte" href={pfad.seite('/circuits/')}><b>Circuits</b><span>{zahlen.strecken} circuits and who was strong there</span></a></li>
+    <li><a class="karte" href={pfad.seite('/records/')}><b>Records</b><span>Every record linked to the race behind it</span></a></li>
   </ul>
 
-  <h2 style="margin-top:2.5rem">Zuletzt</h2>
+  <h2 style="margin-top:2.5rem">Most recent</h2>
   <ul class="karten">
     {saisons.map((s) => (
       <li>
         <a class="karte" href={pfad.saison(s.jahr)}>
           <b>{s.jahr}</b>
-          <span>{s.meister ?? 'läuft noch'}{s.teamMeister ? ` · Team-WM: ${s.teamMeister}` : ''}</span>
+          <span>{s.meister ?? 'still under way'}{s.teamMeister ? ` · Constructors: ${s.teamMeister}` : ''}</span>
         </a>
       </li>
     ))}

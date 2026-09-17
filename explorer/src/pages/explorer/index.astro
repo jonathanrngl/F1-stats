@@ -7,29 +7,29 @@ const z = eine('SELECT COUNT(*) AS n FROM race_result')
 ---
 
 <Seite
-  titel="Statistik-Explorer – eigene Abfragen über die ganze F1-Geschichte"
-  beschreibung="Frei kombinierbare Abfragen über 27.599 Ergebniszeilen: gruppieren, filtern, sortieren, exportieren."
+  titel="Statistics Explorer – your own queries across the whole of Formula 1 history"
+  beschreibung="Freely combinable queries across 27,599 result rows: group, filter, sort, export."
 >
   <h1>Explorer</h1>
   <p class="lead">
-    Eigene Abfragen über {z.n.toLocaleString('de-DE')} Ergebniszeilen seit 1950. Wähle, worüber
-    gezählt wird und was gezählt wird – das Ergebnis steht sofort, weil der ganze Bestand im
-    Browser liegt und keine Anfrage nötig ist.
+    Your own queries across {z.n.toLocaleString('en-GB')} result rows since 1950. Choose what the
+    count is grouped by and what is counted – the result appears at once, because the whole
+    dataset sits in the browser and no request is needed.
   </p>
 
   <details class="beispiele">
-    <summary>Beispielfragen und wie man sie stellt</summary>
+    <summary>Example questions and how to ask them</summary>
     <dl>
-      <dt>Wer hat die meisten Siege in Monaco?</dt>
-      <dd>Gruppieren nach <b>Fahrer</b>, Filter <b>Strecke: Monaco</b>, sortieren nach Siegen.</dd>
-      <dt>Alle Fahrer von 2000 bis heute mit mindestens fünf Siegen und zwanzig Podien</dt>
-      <dd>Gruppieren nach <b>Fahrer</b>, Jahr von <b>2000</b>, <b>min. Siege 5</b>, <b>min. Podien 20</b>.</dd>
-      <dt>Welche Fahrer haben von außerhalb der ersten zehn gewonnen?</dt>
-      <dd>Gruppieren nach <b>Fahrer</b>, Schalter <b>nur Siege von jenseits Startplatz 10</b>.</dd>
-      <dt>Welche Saison hatte die meisten verschiedenen Sieger?</dt>
-      <dd>Gruppieren nach <b>Saison</b>, Schalter <b>nur Siege</b>, sortieren nach Starts.</dd>
-      <dt>Wer hat für Ferrari die meisten Punkte geholt?</dt>
-      <dd>Gruppieren nach <b>Fahrer</b>, Filter <b>Team: Ferrari</b>, sortieren nach Punkten.</dd>
+      <dt>Who has the most wins at Monaco?</dt>
+      <dd>Group by <b>Driver</b>, filter <b>Circuit: Monaco</b>, sort by wins.</dd>
+      <dt>All drivers from 2000 to today with at least five wins and twenty podiums</dt>
+      <dd>Group by <b>Driver</b>, year from <b>2000</b>, <b>min. wins 5</b>, <b>min. podiums 20</b>.</dd>
+      <dt>Which drivers have won from outside the top ten on the grid?</dt>
+      <dd>Group by <b>Driver</b>, toggle <b>wins from outside the top ten on the grid only</b>.</dd>
+      <dt>Which season had the most different winners?</dt>
+      <dd>Group by <b>Season</b>, toggle <b>wins only</b>, sort by starts.</dd>
+      <dt>Who has scored the most points for Ferrari?</dt>
+      <dd>Group by <b>Driver</b>, filter <b>Team: Ferrari</b>, sort by points.</dd>
     </dl>
   </details>
 

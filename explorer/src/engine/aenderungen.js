@@ -74,80 +74,73 @@ const JE_TEAM_UND_RENNEN = `
 export const KATEGORIEN = [
   {
     id: 'siege',
-    titel: 'Meiste Siege',
-    einzahl: 'Sieg',
-    mehrzahl: 'Siege',
-    mehrzahlDativ: 'Siegen',
+    titel: 'Most wins',
+    einzahl: 'win',
+    mehrzahl: 'wins',
     wer: 'fahrer',
     trifft: (z) => z.platz === 1,
   },
   {
     id: 'poles',
-    titel: 'Meiste Pole-Positions',
-    einzahl: 'Pole-Position',
-    mehrzahl: 'Pole-Positions',
+    titel: 'Most pole positions',
+    einzahl: 'pole position',
+    mehrzahl: 'pole positions',
     wer: 'fahrer',
     trifft: (z) => z.quali === 1,
   },
   {
     id: 'podien',
-    titel: 'Meiste Podien',
-    einzahl: 'Podium',
-    mehrzahl: 'Podien',
+    titel: 'Most podiums',
+    einzahl: 'podium',
+    mehrzahl: 'podiums',
     wer: 'fahrer',
     trifft: (z) => z.gewertet === 1 && z.platz <= 3,
   },
   {
     id: 'schnellste',
-    titel: 'Meiste schnellste Runden',
-    einzahl: 'schnellste Runde',
-    einzahlDativ: 'schnellsten Runde',
-    mehrzahl: 'schnellste Runden',
-    mehrzahlDativ: 'schnellsten Runden',
+    titel: 'Most fastest laps',
+    einzahl: 'fastest lap',
+    mehrzahl: 'fastest laps',
     wer: 'fahrer',
     trifft: (z) => z.schnellste === 1,
   },
   {
     id: 'starts',
-    titel: 'Meiste Starts',
-    einzahl: 'Start',
-    mehrzahl: 'Starts',
+    titel: 'Most starts',
+    einzahl: 'start',
+    mehrzahl: 'starts',
     wer: 'fahrer',
     trifft: (z) => z.gestartet === 1,
   },
   {
     id: 'teamSiege',
-    titel: 'Meiste Siege eines Teams',
-    einzahl: 'Sieg',
-    mehrzahl: 'Siege',
-    mehrzahlDativ: 'Siegen',
+    titel: 'Most wins by a team',
+    einzahl: 'win',
+    mehrzahl: 'wins',
     wer: 'team',
     trifft: (z) => z.platz === 1,
   },
   {
     id: 'teamPoles',
-    titel: 'Meiste Pole-Positions eines Teams',
-    einzahl: 'Pole-Position',
-    mehrzahl: 'Pole-Positions',
+    titel: 'Most pole positions by a team',
+    einzahl: 'pole position',
+    mehrzahl: 'pole positions',
     wer: 'team',
     trifft: (z) => z.quali === 1,
   },
 ]
 
 /**
- * „1 Sieg", nicht „1 Siege" – und nach „mit" heißt es „mit 92 Siegen".
+ * „1 win", nicht „1 wins".
  *
- * Der Dativ steht als eigenes Wort in der Tabelle, statt aus einer Regel zu
- * folgen: Die deutsche Mehrzahl im Dativ hängt ein -n an, außer sie endet
- * schon auf -n oder -s, und bei „schnellste Runde" beugt sich zusätzlich das
- * Adjektiv mit. Fünf Wörter aufzuschreiben ist kürzer und verlässlicher, als
- * das zu berechnen. Fehlt die Form, ist sie mit der Grundform gleich.
+ * In der deutschen Fassung hing hier ein zweiter Satz Formen: Nach „mit"
+ * verlangte der Dativ „mit 92 Siegen", und bei „schnellste Runde" beugte sich
+ * zusätzlich das Adjektiv mit. Das Englische kennt keinen Kasus – nach jeder
+ * Präposition steht dieselbe Form. Von der Tabelle bleiben deshalb Einzahl und
+ * Mehrzahl übrig; die Dativformen und das Argument `kasus` sind ersatzlos
+ * entfallen, statt als toter Code weitergeschleppt zu werden.
  */
-export const zahlwort = (n, k, kasus = 'nominativ') => {
-  const eins = (kasus === 'dativ' && k.einzahlDativ) || k.einzahl
-  const viele = (kasus === 'dativ' && k.mehrzahlDativ) || k.mehrzahl
-  return `${n} ${n === 1 ? eins : viele}`
-}
+export const zahlwort = (n, k) => `${n} ${n === 1 ? k.einzahl : k.mehrzahl}`
 
 // --------------------------------------------------------------- Der Verlauf
 
@@ -458,10 +451,10 @@ export function saisonMarken(db, stand) {
   if (!stand) return []
 
   const ARTEN = [
-    { id: 'siege', titel: 'Siege in einer Saison', einzahl: 'Sieg', mehrzahl: 'Siege', mehrzahlDativ: 'Siegen', bedingung: 'rr.position = 1' },
-    { id: 'poles', titel: 'Pole-Positions in einer Saison', einzahl: 'Pole-Position', mehrzahl: 'Pole-Positions', bedingung: 'rr.qualifying_position = 1' },
-    { id: 'podien', titel: 'Podien in einer Saison', einzahl: 'Podium', mehrzahl: 'Podien', bedingung: 'rr.classified = 1 AND rr.position <= 3' },
-    { id: 'schnellste', titel: 'Schnellste Runden in einer Saison', einzahl: 'schnellste Runde', einzahlDativ: 'schnellsten Runde', mehrzahl: 'schnellste Runden', mehrzahlDativ: 'schnellsten Runden', bedingung: 'rr.fastest_lap = 1' },
+    { id: 'siege', titel: 'Wins in a season', einzahl: 'win', mehrzahl: 'wins', bedingung: 'rr.position = 1' },
+    { id: 'poles', titel: 'Pole positions in a season', einzahl: 'pole position', mehrzahl: 'pole positions', bedingung: 'rr.qualifying_position = 1' },
+    { id: 'podien', titel: 'Podiums in a season', einzahl: 'podium', mehrzahl: 'podiums', bedingung: 'rr.classified = 1 AND rr.position <= 3' },
+    { id: 'schnellste', titel: 'Fastest laps in a season', einzahl: 'fastest lap', mehrzahl: 'fastest laps', bedingung: 'rr.fastest_lap = 1' },
   ]
 
   const marken = []
@@ -604,12 +597,12 @@ export function inReichweite(db, verlaeufe, stand, optionen = {}) {
         hochrechnung = metric(fehlt, starts)
       } else if (starts < minStarts) {
         hochrechnung = unknown(
-          `Zu wenige Starts seit ${ab}, um ein Tempo zu messen.`,
+          `Too few starts since ${ab} to measure a strike rate.`,
           starts,
         )
       } else if ((jung?.[tempoFeld] ?? 0) === 0) {
         hochrechnung = unknown(
-          `Seit ${ab} kein einziger Erfolg dieser Art – ein Tempo, das null ist, führt zu keiner Zahl.`,
+          `Not a single success of this kind since ${ab} – a strike rate of zero yields no number.`,
           starts,
         )
       } else {
@@ -687,9 +680,9 @@ export function laufendeSerien(db, stand, { minLaenge = 3, jeArt = 3 } = {}) {
   if (!stand) return []
 
   const ARTEN = [
-    { id: 'siege', titel: 'Siege in Folge', trifft: (z) => z.platz === 1 },
-    { id: 'podien', titel: 'Podien in Folge', trifft: (z) => z.gewertet === 1 && z.platz <= 3 },
-    { id: 'punkte', titel: 'Rennen in Folge mit Punkten', trifft: (z) => (z.punkte ?? 0) > 0 },
+    { id: 'siege', titel: 'Consecutive wins', trifft: (z) => z.platz === 1 },
+    { id: 'podien', titel: 'Consecutive podiums', trifft: (z) => z.gewertet === 1 && z.platz <= 3 },
+    { id: 'punkte', titel: 'Consecutive races in the points', trifft: (z) => (z.punkte ?? 0) > 0 },
   ]
 
   const zeilen = db.prepare(JE_FAHRER_UND_RENNEN).all().filter((z) => z.gestartet === 1)

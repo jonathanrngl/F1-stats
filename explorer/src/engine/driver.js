@@ -203,7 +203,7 @@ export const calculateAverageStart = (rennen, minSample = 3) =>
  */
 export function calculatePositionsGained(rennen) {
   const vergleichbar = gewertet(rennen).filter((r) => r.grid !== null)
-  if (vergleichbar.length === 0) return unknown('Keine Rennen mit überliefertem Startplatz.')
+  if (vergleichbar.length === 0) return unknown('No races with a recorded grid position.')
   return metric(
     vergleichbar.reduce((s, r) => s + (r.grid - r.position), 0),
     vergleichbar.length,
@@ -255,7 +255,7 @@ export function calculateChampionships(db, driverId, filter = {}) {
    * Meisterschaftsplatz dagegen ist dann wirklich nicht bekannt.
    */
   if (zeilen.length === 0) {
-    return { titles: metric(0, 0, null), best: unknown('Nie in einer Wertung geführt.'), seasons: [] }
+    return { titles: metric(0, 0, null), best: unknown('Never listed in the championship standings.'), seasons: [] }
   }
 
   const deckung = { firstYear: zeilen[0].year, lastYear: zeilen[zeilen.length - 1].year }
@@ -265,7 +265,7 @@ export function calculateChampionships(db, driverId, filter = {}) {
     titles: metric(zeilen.filter((z) => z.won).length, zeilen.length, deckung),
     best: platzierungen.length
       ? metric(Math.min(...platzierungen), zeilen.length, deckung)
-      : unknown('Keine Platzierung überliefert.'),
+      : unknown('No championship position recorded.'),
     seasons: zeilen,
   }
 }

@@ -13,10 +13,10 @@ import { nation } from './nations'
  * und damit die Titelzahl richtig stellt.
  */
 
-const zahl = (v: number) => v.toLocaleString('de-DE')
-const eine = (v: number) => v.toFixed(1).replace('.', ',')
+const zahl = (v: number) => v.toLocaleString('en-GB')
+const eine = (v: number) => v.toFixed(1)
 const quote = (teil: number, ganz: number) =>
-  ganz > 0 ? `${((teil / ganz) * 100).toFixed(0)} %` : '–'
+  ganz > 0 ? `${((teil / ganz) * 100).toFixed(0)}%` : '–'
 
 export default function DriverCareer({
   driver,
@@ -47,7 +47,7 @@ export default function DriverCareer({
   if (races.length === 0 && !pending) {
     return (
       <p className="status">
-        Für {driver.givenName} {driver.familyName} liegen keine Rennergebnisse vor.
+        No race results are available for {driver.givenName} {driver.familyName}.
       </p>
     )
   }
@@ -64,14 +64,14 @@ export default function DriverCareer({
           </h2>
           <p>
             {n.name}
-            {driver.dateOfBirth && <> · geboren {new Date(driver.dateOfBirth).toLocaleDateString('de-DE')}</>}
+            {driver.dateOfBirth && <> · born {new Date(driver.dateOfBirth).toLocaleDateString('en-GB')}</>}
             {t.seasonCount > 0 && (
               <>
                 {' · '}
                 {t.firstSeason === t.lastSeason
                   ? t.firstSeason
                   : `${t.firstSeason}–${t.lastSeason}`}{' '}
-                ({t.seasonCount} {t.seasonCount === 1 ? 'Saison' : 'Saisons'})
+                ({t.seasonCount} {t.seasonCount === 1 ? 'season' : 'seasons'})
               </>
             )}
           </p>
@@ -80,24 +80,24 @@ export default function DriverCareer({
 
       <ul className="tiles">
         <Tile value={zahl(t.starts)} label="Starts" />
-        <Tile value={zahl(t.wins)} label="Siege" hint={quote(t.wins, t.starts) + ' der Starts'} />
-        <Tile value={zahl(t.podiums)} label="Podien" hint={quote(t.podiums, t.starts)} />
-        <Tile value={zahl(t.fromPole)} label="Von Startplatz 1" />
+        <Tile value={zahl(t.wins)} label="Wins" hint={quote(t.wins, t.starts) + ' of starts'} />
+        <Tile value={zahl(t.podiums)} label="Podiums" hint={quote(t.podiums, t.starts)} />
+        <Tile value={zahl(t.fromPole)} label="From P1 on the grid" />
         <Tile
           value={vollstaendig ? zahl(titel) : '–'}
-          label={titel === 1 ? 'WM-Titel' : 'WM-Titel'}
-          hint={vollstaendig ? undefined : 'lädt'}
+          label="World Championships"
+          hint={vollstaendig ? undefined : 'loading'}
         />
         <Tile
           value={t.bestFinish === null ? '–' : `P${t.bestFinish}`}
-          label="Bestes Ergebnis"
-          hint={t.avgFinish === null ? undefined : `Ø P${eine(t.avgFinish)}`}
+          label="Best finish"
+          hint={t.avgFinish === null ? undefined : `Avg P${eine(t.avgFinish)}`}
         />
       </ul>
 
       {pending && (
         <div className="status">
-          Lade Meisterschaftsplätze … {pending.done} von {pending.total} Saisons
+          Loading championship positions … {pending.done} of {pending.total} seasons
           <div className="progress">
             <i style={{ width: `${pending.total ? (pending.done / pending.total) * 100 : 0}%` }} />
           </div>
@@ -106,25 +106,26 @@ export default function DriverCareer({
 
       <section className="block">
         <header>
-          <h3>Saison für Saison</h3>
+          <h3>Season by season</h3>
           <p>
-            WM-Platz und WM-Punkte kommen aus der Meisterschaftswertung, alles übrige aus den
-            Rennergebnissen. Bis 1990 zählten nur die besten Ergebnisse einer Saison – dort liegt
-            der WM-Stand unter der Summe der Rennpunkte.
+            Championship position and championship points come from the championship standings,
+            everything else from the race results. Until 1990 only a driver’s best results in a
+            season counted – for those years the championship points sit below the sum of the race
+            points.
           </p>
         </header>
         <div className="table-scroll">
           <table className="compact">
             <thead>
               <tr>
-                <th>Saison</th>
+                <th>Season</th>
                 <th className="hide-sm">Team</th>
-                <th className="num">Rennen</th>
-                <th className="num">Siege</th>
-                <th className="num hide-sm">Podien</th>
-                <th className="num hide-sm">Bestes</th>
-                <th className="num">WM-Platz</th>
-                <th className="num">Punkte</th>
+                <th className="num">Races</th>
+                <th className="num">Wins</th>
+                <th className="num hide-sm">Podiums</th>
+                <th className="num hide-sm">Best</th>
+                <th className="num">Championship</th>
+                <th className="num">Points</th>
               </tr>
             </thead>
             <tbody>
@@ -157,27 +158,27 @@ export default function DriverCareer({
         </div>
         {vollstaendig && (
           <p className="foot">
-            Summe der WM-Punkte über die Karriere: {zahl(wmPunkte)}
-            {podestJahre > 0 && <> · {podestJahre}× unter den ersten drei der Meisterschaft</>}
+            Championship points across the career: {zahl(wmPunkte)}
+            {podestJahre > 0 && <> · {podestJahre}× in the top three of the championship</>}
           </p>
         )}
       </section>
 
       <section className="block">
         <header>
-          <h3>Zahlen zur Karriere</h3>
+          <h3>Career numbers</h3>
         </header>
         <ul className="daten">
-          <Datum k="Gewertete Rennen" v={`${zahl(t.classified)} von ${zahl(t.starts)} (${quote(t.classified, t.starts)})`} />
-          <Datum k="Ohne Wertung" v={`${zahl(t.retired)} (${quote(t.retired, t.starts)})`} />
-          <Datum k="Rennen mit Punkten" v={`${zahl(t.scoring)} (${quote(t.scoring, t.starts)})`} />
+          <Datum k="Classified races" v={`${zahl(t.classified)} of ${zahl(t.starts)} (${quote(t.classified, t.starts)})`} />
+          <Datum k="Not classified" v={`${zahl(t.retired)} (${quote(t.retired, t.starts)})`} />
+          <Datum k="Races in the points" v={`${zahl(t.scoring)} (${quote(t.scoring, t.starts)})`} />
           <Datum
-            k="Schnellste Rennrunden"
-            v={t.fastestLapsKnown ? zahl(t.fastestLaps) : 'nicht überliefert'}
+            k="Fastest laps"
+            v={t.fastestLapsKnown ? zahl(t.fastestLaps) : 'not recorded'}
           />
-          <Datum k="Ø Startplatz" v={t.avgGrid === null ? '–' : eine(t.avgGrid)} />
-          <Datum k="Ø Zielposition" v={t.avgFinish === null ? '–' : eine(t.avgFinish)} />
-          <Datum k="Punkte in Rennen" v={zahl(t.racePoints)} />
+          <Datum k="Avg grid position" v={t.avgGrid === null ? '–' : eine(t.avgGrid)} />
+          <Datum k="Avg finish" v={t.avgFinish === null ? '–' : eine(t.avgFinish)} />
+          <Datum k="Points scored in races" v={zahl(t.racePoints)} />
           <Datum
             k="Teams"
             v={t.teams
@@ -190,12 +191,13 @@ export default function DriverCareer({
           />
         </ul>
         <p className="foot">
-          „Von Startplatz 1“ ist nicht dasselbe wie eine Pole-Position: Strafversetzungen
-          verschieben den Startplatz. Für die frühen Jahrzehnte fallen beide zusammen – Fangio
-          kommt so auf seine 29, Senna auf seine 65 –, ab den 2010ern gehen sie auseinander.
-          Gezählt wird durchgehend der Startplatz, weil nur er seit 1950 überliefert ist.
+          “From P1 on the grid” is not the same as a pole position: grid penalties move a driver
+          away from the slot his qualifying time earned him. For the early decades the two
+          coincide – that is how Fangio arrives at his 29 and Senna at his 65 – but from the 2010s
+          they come apart. What is counted throughout is the grid position, because that is the
+          only one of the two recorded since 1950.
           {!t.fastestLapsKnown &&
-            ' Schnellste Rennrunden führt die Datenquelle erst ab 2004; für diese Karriere liegen sie nicht vor.'}
+            ' The data source carries fastest laps only from 2004 onwards; for this career none are recorded.'}
         </p>
       </section>
     </div>

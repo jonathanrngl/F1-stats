@@ -42,24 +42,24 @@ type Tab = 'drivers' | 'constructors' | 'progression' | 'analysis' | 'title' | '
  */
 const MENU: MenuGruppe<Tab>[] = [
   {
-    titel: 'Stand nach dem Rennen',
+    titel: 'Standings after the race',
     eintraege: [
-      { id: 'drivers', label: 'Fahrerwertung', hint: 'Weltmeisterschaftsstand der Fahrer' },
-      { id: 'constructors', label: 'Konstrukteurswertung', hint: 'Dasselbe für die Teams, ab 1958' },
+      { id: 'drivers', label: 'Drivers’ standings', hint: 'The drivers’ championship standings' },
+      { id: 'constructors', label: 'Constructors’ standings', hint: 'The same for the teams, from 1958' },
     ],
   },
   {
-    titel: 'Über die Saison',
+    titel: 'Across the season',
     eintraege: [
-      { id: 'progression', label: 'WM-Verlauf', hint: 'Punkte aller Fahrer Rennen für Rennen' },
-      { id: 'title', label: 'Titelkampf', hint: 'Rückstand zur Spitze und wann der Titel feststand' },
-      { id: 'analysis', label: 'Rennanalyse', hint: 'Teamduelle, Startplatz zu Ziel, Zuverlässigkeit' },
+      { id: 'progression', label: 'Championship progression', hint: 'Every driver’s points, race by race' },
+      { id: 'title', label: 'Title race', hint: 'Gap to the leader, and when the title was decided' },
+      { id: 'analysis', label: 'Race analysis', hint: 'Team-mate head-to-heads, grid to finish, reliability' },
     ],
   },
   {
-    titel: 'Einzelne Fahrer',
+    titel: 'Individual drivers',
     eintraege: [
-      { id: 'career', label: 'Karriere', hint: 'Suche unter 881 Fahrern seit 1950' },
+      { id: 'career', label: 'Career', hint: 'Search 881 drivers since 1950' },
     ],
   },
 ]
@@ -438,7 +438,7 @@ export default function App() {
         <div className="topbar-inner">
           <ViewMenu gruppen={MENU} aktiv={tab} onSelect={setTab} />
           <span className="wortmarke">
-            <b>Formel 1</b> Statistiken
+            <b>Formula 1</b> Statistics
           </span>
           <ThemeSwitch />
         </div>
@@ -446,10 +446,11 @@ export default function App() {
 
       <header className="masthead">
         <div className="masthead-inner">
-          <h1>Statistiken</h1>
+          <h1>Statistics</h1>
           <p className="subtitle">
-            Jede Saison seit 1950, zu jedem Rennen: Weltmeisterschaftsstand, Punkteverlauf, das
-            Kräfteverhältnis in den Teams und die Frage, wann der Titel entschieden war.
+            Every season since 1950, at every race: the championship standings, the points
+            progression, the balance of power inside the teams, and the question of when the title
+            was decided.
           </p>
         </div>
       </header>
@@ -457,7 +458,7 @@ export default function App() {
       <main className="app">
         <div className="panel controls">
           <label className="field">
-            <span>Saison</span>
+            <span>Season</span>
             <select value={season} onChange={(e) => setSeason(e.target.value)}>
               {seasons.map((y) => (
                 <option key={y} value={y}>
@@ -468,11 +469,11 @@ export default function App() {
           </label>
 
           <div className="field race-field">
-            <span id="race-label">Rennen</span>
+            <span id="race-label">Race</span>
             <div className="stepper">
               <button
                 type="button"
-                aria-label="Vorheriges Rennen"
+                aria-label="Previous race"
                 disabled={atRace <= 0}
                 onClick={() => setRound(available[atRace - 1].round)}
               >
@@ -487,13 +488,13 @@ export default function App() {
                 {races.map((r) => (
                   <option key={r.round} value={r.round} disabled={isUpcoming(r)}>
                     {r.round}. {r.raceName}
-                    {isUpcoming(r) ? ' (noch nicht gefahren)' : ''}
+                    {isUpcoming(r) ? ' (not yet run)' : ''}
                   </option>
                 ))}
               </select>
               <button
                 type="button"
-                aria-label="Nächstes Rennen"
+                aria-label="Next race"
                 disabled={atRace < 0 || atRace >= available.length - 1}
                 onClick={() => setRound(available[atRace + 1].round)}
               >
@@ -505,13 +506,13 @@ export default function App() {
 
         {selectedRace && (
           <div className="race-info">
-            <span className="race-round">Runde {selectedRace.round}</span>
+            <span className="race-round">Round {selectedRace.round}</span>
             <strong>{selectedRace.raceName}</strong>
             <span>
               {selectedRace.Circuit.circuitName} · {selectedRace.Circuit.Location.locality},{' '}
               {selectedRace.Circuit.Location.country}
             </span>
-            <span>{new Date(selectedRace.date).toLocaleDateString('de-DE')}</span>
+            <span>{new Date(selectedRace.date).toLocaleDateString('en-GB')}</span>
           </div>
         )}
 
@@ -538,8 +539,8 @@ export default function App() {
                 onDriver={zeigeFahrer}
                 empty={
                   selectedRace && isUpcoming(selectedRace)
-                    ? 'Dieses Rennen wurde noch nicht gefahren.'
-                    : 'Für dieses Rennen liegen keine Fahrerwertungsdaten vor.'
+                    ? 'This race has not been run yet.'
+                    : 'No drivers’ standings are available for this race.'
                 }
               />
             ) : (
@@ -556,33 +557,33 @@ export default function App() {
                 detailLabel=""
                 empty={
                   selectedRace && isUpcoming(selectedRace)
-                    ? 'Dieses Rennen wurde noch nicht gefahren.'
-                    : 'Die Konstrukteurswertung gibt es erst ab der Saison 1958.'
+                    ? 'This race has not been run yet.'
+                    : 'The constructors’ standings only begin with the 1958 season.'
                 }
               />
             )
           ) : tab === 'progression' ? (
             chartSeries.length === 0 ? (
               !progReady ? (
-                progressBar(prog.done, prog.total, `Lade ${prog.total} Rennen der Saison ${season} …`)
+                progressBar(prog.done, prog.total, `Loading ${prog.total} races from the ${season} season …`)
               ) : (
-                <p className="status">Für diese Saison liegen keine Punktedaten vor.</p>
+                <p className="status">No points data is available for this season.</p>
               )
             ) : (
               <>
                 <div className="chart-head">
-                  <h2>Punkteverlauf {season}</h2>
+                  <h2>Points progression {season}</h2>
                   <p>
-                    Nach {shownRounds} von {races.length} Rennen
-                    {!progReady && ` · lädt noch (${prog.done}/${prog.total})`}
+                    After {shownRounds} of {races.length} races
+                    {!progReady && ` · still loading (${prog.done}/${prog.total})`}
                   </p>
                 </div>
-                <SeasonChart series={chartSeries} rounds={chartRounds} yLabel="Punkte" />
+                <SeasonChart series={chartSeries} rounds={chartRounds} yLabel="Points" />
               </>
             )
           ) : tab === 'analysis' ? (
             !results.complete || results.season !== season ? (
-              progressBar(results.done, results.total || 1, `Lade Rennergebnisse ${season} …`)
+              progressBar(results.done, results.total || 1, `Loading the ${season} race results …`)
             ) : (
               <RaceAnalysis races={analysisRaces} />
             )
@@ -594,7 +595,7 @@ export default function App() {
                 progressBar(
                   index.done,
                   index.total || 9,
-                  'Lade das Fahrerverzeichnis – 881 Namen seit 1950 …',
+                  'Loading the driver index – 881 names since 1950 …',
                 )
               )}
 
@@ -612,23 +613,23 @@ export default function App() {
                   />
                 ) : (
                   <p className="status">
-                    Lade die Karriere von {picked.givenName} {picked.familyName} …
+                    Loading the career of {picked.givenName} {picked.familyName} …
                   </p>
                 )
               ) : (
                 index.complete && (
                   <p className="status">
-                    Tippe einen Namen oder ein Kürzel – etwa „Senna“, „VER“ oder „Fangio“. In den
-                    Wertungstabellen führt auch ein Klick auf einen Fahrernamen hierher.
+                    Type a name or a code – “Senna”, “VER” or “Fangio”, for instance. In the
+                    standings tables, a click on a driver’s name also leads here.
                   </p>
                 )
               )}
             </div>
           ) : chartSeries.length === 0 ? (
             !progReady ? (
-              progressBar(prog.done, prog.total, `Lade ${prog.total} Rennen der Saison ${season} …`)
+              progressBar(prog.done, prog.total, `Loading ${prog.total} races from the ${season} season …`)
             ) : (
-              <p className="status">Für diese Saison liegen keine Punktedaten vor.</p>
+              <p className="status">No points data is available for this season.</p>
             )
           ) : (
             <TitleRace
@@ -646,8 +647,7 @@ export default function App() {
         </div>
 
         <footer>
-          Daten von <a href="https://api.jolpi.ca">Jolpica-F1</a>. Kein offizielles Angebot der
-          Formel 1.
+          Data from <a href="https://api.jolpi.ca">Jolpica-F1</a>. Not an official Formula 1 site.
         </footer>
       </main>
     </>
@@ -664,7 +664,7 @@ function TableSkeleton() {
           <i style={{ width: '3rem' }} />
         </div>
       ))}
-      <span className="sr-only">Lade Daten</span>
+      <span className="sr-only">Loading data</span>
     </div>
   )
 }
@@ -703,9 +703,9 @@ function StandingsTable({
             <th className="pos">#</th>
             <th>Name</th>
             {detailLabel && <th className="hide-sm">{detailLabel}</th>}
-            <th className="hide-sm">Nationalität</th>
-            <th className="num">Punkte</th>
-            <th className="num">Siege</th>
+            <th className="hide-sm">Nationality</th>
+            <th className="num">Points</th>
+            <th className="num">Wins</th>
           </tr>
         </thead>
         <tbody>
@@ -725,7 +725,7 @@ function StandingsTable({
                       type="button"
                       className="namens-knopf"
                       onClick={() => onDriver(r.driver!)}
-                      title={`Karriere von ${r.name} ansehen`}
+                      title={`View the career of ${r.name}`}
                     >
                       {r.name}
                     </button>

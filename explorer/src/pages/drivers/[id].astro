@@ -76,9 +76,9 @@ const spannen = (jahre) => {
 }
 const teams = [...proTeam.values()].sort((a, b) => Math.min(...a.jahre) - Math.min(...b.jahre))
 
-const nf = new Intl.NumberFormat('de-DE')
+const nf = new Intl.NumberFormat('en-GB')
 const ein = (n) => (n === null || n === undefined ? '–' : nf.format(Math.round(n * 10) / 10))
-const proz = (m) => (m.value === null ? '–' : `${Math.round(m.value * 100)} %`)
+const proz = (m) => (m.value === null ? '–' : `${Math.round(m.value * 100)}%`)
 /** Zeigt den Wert, oder den Grund, warum es keinen gibt. */
 const wert = (m, f = (v) => nf.format(v)) => (m.value === null ? '–' : f(m.value))
 
@@ -89,19 +89,19 @@ const zeitraum =
       ? String(rennen[0].year)
       : `${rennen[0].year}–${rennen.at(-1).year}`
 
+const datum = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
 const jahre = (d) => {
   if (!d) return ''
-  const j = new Date(d)
-  return `${j.getDate()}.${j.getMonth() + 1}.${j.getFullYear()}`
+  return datum.format(new Date(d))
 }
 
 const beschreibung =
-  `${fahrer.full_name}: ${calculateStarts(rennen).value} Starts, ` +
-  `${calculateWins(rennen).value} Siege, ${calculatePodiums(rennen).value} Podien, ` +
-  `${titel.titles.value} Weltmeisterschaften (${zeitraum}).`
+  `${fahrer.full_name}: ${calculateStarts(rennen).value} starts, ` +
+  `${calculateWins(rennen).value} wins, ${calculatePodiums(rennen).value} podiums, ` +
+  `${titel.titles.value} World Championships (${zeitraum}).`
 ---
 
-<Seite titel={`${fahrer.full_name} – Statistik und Karriere`} beschreibung={beschreibung}>
+<Seite titel={`${fahrer.full_name} – statistics and career`} beschreibung={beschreibung}>
   <header class="profil">
     <span class="kuerzel gross" title={heimat.name}>{heimat.code}</span>
     <div>
@@ -109,8 +109,8 @@ const beschreibung =
       <p class="lead">
         {[
           heimat.name,
-          fahrer.date_of_birth && `geboren ${jahre(fahrer.date_of_birth)}`,
-          fahrer.date_of_death && `gestorben ${jahre(fahrer.date_of_death)}`,
+          fahrer.date_of_birth && `born ${jahre(fahrer.date_of_birth)}`,
+          fahrer.date_of_death && `died ${jahre(fahrer.date_of_death)}`,
           zeitraum,
           fahrer.abbreviation,
         ]
@@ -123,49 +123,49 @@ const beschreibung =
   <ul class="kacheln">
     <li><b>{wert(calculateStarts(rennen))}</b><span>Starts</span>
       {calculateEntries(rennen).value !== calculateStarts(rennen).value && (
-        <i>{calculateEntries(rennen).value} Nennungen</i>
+        <i>{calculateEntries(rennen).value} entries</i>
       )}
     </li>
-    <li><b>{wert(calculateWins(rennen))}</b><span>Siege</span><i>{proz(calculateWinRate(rennen))} der Starts</i></li>
-    <li><b>{wert(calculatePodiums(rennen))}</b><span>Podien</span><i>{proz(calculatePodiumRate(rennen))}</i></li>
-    <li><b>{wert(calculatePoles(rennen))}</b><span>Pole-Positions</span>
-      <i>{wert(calculateStartsFromPole(rennen))}× von Platz 1 gestartet</i></li>
-    <li><b>{wert(calculateFastestLaps(rennen))}</b><span>Schnellste Runden</span></li>
-    <li><b>{wert(titel.titles)}</b><span>Weltmeisterschaften</span>
-      <i>bester Platz {wert(titel.best, (v) => 'P' + v)}</i></li>
+    <li><b>{wert(calculateWins(rennen))}</b><span>Wins</span><i>{proz(calculateWinRate(rennen))} of starts</i></li>
+    <li><b>{wert(calculatePodiums(rennen))}</b><span>Podiums</span><i>{proz(calculatePodiumRate(rennen))}</i></li>
+    <li><b>{wert(calculatePoles(rennen))}</b><span>Pole positions</span>
+      <i>{wert(calculateStartsFromPole(rennen))}× started from P1 on the grid</i></li>
+    <li><b>{wert(calculateFastestLaps(rennen))}</b><span>Fastest laps</span></li>
+    <li><b>{wert(titel.titles)}</b><span>World Championships</span>
+      <i>best championship finish {wert(titel.best, (v) => 'P' + v)}</i></li>
   </ul>
 
   <section>
-    <h2>Zahlen zur Karriere</h2>
+    <h2>Career numbers</h2>
     <ul class="daten">
-      <li><span>Ø Startplatz</span><b>{ein(calculateAverageStart(rennen).value)}</b></li>
-      <li><span>Ø Zielposition</span><b>{ein(calculateAverageFinish(rennen).value)}</b></li>
-      <li><span>Ausfallquote</span><b>{proz(calculateDNFRate(rennen))}</b></li>
-      <li><span>Pole zu Sieg</span><b>{proz(calculatePoleToWinRate(rennen))}</b></li>
-      <li><span>Plätze gutgemacht</span><b>{wert(calculatePositionsGained(rennen), (v) => (v > 0 ? '+' : '') + nf.format(v))}</b></li>
-      <li><span>Punkte in Rennen</span><b>{ein(calculatePoints(rennen).value)}</b></li>
-      <li><span>Längste Siegesserie</span><b>{serien.wins.length || '–'}</b></li>
-      <li><span>Längste Podiumsserie</span><b>{serien.podiums.length || '–'}</b></li>
-      <li><span>Längste Punkteserie</span><b>{serien.points.length || '–'}</b></li>
+      <li><span>Avg grid position</span><b>{ein(calculateAverageStart(rennen).value)}</b></li>
+      <li><span>Avg finish</span><b>{ein(calculateAverageFinish(rennen).value)}</b></li>
+      <li><span>Retirement rate</span><b>{proz(calculateDNFRate(rennen))}</b></li>
+      <li><span>Pole-to-win conversion</span><b>{proz(calculatePoleToWinRate(rennen))}</b></li>
+      <li><span>Positions gained</span><b>{wert(calculatePositionsGained(rennen), (v) => (v > 0 ? '+' : '') + nf.format(v))}</b></li>
+      <li><span>Points scored in races</span><b>{ein(calculatePoints(rennen).value)}</b></li>
+      <li><span>Longest winning streak</span><b>{serien.wins.length || '–'}</b></li>
+      <li><span>Longest podium streak</span><b>{serien.podiums.length || '–'}</b></li>
+      <li><span>Longest points-scoring streak</span><b>{serien.points.length || '–'}</b></li>
       <li><span>Teams</span><b>{teams.map((t) => `${teamNamen.get(t.id)} (${spannen(t.jahre)})`).join(', ')}</b></li>
     </ul>
     <p class="fussnote">
-      Pole-Position heißt: schnellste Zeit im Qualifying. Das ist nicht dasselbe wie ein Start
-      von Platz 1 – Strafversetzungen verschieben den Startplatz. Bis in die 2000er fallen
-      beide Zahlen zusammen.
+      Pole position means the fastest time in qualifying. That is not the same as a start from
+      P1 – grid penalties move a driver down the grid. Up to the 2000s the two numbers
+      coincide.
     </p>
   </section>
 
   {titel.seasons.length > 0 && (
     <section>
-      <h2>Saison für Saison</h2>
+      <h2>Season by season</h2>
       <div class="tabelle">
         <table>
           <thead>
             <tr>
-              <th>Saison</th><th>Team</th>
-              <th class="num">Rennen</th><th class="num">Siege</th><th class="num">Podien</th>
-              <th class="num">WM-Platz</th><th class="num">WM-Punkte</th>
+              <th>Season</th><th>Team</th>
+              <th class="num">Races</th><th class="num">Wins</th><th class="num">Podiums</th>
+              <th class="num">Championship</th><th class="num">Championship points</th>
             </tr>
           </thead>
           <tbody>
@@ -193,17 +193,17 @@ const beschreibung =
 
   {duelle.length > 0 && (
     <section>
-      <h2>Gegen die Teamkollegen</h2>
+      <h2>Against the team-mates</h2>
       <p class="lead">
-        Gleiches Auto, gleiche Rennen. Gezählt wird im Rennen nur, wo beide ins Ziel kamen –
-        ein Ausfall sagt nichts über den Zweikampf.
+        Same car, same races. In the race only those where both reached the finish are counted –
+        a retirement says nothing about the head-to-head.
       </p>
       <div class="tabelle">
         <table>
           <thead>
             <tr>
-              <th>Teamkollege</th><th>Jahre</th>
-              <th class="num">Rennen</th><th class="num">Qualifying</th><th class="num">Punkte</th>
+              <th>Team-mate</th><th>Years</th>
+              <th class="num">Races</th><th class="num">Qualifying</th><th class="num">Points</th>
             </tr>
           </thead>
           <tbody>
@@ -226,13 +226,13 @@ const beschreibung =
 
   {strecken.length > 0 && (
     <section>
-      <h2>Stärkste Strecken</h2>
+      <h2>Strongest circuits</h2>
       <div class="tabelle">
         <table>
           <thead>
             <tr>
-              <th>Strecke</th><th class="num">Starts</th><th class="num">Siege</th>
-              <th class="num">Podien</th><th class="num">Ø Ziel</th>
+              <th>Circuit</th><th class="num">Starts</th><th class="num">Wins</th>
+              <th class="num">Podiums</th><th class="num">Avg finish</th>
             </tr>
           </thead>
           <tbody>

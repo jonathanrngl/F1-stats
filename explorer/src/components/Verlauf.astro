@@ -74,14 +74,14 @@ benannt.slice(0, 5).forEach((f, i) => {
 /* Vorsatz der Seite: auf GitHub Pages "/F1-stats", beim Entwickeln leer. */
 const BASIS = import.meta.env.BASE_URL.replace(/\/$/, '')
 
-const nf = new Intl.NumberFormat('de-DE')
+const nf = new Intl.NumberFormat('en-GB')
 ---
 
 <figure class="verlauf">
   <svg
     viewBox={`0 0 ${W} ${H}`}
     role="img"
-    aria-label={`Punkteverlauf über ${n} Rennen für ${fahrer.length} Fahrer. Die vollständigen Zahlen stehen in der Wertungstabelle darunter.`}
+    aria-label={`Points progression across ${n} races for ${fahrer.length} drivers. The full figures are in the standings table below.`}
   >
     {yWerte.map((v) => (
       <g>
@@ -98,7 +98,7 @@ const nf = new Intl.NumberFormat('de-DE')
     {xWerte.map((r) => (
       <text class="achse" x={x(r.runde)} y={y(0) + 17} text-anchor="middle">{r.runde}</text>
     ))}
-    <text class="achse" x={PAD.links + PLOT_B / 2} y={H - 4} text-anchor="middle">Rennen</text>
+    <text class="achse" x={PAD.links + PLOT_B / 2} y={H - 4} text-anchor="middle">Races</text>
 
     {/* Sammelgruppe zuerst, damit die benannten Linien darüber liegen. */}
     {rest.map((f) => <path class="linie grau" d={pfad(f.punkte)} />)}
@@ -117,24 +117,24 @@ const nf = new Intl.NumberFormat('de-DE')
     {benannt.map((f, i) => (
       <li>
         <span class="strich" style={`background: var(--s${i + 1})`}></span>
-        <a href={`${BASIS}/fahrer/${f.id}/`}>{f.name}</a>
+        <a href={`${BASIS}/drivers/${f.id}/`}>{f.name}</a>
         <b>{nf.format(f.punkte.at(-1) ?? 0)}</b>
       </li>
     ))}
     {rest.length > 0 && (
       <li>
         <span class="strich" style="background: var(--s-rest)"></span>
-        <span class="uebrige">{rest.length} weitere Fahrer</span>
+        <span class="uebrige">{rest.length} further drivers</span>
       </li>
     )}
   </ul>
 
   <figcaption>
-    Weltmeisterschaftsstand nach jeder Runde.
+    Championship standings after each round.
     {streichresultate && (
       <>
-        {' '}In dieser Saison zählten nicht alle Ergebnisse: Der Verlauf zeigt den amtlichen
-        WM-Stand, nicht die Summe der Rennpunkte.
+        {' '}Not every result counted in this season: the chart shows the official championship
+        standings, not the sum of the race points.
       </>
     )}
   </figcaption>

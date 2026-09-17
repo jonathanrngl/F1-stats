@@ -23,8 +23,8 @@ export function db() {
   if (verbindung) return verbindung
   if (!fs.existsSync(PFAD)) {
     throw new Error(
-      `Die Datenbank fehlt (${path.relative(process.cwd(), PFAD)}).\n` +
-        'Erst importieren:  npm run import',
+      `The database is missing (${path.relative(process.cwd(), PFAD)}).\n` +
+        'Import it first:  npm run import',
     )
   }
   verbindung = new DatabaseSync(PFAD, { readOnly: true })
@@ -72,11 +72,11 @@ export const slug = (s) =>
 const BASIS = (import.meta.env?.BASE_URL ?? '/').replace(/\/$/, '')
 
 export const pfad = {
-  fahrer: (id) => `${BASIS}/fahrer/${id}/`,
+  fahrer: (id) => `${BASIS}/drivers/${id}/`,
   team: (id) => `${BASIS}/teams/${id}/`,
-  saison: (jahr) => `${BASIS}/saisons/${jahr}/`,
-  rennen: (id) => `${BASIS}/rennen/${id}/`,
-  strecke: (id) => `${BASIS}/strecken/${id}/`,
+  saison: (jahr) => `${BASIS}/seasons/${jahr}/`,
+  rennen: (id) => `${BASIS}/races/${id}/`,
+  strecke: (id) => `${BASIS}/circuits/${id}/`,
   /** Für Verweise, die nicht auf einen Datensatz zeigen: Übersichten, Startseite. */
   seite: (weg = '/') => `${BASIS}${weg}`,
 }
