@@ -16,10 +16,10 @@ import { useEffect, useMemo, useState } from 'react'
 /* Vorsatz der Seite: auf GitHub Pages "/F1-stats", beim Entwickeln leer. */
 const BASIS = import.meta.env.BASE_URL.replace(/\/$/, '')
 
-const nf = new Intl.NumberFormat('de-DE')
+const nf = new Intl.NumberFormat('en-GB')
 const ein = (v) => (v === null || v === undefined ? '–' : nf.format(Math.round(v * 10) / 10))
 const zwei = (v) => (v === null || v === undefined ? '–' : nf.format(Math.round(v * 100) / 100))
-const proz = (v) => (v === null || v === undefined ? '–' : `${Math.round(v * 100)} %`)
+const proz = (v) => (v === null || v === undefined ? '–' : `${Math.round(v * 100)}%`)
 
 /** Summiert die Saisons eines Profils im gewählten Zeitraum. */
 function summe(profil, von, bis) {
@@ -70,33 +70,33 @@ function summe(profil, von, bis) {
  * Hervorhebung bei jeder zweiten Zeile lügen.
  */
 const ZEILEN = [
-  { gruppe: 'Umfang' },
+  { gruppe: 'Scope' },
   { k: 'starts', label: 'Starts', f: nf.format, besser: 'gross' },
-  { k: 'jahre', label: 'Saisons', f: nf.format, besser: 'gross' },
-  { gruppe: 'Erfolge' },
-  { k: 'siege', label: 'Siege', f: nf.format, besser: 'gross' },
-  { k: 'podien', label: 'Podien', f: nf.format, besser: 'gross' },
-  { k: 'poles', label: 'Pole-Positions', f: nf.format, besser: 'gross' },
-  { k: 'schnellsteRunden', label: 'Schnellste Runden', f: nf.format, besser: 'gross' },
-  { k: 'titel', label: 'Weltmeisterschaften', f: nf.format, besser: 'gross' },
-  { k: 'besterWMPlatz', label: 'Bester WM-Platz', f: (v) => (v ? 'P' + v : '–'), besser: 'klein' },
-  { gruppe: 'Quoten' },
-  { k: 'siegquote', label: 'Siegquote', f: proz, besser: 'gross' },
-  { k: 'podestquote', label: 'Podestquote', f: proz, besser: 'gross' },
-  { k: 'poleZuSieg', label: 'Pole wurde Sieg', f: proz, besser: 'gross', hinweis: 'Anteil der Pole-Positions, aus denen ein Sieg wurde.' },
-  { k: 'ausfallquote', label: 'Ausfallquote', f: proz, besser: 'klein' },
-  { gruppe: 'Durchschnitt' },
-  { k: 'oStart', label: 'Ø Startplatz', f: ein, besser: 'klein' },
-  { k: 'oZiel', label: 'Ø Zielposition', f: ein, besser: 'klein' },
-  { gruppe: 'Normalisiert' },
+  { k: 'jahre', label: 'Seasons', f: nf.format, besser: 'gross' },
+  { gruppe: 'Achievements' },
+  { k: 'siege', label: 'Wins', f: nf.format, besser: 'gross' },
+  { k: 'podien', label: 'Podiums', f: nf.format, besser: 'gross' },
+  { k: 'poles', label: 'Pole positions', f: nf.format, besser: 'gross' },
+  { k: 'schnellsteRunden', label: 'Fastest laps', f: nf.format, besser: 'gross' },
+  { k: 'titel', label: 'World Championships', f: nf.format, besser: 'gross' },
+  { k: 'besterWMPlatz', label: 'Best championship finish', f: (v) => (v ? 'P' + v : '–'), besser: 'klein' },
+  { gruppe: 'Rates' },
+  { k: 'siegquote', label: 'Win rate', f: proz, besser: 'gross' },
+  { k: 'podestquote', label: 'Podium rate', f: proz, besser: 'gross' },
+  { k: 'poleZuSieg', label: 'Pole-to-win conversion', f: proz, besser: 'gross', hinweis: 'Share of pole positions that were turned into wins.' },
+  { k: 'ausfallquote', label: 'Retirement rate', f: proz, besser: 'klein' },
+  { gruppe: 'Averages' },
+  { k: 'oStart', label: 'Avg grid position', f: ein, besser: 'klein' },
+  { k: 'oZiel', label: 'Avg finish', f: ein, besser: 'klein' },
+  { gruppe: 'Normalised' },
   {
     k: 'punkteProStart',
-    label: 'Punkte je Start',
+    label: 'Points per start',
     f: zwei,
     besser: 'gross',
-    hinweis: 'Über Epochen hinweg nur eingeschränkt vergleichbar: Das Punktesystem hat sich vielfach geändert.',
+    hinweis: 'Comparable across eras only up to a point: the points system has changed many times.',
   },
-  { k: 'siegeProStart', label: 'Siege je Start', f: zwei, besser: 'gross' },
+  { k: 'siegeProStart', label: 'Wins per start', f: zwei, besser: 'gross' },
 ]
 
 export default function Vergleich({ index }) {
@@ -119,7 +119,7 @@ export default function Vergleich({ index }) {
     Promise.all(
       fehlend.map((id) =>
         fetch(`${BASIS}/api/v1/drivers/${id}.json`).then((r) => {
-          if (!r.ok) throw new Error(`Profil ${id} nicht gefunden.`)
+          if (!r.ok) throw new Error(`Profile ${id} not found.`)
           return r.json()
         }),
       ),
@@ -174,6 +174,31 @@ export default function Vergleich({ index }) {
 
   const waehle = (i, id) => setIds((alt) => alt.map((x, j) => (j === i ? id : x)))
 
+  /*
+   * Zwei leere Felder sind eine Sackgasse: Wer die Seite öffnet, muss erst
+   * einen Namen wissen, bevor sie irgendetwas zeigt. Diese Paarungen sind
+   * deshalb keine Zierde, sondern der Einstieg – und weil sie Teamkollegen
+   * waren, liefert jede auch die direkte Bilanz, die den Vergleich erst
+   * interessant macht.
+   *
+   * Gefiltert gegen das geladene Verzeichnis: Fehlt ein Fahrer in den Daten,
+   * verschwindet der Vorschlag, statt auf einen leeren Vergleich zu führen.
+   */
+  const vorschlaege = useMemo(() => {
+    const alle = [
+      { ids: ['ayrton-senna', 'alain-prost'], titel: 'Senna vs Prost', warum: 'Team-mates at McLaren, 1988–1989' },
+      { ids: ['lewis-hamilton', 'michael-schumacher'], titel: 'Hamilton vs Schumacher', warum: 'The two largest win tallies' },
+      { ids: ['max-verstappen', 'lewis-hamilton'], titel: 'Verstappen vs Hamilton', warum: 'The 2021 title fight' },
+      { ids: ['lewis-hamilton', 'nico-rosberg'], titel: 'Hamilton vs Rosberg', warum: 'Team-mates at Mercedes, 2013–2016' },
+      { ids: ['niki-lauda', 'james-hunt'], titel: 'Lauda vs Hunt', warum: 'The 1976 season' },
+      { ids: ['lando-norris', 'oscar-piastri'], titel: 'Norris vs Piastri', warum: 'Team-mates at McLaren today' },
+      { ids: ['juan-manuel-fangio', 'jim-clark'], titel: 'Fangio vs Clark', warum: 'Two eras, both dominant' },
+    ]
+    if (!index?.length) return []
+    const bekannt = new Set(index.map((f) => f.id))
+    return alle.filter((v) => v.ids.every((id) => bekannt.has(id)))
+  }, [index])
+
   return (
     <div className="vgl">
       <div className="waehler">
@@ -183,33 +208,50 @@ export default function Vergleich({ index }) {
             index={index}
             wert={ids[i]}
             gesperrt={ids[1 - i]}
-            label={i === 0 ? 'Erster Fahrer' : 'Zweiter Fahrer'}
+            label={i === 0 ? 'First driver' : 'Second driver'}
             onWahl={(id) => waehle(i, id)}
           />
         ))}
       </div>
 
       {fehler && <p className="fehler">{fehler}</p>}
-      {laedt && <p className="status">Lade Profile …</p>}
+      {laedt && <p className="status">Loading profiles …</p>}
 
       {!vollstaendig && !laedt && (
-        <p className="status">
-          Zwei Fahrer wählen. Der Vergleich rechnet im Browser – auch für einen frei gewählten
-          Zeitraum.
-        </p>
+        <div className="leer">
+          <p className="status">
+            Choose two drivers. The comparison is worked out in your browser – including for a
+            period you set yourself.
+          </p>
+          {vorschlaege.length > 0 && (
+            <>
+              <p className="anstoss">Or start from one of these:</p>
+              <ul className="paarungen">
+                {vorschlaege.map((v) => (
+                  <li key={v.ids.join('-')}>
+                    <button type="button" onClick={() => setIds(v.ids)}>
+                      <b>{v.titel}</b>
+                      <span>{v.warum}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
       )}
 
       {vollstaendig && werte && grenzen && (
         <>
           <div className="zeitwahl">
-            <span>Zeitraum</span>
+            <span>Period</span>
             <div className="knoepfe">
               <button
                 type="button"
                 className={!zeitraum ? 'on' : ''}
                 onClick={() => setZeitraum(null)}
               >
-                Ganze Karrieren
+                Full careers
               </button>
               {grenzen.gibtUeberschneidung && (
                 <button
@@ -223,13 +265,13 @@ export default function Vergleich({ index }) {
                   }
                   onClick={() => setZeitraum([grenzen.gemeinsamVon, grenzen.gemeinsamBis])}
                 >
-                  Gemeinsame Jahre {grenzen.gemeinsamVon}–{grenzen.gemeinsamBis}
+                  Overlapping years {grenzen.gemeinsamVon}–{grenzen.gemeinsamBis}
                 </button>
               )}
             </div>
             <div className="regler">
               <label>
-                von
+                from
                 <input
                   type="number"
                   min={grenzen.von}
@@ -239,7 +281,7 @@ export default function Vergleich({ index }) {
                 />
               </label>
               <label>
-                bis
+                to
                 <input
                   type="number"
                   min={spanne[0]}
@@ -255,9 +297,9 @@ export default function Vergleich({ index }) {
             {beide.map((p, i) => (
               <div key={p.id} className={`kopfkarte s${i}`}>
                 <span className="kuerzel">{p.land.code}</span>
-                <a href={`${BASIS}/fahrer/${p.id}/`}>{p.name}</a>
+                <a href={`${BASIS}/drivers/${p.id}/`}>{p.name}</a>
                 <i>
-                  {werte[i].von ? `${werte[i].von}–${werte[i].bis}` : 'keine Rennen im Zeitraum'}
+                  {werte[i].von ? `${werte[i].von}–${werte[i].bis}` : 'no races in this period'}
                   {werte[i].teams.length > 0 && ` · ${werte[i].teams.slice(0, 3).join(', ')}`}
                 </i>
               </div>
@@ -266,8 +308,8 @@ export default function Vergleich({ index }) {
 
           {werte.some((w) => w.starts === 0) && (
             <p className="hinweis">
-              Mindestens einer der beiden hat in diesem Zeitraum kein Rennen bestritten. Die
-              Quoten bleiben leer, statt null zu behaupten.
+              At least one of the two did not contest a race in this period. The rates stay empty
+              rather than claim a zero.
             </p>
           )}
 
@@ -287,34 +329,33 @@ export default function Vergleich({ index }) {
 
           {duell && duell.rennDuelle + duell.qualiDuelle > 0 && (
             <section className="duell">
-              <h2>Als Teamkollegen</h2>
+              <h2>As team-mates</h2>
               <p>
-                Die beiden fuhren {duell.jahre.length === 1 ? 'im Jahr' : 'in den Jahren'}{' '}
-                {duell.jahre.join(', ')} im selben Auto. Das ist der einzige wirklich faire
-                Vergleich – gleiches Material, gleiche Rennen.
+                The two of them drove the same car in {duell.jahre.join(', ')}. That is the only
+                genuinely fair comparison there is – same machinery, same races.
               </p>
               <table className="gegen">
                 <tbody>
                   <Zeile
-                    z={{ label: 'Rennduelle', f: nf.format, besser: 'gross' }}
+                    z={{ label: 'Race head-to-head', f: nf.format, besser: 'gross' }}
                     a={duell.rennSiege}
                     b={duell.rennDuelle - duell.rennSiege}
                   />
                   <Zeile
-                    z={{ label: 'Qualifying-Duelle', f: nf.format, besser: 'gross' }}
+                    z={{ label: 'Qualifying head-to-head', f: nf.format, besser: 'gross' }}
                     a={duell.qualiSiege}
                     b={duell.qualiDuelle - duell.qualiSiege}
                   />
                   <Zeile
-                    z={{ label: 'Punkte in diesen Jahren', f: ein, besser: 'gross' }}
+                    z={{ label: 'Points in those years', f: ein, besser: 'gross' }}
                     a={duell.punkteSelbst}
                     b={duell.punkteAndere}
                   />
                 </tbody>
               </table>
               <p className="fuss">
-                Im Rennen zählt nur, wo beide ins Ziel kamen – ein Ausfall sagt nichts über den
-                Zweikampf.
+                In the race, only those in which both reached the finish are counted – a
+                retirement says nothing about the head-to-head.
               </p>
             </section>
           )}
@@ -400,7 +441,7 @@ function Auswahl({ index, wert, gesperrt, label, onWahl }) {
             type="search"
             value={frage}
             autoFocus={offen}
-            placeholder="Name oder Kürzel"
+            placeholder="Name or code"
             onChange={(e) => setFrage(e.target.value)}
           />
           {treffer.length > 0 && (
@@ -417,7 +458,7 @@ function Auswahl({ index, wert, gesperrt, label, onWahl }) {
                   >
                     <span className="kuerzel">{f.land ?? '—'}</span>
                     <b>{f.name}</b>
-                    <i>{f.siege ? `${f.siege} Siege` : `${f.starts ?? 0} Starts`}</i>
+                    <i>{f.siege ? `${f.siege} wins` : `${f.starts ?? 0} starts`}</i>
                   </button>
                 </li>
               ))}

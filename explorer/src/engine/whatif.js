@@ -22,32 +22,32 @@
 /** Bekannte Punktesysteme. Daten, kein Code – deshalb erweiterbar ohne Eingriff. */
 export const SYSTEME = {
   heute: {
-    name: 'Heutiges System',
-    beschreibung: '25-18-15-12-10-8-6-4-2-1 für die ersten zehn.',
+    name: "Today's system",
+    beschreibung: '25-18-15-12-10-8-6-4-2-1 for the top ten.',
     punkte: [25, 18, 15, 12, 10, 8, 6, 4, 2, 1],
     seit: 2010,
   },
   '2003': {
-    name: 'System 2003–2009',
-    beschreibung: '10-8-6-5-4-3-2-1 für die ersten acht.',
+    name: '2003–2009 system',
+    beschreibung: '10-8-6-5-4-3-2-1 for the top eight.',
     punkte: [10, 8, 6, 5, 4, 3, 2, 1],
     seit: 2003,
   },
   '1991': {
-    name: 'System 1991–2002',
-    beschreibung: '10-6-4-3-2-1 für die ersten sechs.',
+    name: '1991–2002 system',
+    beschreibung: '10-6-4-3-2-1 for the top six.',
     punkte: [10, 6, 4, 3, 2, 1],
     seit: 1991,
   },
   '1961': {
-    name: 'System 1961–1990',
-    beschreibung: '9-6-4-3-2-1 für die ersten sechs.',
+    name: '1961–1990 system',
+    beschreibung: '9-6-4-3-2-1 for the top six.',
     punkte: [9, 6, 4, 3, 2, 1],
     seit: 1961,
   },
   '1950': {
-    name: 'System 1950–1959',
-    beschreibung: '8-6-4-3-2 für die ersten fünf, plus einer für die schnellste Runde.',
+    name: '1950–1959 system',
+    beschreibung: '8-6-4-3-2 for the top five, plus one for the fastest lap.',
     punkte: [8, 6, 4, 3, 2],
     schnellsteRunde: 1,
     seit: 1950,
@@ -64,7 +64,7 @@ export const SYSTEME = {
  */
 export function saisonNeuRechnen(db, jahr, systemId, optionen = {}) {
   const system = SYSTEME[systemId]
-  if (!system) throw new Error(`Unbekanntes Punktesystem: ${systemId}`)
+  if (!system) throw new Error(`Unknown points system: ${systemId}`)
 
   const zeilen = db
     .prepare(

@@ -34,9 +34,9 @@ const marken = saisonMarken(db(), stand)
 const aussichten = inReichweite(db(), verlaeufe, stand)
 const serien = laufendeSerien(db(), stand)
 
-const nf = new Intl.NumberFormat('de-DE')
+const nf = new Intl.NumberFormat('en-GB')
 const datum = (s) =>
-  new Intl.DateTimeFormat('de-DE', { dateStyle: 'long', timeZone: 'UTC' }).format(
+  new Intl.DateTimeFormat('en-GB', { dateStyle: 'long', timeZone: 'UTC' }).format(
     new Date(`${s}T12:00:00Z`),
   )
 /** Eine Saison und ein Bruchteil – „5,7" sagt hier mehr als „6". */
@@ -48,8 +48,8 @@ const tageZwischen = (a, b) =>
 const zielVon = (k, id) => (k.wer === 'team' ? pfad.team(id) : pfad.fahrer(id))
 
 const WORT = {
-  alleinVorn: { kurz: 'gebrochen', farbe: 'neu' },
-  eingestellt: { kurz: 'eingestellt', farbe: 'gleich' },
+  alleinVorn: { kurz: 'broken', farbe: 'neu' },
+  eingestellt: { kurz: 'equalled', farbe: 'gleich' },
 }
 
 const { rennen: rennenGesamt } = db()
@@ -58,54 +58,54 @@ const { rennen: rennenGesamt } = db()
 
 /** Ein Ereignis in einen Satz – die Formulierung trägt die Unterscheidung. */
 function satz(e) {
-  const wer = e.halter.map((h) => h.name).join(' und ')
+  const wer = e.halter.map((h) => h.name).join(' and ')
   /** Wer die Marke bisher hielt und sie nun nicht mehr allein hat. */
   const alt = e.vorher.halter
     .filter((h) => !e.halter.some((n) => n.id === h.id))
     .map((h) => h.name)
-    .join(' und ')
+    .join(' and ')
 
   if (e.art === 'eingestellt') {
-    return `${wer} erreicht ${zahlwort(e.wert, e.kategorie)} und teilt die Bestmarke${alt ? ` mit ${alt}` : ''}.`
+    return `${wer} reaches ${zahlwort(e.wert, e.kategorie)} and now shares the record${alt ? ` with ${alt}` : ''}.`
   }
-  return `${wer} zieht mit ${zahlwort(e.wert, e.kategorie, 'dativ')} allein vorbei${
-    alt ? ` – ${alt} verliert die geteilte Marke` : ''
+  return `${wer} moves clear on ${zahlwort(e.wert, e.kategorie)}${
+    alt ? ` – ${alt} loses a share of the record` : ''
   }.`
 }
 ---
 
 <Seite
-  titel="Änderungen – was sich in den Rekordlisten bewegt"
-  beschreibung="Welche Formel-1-Bestmarke zuletzt gefallen ist, was in dieser Saison noch erreichbar ist und wer den ewigen Rekorden am nächsten kommt."
+  titel="Changes – what is moving in the record lists"
+  beschreibung="Which Formula 1 record fell most recently, what is still within reach this season, and who is closest to the all-time marks."
 >
-  <h1>Änderungen</h1>
+  <h1>Changes</h1>
   <p class="lead">
-    Rekordlisten sehen fest aus und sind es nicht. Diese Seite rechnet aus den Ergebnissen nach,
-    wann sich jede Bestmarke zuletzt bewegt hat – und wer ihr gerade am nächsten kommt.
+    Record lists look settled, and they are not. This page works out from the results themselves
+    when each record last moved – and who is closest to it right now.
   </p>
 
   {
     stand && (
       <p class="stand">
-        Stand nach dem <a href={pfad.rennen(stand.id)}>{stand.grandPrix} {stand.jahr}</a>,
-        {' '}{datum(stand.datum)} · Runde {stand.runde} von {stand.rennenImJahr}
-        {stand.offen > 0 && ` · noch ${stand.offen} Rennen offen`}
+        As at <a href={pfad.rennen(stand.id)}>{stand.grandPrix} {stand.jahr}</a>,
+        {' '}{datum(stand.datum)} · round {stand.runde} of {stand.rennenImJahr}
+        {stand.offen > 0 && ` · ${stand.offen} races remaining`}
       </p>
     )
   }
 
-  {!stand && <p class="hinweis">Es liegen keine Ergebnisse vor, auf denen sich rechnen ließe.</p>}
+  {!stand && <p class="hinweis">There are no results to calculate from.</p>}
 
   {/* ------------------------------------------------------ zuletzt gefallen */}
 
   {
     gefallen.length > 0 && (
       <section>
-        <h2>Zuletzt gefallen</h2>
+        <h2>Recently fallen</h2>
         <p class="unter">
-          Jede Bestmarke wächst in Einerschritten. Wer sie brechen will, muss sie also erst
-          einstellen – bei jedem Bruch steht deshalb dabei, wann das geschah, oft Wochen zuvor.
-          Ein Eintrag ohne diesen Zusatz ist eine Marke, die derzeit geteilt wird.
+          Every record grows one at a time. To break one you must first equal it – so each broken
+          record carries the date it was equalled, often weeks earlier. An entry without that line
+          is a record currently being shared.
         </p>
         <ol class="ereignisse">
           {gefallen.map((e) => (
@@ -120,11 +120,11 @@ function satz(e) {
                 <p>{satz(e)}</p>
                 {e.zuvorEingestellt && (
                   <p class="davor">
-                    Eingestellt {datum(e.zuvorEingestellt.datum)} beim{' '}
+                    Equalled on {datum(e.zuvorEingestellt.datum)} at{' '}
                     <a href={pfad.rennen(e.zuvorEingestellt.rennen)}>
                       {e.zuvorEingestellt.grandPrix} {e.zuvorEingestellt.jahr}
                     </a>
-                    , {tageZwischen(e.zuvorEingestellt.datum, e.datum)} Tage zuvor.
+                    , {tageZwischen(e.zuvorEingestellt.datum, e.datum)} days earlier.
                   </p>
                 )}
                 <p class="spur">
@@ -138,7 +138,7 @@ function satz(e) {
                     </>
                   ))}
                   {e.wert !== e.rekordJetzt &&
-                    ` · steht heute bei ${nf.format(e.rekordJetzt)}`}
+                    ` · stands today at ${nf.format(e.rekordJetzt)}`}
                 </p>
               </div>
             </li>
@@ -153,20 +153,20 @@ function satz(e) {
   {
     laufendeAusbauten.length > 0 && (
       <section>
-        <h2>Wird gerade ausgebaut</h2>
+        <h2>Currently being extended</h2>
         <p class="unter">
-          Wer eine Marke hält und noch fährt, vergrößert sie in jedem erfolgreichen Rennen. Das
-          steht hier gebündelt: nicht als eine Meldung je Rennen, sondern als ein Zuwachs.
+          A driver who holds a record and is still racing adds to it in every successful race.
+          That is gathered here as a single gain rather than one notice per race.
         </p>
         <div class="tabelle">
           <table>
             <thead>
               <tr>
-                <th>Bestmarke</th>
-                <th>Halter</th>
-                <th class="zahl">Zuwachs</th>
-                <th>Ausbau seit</th>
-                <th>Zuletzt</th>
+                <th>Record</th>
+                <th>Holder</th>
+                <th class="zahl">Gain</th>
+                <th>Extending since</th>
+                <th>Most recently</th>
               </tr>
             </thead>
             <tbody>
@@ -183,7 +183,7 @@ function satz(e) {
                   </td>
                   <td class="zahl">
                     {nf.format(a.von)} → <b>{nf.format(a.bis)}</b>
-                    <span class="neben">in {a.schritte} Schritten</span>
+                    <span class="neben">in {a.schritte} steps</span>
                   </td>
                   <td>
                     <a href={pfad.rennen(a.seit.rennen)}>{a.seit.grandPrix} {a.seit.jahr}</a>
@@ -205,10 +205,10 @@ function satz(e) {
   {
     stand && marken.length > 0 && (
       <section>
-        <h2>In dieser Saison noch erreichbar</h2>
+        <h2>Still within reach this season</h2>
         <p class="unter">
-          Keine Hochrechnung, sondern eine Rechnung: So viele Erfolge fehlen, so viele Rennen sind
-          übrig. Was rechnerisch nicht mehr geht, steht hier gar nicht erst.
+          Not a projection but a calculation: this many successes are needed, this many races
+          remain. Anything no longer possible on the arithmetic does not appear here at all.
         </p>
         <ul class="karten">
           {marken.map((m) => (
@@ -219,15 +219,15 @@ function satz(e) {
                 <span class="wert">{zahlwort(m.fuehrender.wert, m.art)}</span>
               </p>
               <p class="spur">
-                Bestmarke <span class="fett">{m.rekord.wert}</span> –{' '}
+                Record <span class="fett">{m.rekord.wert}</span> –{' '}
                 <a href={pfad.fahrer(m.rekord.id)}>{m.rekord.name}</a> {m.rekord.jahr}
               </p>
               <p class={m.brechenMoeglich ? 'urteil moeglich' : 'urteil knapp'}>
                 {m.haeltSchon
-                  ? `Liegt bereits auf der Bestmarke; jeder weitere Erfolg ist ein neuer Rekord.`
+                  ? `Already level with the record; every further success sets a new one.`
                   : m.brechenMoeglich
-                    ? `Noch ${m.fehltZumBrechen} nötig, um sie zu brechen – bei ${stand.offen} offenen Rennen.`
-                    : `Einstellen ist mit ${m.fehltZumEinstellen} weiteren noch möglich, brechen bei ${stand.offen} offenen Rennen nicht mehr.`}
+                    ? `${m.fehltZumBrechen} more needed to break it, with ${stand.offen} races remaining.`
+                    : `Equalling it is still possible with ${m.fehltZumEinstellen} more; breaking it is not, with ${stand.offen} races remaining.`}
               </p>
             </li>
           ))}
@@ -241,21 +241,21 @@ function satz(e) {
   {
     aussichten.length > 0 && (
       <section>
-        <h2>Den ewigen Bestmarken am nächsten</h2>
+        <h2>Closest to the all-time records</h2>
         <p class="unter">
-          Je Bestmarke der nächste Verfolger. Der Abstand ist eine Tatsache, die Hochrechnung
-          daneben ist keine – sie schreibt nur das Tempo der letzten drei Saisons fort und
-          unterstellt, dass er weiterfährt.
+          The nearest challenger to each record. The gap is a fact; the projection beside it is
+          not – it merely carries forward the strike rate of the past three seasons and assumes
+          the driver keeps racing.
         </p>
         <div class="tabelle">
           <table>
             <thead>
               <tr>
-                <th>Fahrer</th>
-                <th>Bestmarke</th>
-                <th class="zahl">Stand</th>
-                <th class="zahl">Fehlt</th>
-                <th>Bei diesem Tempo</th>
+                <th>Driver</th>
+                <th>Record</th>
+                <th class="zahl">Tally</th>
+                <th class="zahl">Needed</th>
+                <th>At this rate</th>
               </tr>
             </thead>
             <tbody>
@@ -263,7 +263,7 @@ function satz(e) {
                 <tr class={a.naechstesRennen ? 'dringend' : undefined}>
                   <td>
                     <a class="zeile" href={pfad.fahrer(a.fahrer.id)}>{a.fahrer.name}</a>
-                    {a.alter !== null && <span class="neben">{Math.floor(a.alter)} Jahre</span>}
+                    {a.alter !== null && <span class="neben">{Math.floor(a.alter)} years old</span>}
                   </td>
                   <td>
                     {a.kategorie.titel}
@@ -275,24 +275,24 @@ function satz(e) {
                           <a href={zielVon(a.kategorie, h.id)}>{h.name}</a>
                         </>
                       ))}
-                      {a.halterAktiv && ' – fährt noch, die Marke wächst weiter'}
+                      {a.halterAktiv && ' – still racing, so the record keeps growing'}
                     </span>
                   </td>
                   <td class="zahl">{nf.format(a.eigene)}</td>
                   <td class="zahl">
                     <b>{nf.format(a.fehlt)}</b>
-                    {a.naechstesRennen && <span class="neben">nächstes Rennen</span>}
+                    {a.naechstesRennen && <span class="neben">next race</span>}
                   </td>
                   <td>
                     {a.hochrechnung.value === null ? (
                       <span class="luecke">{a.hochrechnung.caveat}</span>
                     ) : (
                       <>
-                        {nf.format(a.hochrechnung.value)} Rennen
+                        {nf.format(a.hochrechnung.value)} races
                         <span class="neben">
-                          ≈ {ein(a.saisonNoetig)} Saisons
+                          ≈ {ein(a.saisonNoetig)} seasons
                           {a.alterAmZiel !== null &&
-                            ` – dann wäre er ${Math.round(a.alterAmZiel)}`}
+                            ` – he would then be ${Math.round(a.alterAmZiel)}`}
                         </span>
                       </>
                     )}
@@ -311,19 +311,19 @@ function satz(e) {
   {
     serien.length > 0 && (
       <section>
-        <h2>Laufende Serien</h2>
+        <h2>Active streaks</h2>
         <p class="unter">
-          Serien, die am letzten Start ihres Fahrers noch offen waren. Ein ausgelassenes Rennen
-          unterbricht nicht – wer nicht dabei war, konnte nichts verlieren.
+          Streaks still open at their driver's most recent start. A race sat out does not break
+          one – a driver who was not there had nothing to lose.
         </p>
         <div class="tabelle">
           <table>
             <thead>
               <tr>
-                <th>Fahrer</th>
-                <th>Serie</th>
-                <th class="zahl">Länge</th>
-                <th>Bestmarke</th>
+                <th>Driver</th>
+                <th>Streak</th>
+                <th class="zahl">Length</th>
+                <th>Record</th>
               </tr>
             </thead>
             <tbody>
@@ -342,7 +342,7 @@ function satz(e) {
                         </>
                       ))}
                       {' · '}
-                      {s.haeltRekord ? 'eingestellt' : `noch ${s.fehlt} bis zum Rekord`}
+                      {s.haeltRekord ? 'equalled' : `${s.fehlt} more to the record`}
                     </span>
                   </td>
                 </tr>
@@ -357,35 +357,35 @@ function satz(e) {
   {/* ------------------------------------------------------------------ Methode */}
 
   <section>
-    <h2>Wie das gerechnet ist</h2>
+    <h2>How this is worked out</h2>
     <div class="methode">
       <p>
-        Der Verlauf jeder Bestmarke entsteht aus den Ergebnissen selbst: Alle
-        {' '}{nf.format(rennenGesamt)} gefahrenen Rennen seit 1950 laufen in zeitlicher
-        Reihenfolge durch, und nach jedem steht fest, ob die Spitze sich bewegt hat. Es gibt keine
-        gepflegte Liste von Rekordterminen, die jemand zu aktualisieren vergessen könnte.
+        The history of every record is derived from the results themselves: all
+        {' '}{nf.format(rennenGesamt)} races held since 1950 are walked through in chronological
+        order, and after each one it is settled whether the top mark has moved. There is no
+        curated list of record dates that anyone could forget to update.
       </p>
       <p>
-        <b>Gezählt wird in Starts, nicht in Nennungen.</b> Das verschiebt einzelne Termine
-        gegenüber den Rekordbüchern, die oft Nennungen zählen. Räikkönen etwa erreichte
-        Barrichellos 322 Starts in Mugello 2020 und zog zwei Rennen später in Sotschi vorbei –
-        seine 326. <i>Nennung</i>, die dort üblicherweise genannte Marke, fiel erst beim
-        Eifel-Grand-Prix. Beide Angaben sind richtig; sie zählen Verschiedenes.
+        <b>Counting is by starts, not by entries.</b> That shifts individual dates away from the
+        record books, which often count entries. Räikkönen, for instance, reached Barrichello's
+        322 starts at Mugello in 2020 and passed him two races later at Sochi – his 326th
+        <i>entry</i>, the mark usually quoted, did not fall until the Eifel Grand Prix. Both
+        statements are correct; they count different things.
       </p>
       <p>
-        <b>Eine Hochrechnung ist keine Vorhersage.</b> Sie nimmt die Trefferquote der letzten drei
-        Saisons und schreibt sie fort. Wer in diesem Zeitraum zu wenige Starts hat oder keinen
-        einzigen Erfolg dieser Art, bekommt keine Zahl – „unendlich viele Rennen" wäre eine
-        Scheingenauigkeit. Hält ein aktiver Fahrer die Marke selbst, wächst sie weiter, während
-        der Verfolger aufholt; das steht an der betreffenden Zeile.
+        <b>A projection is not a prediction.</b> It takes the strike rate of the past three
+        seasons and carries it forward. A driver with too few starts in that window, or no
+        success of that kind at all, gets no number – "infinitely many races" would be false
+        precision. Where an active driver holds the record himself, it keeps growing while the
+        challenger closes in; that is noted on the relevant row.
       </p>
       <p>
-        Die ewige Punktewertung fehlt hier bewusst. Die Punktesysteme haben sich mehr als ein
-        Dutzend Mal geändert – ein solcher Rekord misst vor allem das System.
+        The all-time points table is deliberately absent. The scoring systems have changed more
+        than a dozen times – a record of that kind mostly measures the system.
       </p>
       <p class="weiter">
-        Die vollständigen Listen stehen unter <a href={pfad.seite('/rekorde/')}>Rekorde</a>,
-        das nächste Rennen unter <a href={pfad.seite('/vorschau/')}>Vorschau</a>.
+        The full lists are under <a href={pfad.seite('/records/')}>Records</a>, and the next race
+        under <a href={pfad.seite('/preview/')}>Preview</a>.
       </p>
     </div>
   </section>

@@ -49,9 +49,9 @@ const nachbarn = alle(
 const vorher = nachbarn.find((n) => n.round === rennen.round - 1)
 const nachher = nachbarn.find((n) => n.round === rennen.round + 1)
 
-const nf = new Intl.NumberFormat('de-DE')
+const nf = new Intl.NumberFormat('en-GB')
 const ein = (n) => (n === null || n === undefined ? '' : nf.format(Math.round(n * 10) / 10))
-const datum = (d) => new Date(d).toLocaleDateString('de-DE', { day: 'numeric', month: 'long', year: 'numeric' })
+const datum = (d) => new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
 
 /** Millisekunden als Rennzeit oder Abstand. */
 function zeit(ms) {
@@ -69,46 +69,46 @@ const schnellste = ergebnisse.find((e) => e.fastest_lap)
 ---
 
 <Seite
-  titel={`${rennen.gpName} Grand Prix ${rennen.year} – Ergebnis`}
-  beschreibung={`Runde ${rennen.round} der Saison ${rennen.year} in ${rennen.ort}${sieger ? `. Sieger: ${sieger.fahrer}` : ''}.`}
+  titel={`${rennen.gpName} Grand Prix ${rennen.year} – Result`}
+  beschreibung={`Round ${rennen.round} of the ${rennen.year} season in ${rennen.ort}${sieger ? `. Winner: ${sieger.fahrer}` : ''}.`}
 >
   <p class="brotkrumen">
-    <a href={pfad.saison(rennen.year)}>Saison {rennen.year}</a> · Runde {rennen.round}
+    <a href={pfad.saison(rennen.year)}>{rennen.year} season</a> · Round {rennen.round}
   </p>
   <h1>{rennen.gpName} Grand Prix {rennen.year}</h1>
   <p class="lead">
     <a href={pfad.strecke(rennen.circuit_id)}>{rennen.strecke}</a> · {rennen.ort} · {datum(rennen.date)}
-    {rennen.laps && <> · {rennen.laps} Runden</>}
+    {rennen.laps && <> · {rennen.laps} laps</>}
     {rennen.distance_km && <> · {ein(rennen.distance_km)} km</>}
   </p>
 
   {rennen.drivers_title_decider === 1 && (
-    <p class="hinweis">In diesem Rennen fiel die Entscheidung um den Fahrertitel.</p>
+    <p class="hinweis">The drivers’ title was decided in this race.</p>
   )}
 
   <ul class="kacheln">
     {sieger && (
-      <li><b>Sieger</b><a href={pfad.fahrer(sieger.fahrerId)}>{sieger.fahrer}</a>
-        <i>{sieger.team}{sieger.grid_position ? ` · von Platz ${sieger.grid_position}` : ''}</i></li>
+      <li><b>Winner</b><a href={pfad.fahrer(sieger.fahrerId)}>{sieger.fahrer}</a>
+        <i>{sieger.team}{sieger.grid_position ? ` · from P${sieger.grid_position} on the grid` : ''}</i></li>
     )}
     {pole && (
-      <li><b>Pole-Position</b><a href={pfad.fahrer(pole.fahrerId)}>{pole.fahrer}</a><i>{pole.team}</i></li>
+      <li><b>Pole position</b><a href={pfad.fahrer(pole.fahrerId)}>{pole.fahrer}</a><i>{pole.team}</i></li>
     )}
     {schnellste && (
-      <li><b>Schnellste Runde</b><a href={pfad.fahrer(schnellste.fahrerId)}>{schnellste.fahrer}</a>
+      <li><b>Fastest lap</b><a href={pfad.fahrer(schnellste.fahrerId)}>{schnellste.fahrer}</a>
         <i>{schnellste.team}</i></li>
     )}
   </ul>
 
   <section>
-    <h2>Ergebnis</h2>
+    <h2>Result</h2>
     <div class="tabelle">
       <table>
         <thead>
           <tr>
-            <th class="num">#</th><th>Fahrer</th><th>Team</th>
-            <th class="num">Start</th><th class="num">Runden</th>
-            <th>Zeit / Grund</th><th class="num">Punkte</th>
+            <th class="num">#</th><th>Driver</th><th>Team</th>
+            <th class="num">Grid</th><th class="num">Laps</th>
+            <th>Time / Reason</th><th class="num">Points</th>
           </tr>
         </thead>
         <tbody>
@@ -117,7 +117,7 @@ const schnellste = ergebnisse.find((e) => e.fastest_lap)
               <td class="num">{e.position ?? e.position_text}</td>
               <td>
                 <a class="zeile" href={pfad.fahrer(e.fahrerId)}>{e.fahrer}</a>
-                {e.shared_car === 1 && <span class="marke" title="Geteiltes Auto">geteilt</span>}
+                {e.shared_car === 1 && <span class="marke" title="Shared car">shared</span>}
               </td>
               <td style="color:var(--muted)"><a class="leise" href={pfad.team(e.teamId)}>{e.team}</a></td>
               <td class="num">{e.grid_position ?? '–'}</td>
@@ -128,7 +128,7 @@ const schnellste = ergebnisse.find((e) => e.fastest_lap)
                   : e.gap_ms
                     ? `+${zeit(e.gap_ms)}`
                     : e.gap_laps
-                      ? `+${e.gap_laps} ${e.gap_laps === 1 ? 'Runde' : 'Runden'}`
+                      ? `+${e.gap_laps} ${e.gap_laps === 1 ? 'lap' : 'laps'}`
                       : (e.reason_retired ?? '')}
               </td>
               <td class="num">{e.points ? ein(e.points) : ''}</td>
@@ -138,24 +138,24 @@ const schnellste = ergebnisse.find((e) => e.fastest_lap)
       </table>
     </div>
     <p class="fussnote">
-      Eine Ziffer in der ersten Spalte heißt gewertet. DNF, DNQ und DNS stehen für Ausfall,
-      nicht qualifiziert und nicht gestartet. „geteilt“ markiert ein Auto, das sich zwei Fahrer
-      teilten – in den 1950ern erlaubt, beide wurden gewertet.
+      A number in the first column means classified. DNF, DNQ and DNS stand for retirement,
+      did not qualify and did not start. ‘shared’ marks a car that two drivers shared
+      between them – permitted in the 1950s, and both were classified.
     </p>
   </section>
 
   {boxenstopps.length > 0 && (
     <section>
-      <h2>Boxenstopps</h2>
+      <h2>Pit stops</h2>
       <div class="tabelle">
         <table>
-          <thead><tr><th>Fahrer</th><th class="num">Stopps</th><th class="num">Schnellster</th></tr></thead>
+          <thead><tr><th>Driver</th><th class="num">Stops</th><th class="num">Fastest</th></tr></thead>
           <tbody>
             {boxenstopps.map((b) => (
               <tr>
                 <td><a class="zeile" href={pfad.fahrer(b.fahrerId)}>{b.fahrer}</a></td>
                 <td class="num">{b.stopps}</td>
-                <td class="num">{b.schnellster ? `${(b.schnellster / 1000).toFixed(3).replace('.', ',')} s` : '–'}</td>
+                <td class="num">{b.schnellster ? `${(b.schnellster / 1000).toFixed(3)} s` : '–'}</td>
               </tr>
             ))}
           </tbody>

@@ -97,13 +97,13 @@ const verlauf = fahrerWertung
 
 const verlaufRunden = rundenMitStand.map((r) => ({
   runde: r,
-  name: rennen.find((x) => x.runde === r)?.name ?? `Runde ${r}`,
+  name: rennen.find((x) => x.runde === r)?.name ?? `Round ${r}`,
 }))
 
 const entscheidung = rennen.find((r) => r.titelentscheidung)
-const nf = new Intl.NumberFormat('de-DE')
+const nf = new Intl.NumberFormat('en-GB')
 const ein = (n) => (n === null || n === undefined ? '–' : nf.format(Math.round(n * 10) / 10))
-const datum = (d) => new Date(d).toLocaleDateString('de-DE')
+const datum = (d) => new Date(d).toLocaleDateString('en-GB')
 const meister = fahrerWertung.find((f) => f.meister)
 const meisterId = meister?.id ?? null
 
@@ -124,45 +124,45 @@ const teamMeister = teamWertung.find((t) => t.meister)
 ---
 
 <Seite
-  titel={`Formel-1-Saison ${jahr} – Wertungen und Rennen`}
-  beschreibung={`${saison.rennen} Rennen${meister ? `, Weltmeister ${meister.name}` : ''}${teamMeister ? `, Konstrukteurstitel ${teamMeister.name}` : ''}.`}
+  titel={`Formula 1 season ${jahr} – standings and races`}
+  beschreibung={`${saison.rennen} races${meister ? `, World Champion ${meister.name}` : ''}${teamMeister ? `, constructors' title ${teamMeister.name}` : ''}.`}
 >
-  <h1>Saison {jahr}</h1>
+  <h1>Season {jahr}</h1>
   <p class="lead">
-    {saison.rennen} Rennen
-    {meister && <> · Weltmeister <a href={pfad.fahrer(meister.id)}>{meister.name}</a></>}
-    {teamMeister && <> · Konstrukteurstitel <a href={pfad.team(teamMeister.id)}>{teamMeister.name}</a></>}
+    {saison.rennen} races
+    {meister && <> · World Champion <a href={pfad.fahrer(meister.id)}>{meister.name}</a></>}
+    {teamMeister && <> · Constructors' title <a href={pfad.team(teamMeister.id)}>{teamMeister.name}</a></>}
   </p>
 
   <ul class="kacheln">
-    <li><b>{saison.rennen}</b><span>Rennen</span></li>
-    <li><b>{kennzahlen.sieger}</b><span>verschiedene Sieger</span></li>
-    <li><b>{kennzahlen.polesetter}</b><span>Polesetter</span></li>
+    <li><b>{saison.rennen}</b><span>Races</span></li>
+    <li><b>{kennzahlen.sieger}</b><span>Different winners</span></li>
+    <li><b>{kennzahlen.polesetter}</b><span>Pole-sitters</span></li>
     <li>
       <b>{kennzahlen.starts ? Math.round((kennzahlen.ausfaelle / kennzahlen.starts) * 100) : 0} %</b>
-      <span>Starts ohne Wertung</span>
-      <i>{kennzahlen.ausfaelle} von {kennzahlen.starts}</i>
+      <span>Starts not classified</span>
+      <i>{kennzahlen.ausfaelle} of {kennzahlen.starts}</i>
     </li>
   </ul>
 
   {saison.dropped_scores === 1 && (
     <p class="hinweis">
-      In dieser Saison zählten nicht alle Ergebnisse zur Meisterschaft: Nur die besten Rennen
-      eines Fahrers gingen in die Wertung ein, der Rest verfiel. Der WM-Stand liegt deshalb
-      unter der Summe der Rennpunkte.
+      In this season not every result counted towards the championship: only a driver's best
+      races went into the standings, the rest were dropped. The championship standings therefore
+      sit below the sum of the points scored in races.
     </p>
   )}
 
   {entscheidung && (
     <p class="hinweis entschieden">
-      Der Titel fiel in Runde {entscheidung.runde}: <a href={pfad.rennen(entscheidung.id)}>{entscheidung.name}</a>
-      am {datum(entscheidung.datum)}.
+      The title was decided in round {entscheidung.runde}: <a href={pfad.rennen(entscheidung.id)}>{entscheidung.name}</a>
+      on {datum(entscheidung.datum)}.
     </p>
   )}
 
   {verlauf.length > 0 && verlaufRunden.length > 1 && (
     <section>
-      <h2>Punkteverlauf</h2>
+      <h2>Points progression</h2>
       <Verlauf
         fahrer={verlauf}
         runden={verlaufRunden}
@@ -172,11 +172,11 @@ const teamMeister = teamWertung.find((t) => t.meister)
   )}
 
   <section>
-    <h2>Fahrerwertung</h2>
+    <h2>Drivers' standings</h2>
     <div class="tabelle">
       <table>
         <thead>
-          <tr><th class="num">#</th><th>Fahrer</th><th>Team</th><th class="num">Siege</th><th class="num">Punkte</th></tr>
+          <tr><th class="num">#</th><th>Driver</th><th>Team</th><th class="num">Wins</th><th class="num">Points</th></tr>
         </thead>
         <tbody>
           {fahrerWertung.map((f) => (
@@ -195,10 +195,10 @@ const teamMeister = teamWertung.find((t) => t.meister)
 
   {teamWertung.length > 0 && (
     <section>
-      <h2>Konstrukteurswertung</h2>
+      <h2>Constructors' standings</h2>
       <div class="tabelle">
         <table>
-          <thead><tr><th class="num">#</th><th>Team</th><th class="num">Punkte</th></tr></thead>
+          <thead><tr><th class="num">#</th><th>Team</th><th class="num">Points</th></tr></thead>
           <tbody>
             {teamWertung.map((t) => (
               <tr>
@@ -215,28 +215,28 @@ const teamMeister = teamWertung.find((t) => t.meister)
 
   {neuGerechnet && neuGerechnet.tabelle.length > 0 && (
     <section>
-      <h2>Nach heutigem Punktesystem</h2>
+      <h2>Under today's points system</h2>
       <p class="lead">
-        Dieselben Rennen, dieselben Platzierungen – nur nach der Bewertung von heute
-        (25-18-15-12-10-8-6-4-2-1) statt nach der damaligen. Streichresultate entfallen dabei,
-        weil es sie heute nicht mehr gibt.
+        The same races, the same finishing positions – only scored under today's system
+        (25-18-15-12-10-8-6-4-2-1) instead of the one in force at the time. Dropped scores fall
+        away with it, because today there are none.
       </p>
 
       {andererMeister ? (
         <p class="hinweis entschieden">
-          Der Titel hätte gewechselt: <a href={pfad.fahrer(neuGerechnet.tabelle[0].driverId)}>
-          {neuGerechnet.tabelle[0].name}</a> statt {meister?.name}.
+          The title would have changed hands: <a href={pfad.fahrer(neuGerechnet.tabelle[0].driverId)}>
+          {neuGerechnet.tabelle[0].name}</a> instead of {meister?.name}.
         </p>
       ) : (
-        <p class="hinweis">Der Weltmeister bliebe derselbe.</p>
+        <p class="hinweis">The World Champion would be the same.</p>
       )}
 
       <div class="tabelle">
         <table>
           <thead>
             <tr>
-              <th class="num">#</th><th>Fahrer</th><th class="num">Punkte heute</th>
-              <th class="num">amtlich</th><th class="num">WM-Platz</th>
+              <th class="num">#</th><th>Driver</th><th class="num">Points today</th>
+              <th class="num">Official</th><th class="num">Championship position</th>
             </tr>
           </thead>
           <tbody>
@@ -262,25 +262,25 @@ const teamMeister = teamWertung.find((t) => t.meister)
       <p class="fussnote">
         {neuGerechnet.mitGeteiltenFahrten > 0 && (
           <>
-            In dieser Saison teilten sich Fahrer ein Auto. Die Punkte eines geteilten Platzes
-            werden aufgeteilt, wie es die Epoche auch tat – {neuGerechnet.mitGeteiltenFahrten}
-            {' '}Fahrer sind betroffen.{' '}
+            In this season drivers shared a car. The points for a shared position are split,
+            just as the era itself split them – {neuGerechnet.mitGeteiltenFahrten}
+            {' '}drivers are affected.{' '}
           </>
         )}
         {neuGerechnet.sprintPunkte > 0 && (
-          <>Sprintpunkte bleiben unverändert: Ein Rennsystem gilt nicht für sie. </>
+          <>Sprint points are left unchanged: a race points system does not apply to them. </>
         )}
-        Eine Rechnung, keine Geschichtsschreibung – Fahrer hätten anders taktiert, wenn andere
-        Punkte auf dem Spiel gestanden hätten.
+        A calculation, not a rewriting of history – drivers would have raced differently if
+        different points had been at stake.
       </p>
     </section>
   )}
 
   <section>
-    <h2>Rennkalender</h2>
+    <h2>Race calendar</h2>
     <div class="tabelle">
       <table>
-        <thead><tr><th class="num">Runde</th><th>Rennen</th><th>Strecke</th><th>Datum</th><th>Sieger</th></tr></thead>
+        <thead><tr><th class="num">Round</th><th>Race</th><th>Circuit</th><th>Date</th><th>Winner</th></tr></thead>
         <tbody>
           {rennen.map((r) => (
             <tr>

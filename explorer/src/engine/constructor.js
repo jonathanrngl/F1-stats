@@ -145,13 +145,13 @@ export function calculateTeamChampionships(db, constructorId) {
     .all(constructorId)
 
   if (zeilen.length === 0) {
-    return { titles: metric(0, 0, null), best: unknown('Nie in einer Konstrukteurswertung geführt.'), seasons: [] }
+    return { titles: metric(0, 0, null), best: unknown("Never listed in the constructors' standings."), seasons: [] }
   }
   const deckung = { firstYear: zeilen[0].year, lastYear: zeilen.at(-1).year }
   const plaetze = zeilen.map((z) => z.position).filter((p) => p !== null)
   return {
     titles: metric(zeilen.filter((z) => z.won).length, zeilen.length, deckung),
-    best: plaetze.length ? metric(Math.min(...plaetze), zeilen.length, deckung) : unknown('Keine Platzierung überliefert.'),
+    best: plaetze.length ? metric(Math.min(...plaetze), zeilen.length, deckung) : unknown('No championship position recorded.'),
     seasons: zeilen,
   }
 }

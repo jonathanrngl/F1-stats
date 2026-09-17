@@ -109,8 +109,8 @@ export default function ViewMenu<T extends string>({
           <i />
         </span>
         <span className="menu-text">
-          <small>Statistik</small>
-          {aktuell?.label ?? 'Auswählen'}
+          <small>Statistics</small>
+          {aktuell?.label ?? 'Select a view'}
         </span>
         <span className="menu-pfeil" aria-hidden>
           ›

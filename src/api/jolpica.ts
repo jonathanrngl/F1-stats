@@ -144,7 +144,7 @@ async function request(path: string): Promise<any> {
     } catch {
       // Abgerissene Verbindung, DNS-Aussetzer, blockierte Antwort: der Browser
       // meldet nur "Failed to fetch". Genauso behandeln wie eine Drosselung.
-      if (last) throw new Error('Die F1-API ist gerade nicht erreichbar. Bitte neu laden.')
+      if (last) throw new Error('The F1 API cannot be reached at the moment. Please reload.')
       await backoff(attempt)
       continue
     }
@@ -152,14 +152,14 @@ async function request(path: string): Promise<any> {
     if (res.status === 429) {
       if (last) {
         throw new Error(
-          'Die F1-API drosselt gerade alle Zugriffe. Bitte eine Minute warten und neu laden.',
+          'The F1 API is throttling every request at the moment. Please wait a minute and reload.',
         )
       }
       await backoff(attempt)
       continue
     }
     if (!res.ok) {
-      throw new Error(`Daten konnten nicht geladen werden (HTTP ${res.status}).`)
+      throw new Error(`The data could not be loaded (HTTP ${res.status}).`)
     }
     return (await res.json()).MRData
   }

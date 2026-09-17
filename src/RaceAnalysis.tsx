@@ -13,7 +13,7 @@ import { nation } from './nations'
  */
 
 const pct = (part: number, whole: number) => (whole > 0 ? (part / whole) * 100 : 0)
-const one = (v: number) => v.toFixed(1).replace('.', ',')
+const one = (v: number) => v.toFixed(1)
 
 export default function RaceAnalysis({ races }: { races: RaceResults[] }) {
   const stats = useMemo(() => driverRaceStats(races), [races])
@@ -45,28 +45,29 @@ export default function RaceAnalysis({ races }: { races: RaceResults[] }) {
   )
 
   if (races.length === 0) {
-    return <p className="status">Für diese Saison liegen keine Rennergebnisse vor.</p>
+    return <p className="status">No race results are available for this season.</p>
   }
 
   return (
     <div className="analysis">
       <ul className="tiles">
-        <Tile value={String(races.length)} label="Rennen" />
-        <Tile value={String(winners)} label={winners === 1 ? 'Sieger' : 'verschiedene Sieger'} />
-        <Tile value={String(polesitters)} label="Polesetter" />
+        <Tile value={String(races.length)} label="Races" />
+        <Tile value={String(winners)} label={winners === 1 ? 'Winner' : 'Different winners'} />
+        <Tile value={String(polesitters)} label="Pole-sitters" />
         <Tile
-          value={`${Math.round(pct(retired, entries))} %`}
-          label="Antritte ohne Wertung"
-          hint={`${retired} von ${entries}`}
+          value={`${Math.round(pct(retired, entries))}%`}
+          label="Starts not classified"
+          hint={`${retired} of ${entries}`}
         />
       </ul>
 
       <section className="block">
         <header>
-          <h3>Teamduell</h3>
+          <h3>Team-mate head-to-head</h3>
           <p>
-            Gleiches Auto, zwei Fahrer – die einzige halbwegs faire Gegenüberstellung. Gezählt
-            wird nur, wo beide ins Ziel kamen; ein Ausfall sagt nichts über den Zweikampf.
+            The same car, two drivers – the only halfway fair comparison there is. Only races
+            where both reached the finish are counted; a retirement says nothing about the
+            contest between them.
           </p>
         </header>
         <ul className="duels">
@@ -85,19 +86,19 @@ export default function RaceAnalysis({ races }: { races: RaceResults[] }) {
               <div
                 className="duel-bar"
                 role="img"
-                aria-label={`Rennduelle ${d.a.name} ${d.a.races}, ${d.b.name} ${d.b.races}`}
+                aria-label={`Race head-to-head ${d.a.name} ${d.a.races}, ${d.b.name} ${d.b.races}`}
               >
                 <i style={{ width: `${pct(d.a.races, d.raceDuels)}%` }} />
               </div>
               <span className="duel-note">
-                {d.raceDuels} Rennduelle
+                {d.raceDuels} races head-to-head
                 {d.gridDuels > 0 && (
                   <>
-                    {' · Startplatz '}
+                    {' · Grid '}
                     {d.a.grids}:{d.b.grids}
                   </>
                 )}
-                {' · Punkte '}
+                {' · Points '}
                 {d.a.points}:{d.b.points}
               </span>
             </li>
@@ -107,10 +108,10 @@ export default function RaceAnalysis({ races }: { races: RaceResults[] }) {
 
       <section className="block">
         <header>
-          <h3>Startplatz zu Ziel</h3>
+          <h3>Grid to finish</h3>
           <p>
-            Summe aus Startplatz minus Zielposition über alle gewerteten Rennen. Wer oben steht,
-            holt im Rennen mehr heraus, als die Qualifikation hergab.
+            Grid position minus finishing position, added up over every classified race. Whoever
+            stands at the top takes more out of the race than qualifying gave them.
           </p>
         </header>
         <ul className="bars diverging">
@@ -137,14 +138,14 @@ export default function RaceAnalysis({ races }: { races: RaceResults[] }) {
           ))}
         </ul>
         <p className="foot">
-          Ø Startplatz und Ø Ziel je Fahrer stehen in der Tabelle unten.
+          Avg grid and Avg finish per driver are in the table below.
         </p>
       </section>
 
       <section className="block">
         <header>
-          <h3>Zuverlässigkeit</h3>
-          <p>Anteil der Antritte, die in der Wertung endeten.</p>
+          <h3>Reliability</h3>
+          <p>The share of starts that ended in a classified finish.</p>
         </header>
         <ul className="bars">
           {reliability.map((s) => (
@@ -167,10 +168,10 @@ export default function RaceAnalysis({ races }: { races: RaceResults[] }) {
       {reasons.length > 0 && (
         <section className="block">
           <header>
-            <h3>Ausfallgründe</h3>
+            <h3>Reasons for retirement</h3>
             <p>
-              Für die jüngeren Jahre fasst die API den Grund zu „Aufgegeben“ zusammen, ältere
-              Saisons nennen ihn genau.
+              For the more recent years the API collapses the reason into “Retired”; older
+              seasons name it exactly.
             </p>
           </header>
           <ul className="chips">
@@ -185,20 +186,20 @@ export default function RaceAnalysis({ races }: { races: RaceResults[] }) {
 
       <section className="block">
         <header>
-          <h3>Alle Fahrer</h3>
+          <h3>All drivers</h3>
         </header>
         <div className="table-scroll">
           <table className="compact">
             <thead>
               <tr>
-                <th>Fahrer</th>
+                <th>Driver</th>
                 <th className="hide-sm">Team</th>
                 <th className="num">Starts</th>
-                <th className="num hide-sm">Ø Start</th>
-                <th className="num">Ø Ziel</th>
-                <th className="num hide-sm">Siege</th>
-                <th className="num hide-sm">Podien</th>
-                <th className="num">Punkte</th>
+                <th className="num hide-sm">Avg grid</th>
+                <th className="num">Avg finish</th>
+                <th className="num hide-sm">Wins</th>
+                <th className="num hide-sm">Podiums</th>
+                <th className="num">Points</th>
               </tr>
             </thead>
             <tbody>
@@ -223,8 +224,8 @@ export default function RaceAnalysis({ races }: { races: RaceResults[] }) {
           </table>
         </div>
         <p className="foot">
-          Ø Ziel zählt nur gewertete Rennen. Punkte sind die im Rennen erzielten – bis 1990
-          gingen nicht alle davon in die Meisterschaft ein.
+          Avg finish counts classified races only. Points are those scored in the races – until
+          1990 not all of them counted towards the championship.
         </p>
       </section>
     </div>

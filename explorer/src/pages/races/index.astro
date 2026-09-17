@@ -4,7 +4,7 @@ import { rennenListe, saisonListe, pfad } from '../../lib/db.js'
 
 const rennen = rennenListe()
 const saisons = saisonListe()
-const datum = (d) => new Date(d).toLocaleDateString('de-DE')
+const datum = (d) => new Date(d).toLocaleDateString('en-GB')
 
 /*
  * Alle 1172 Rennen auf einer Seite, nach Saison gegliedert. Das ist viel, aber
@@ -21,15 +21,15 @@ const jahre = [...proJahr.keys()].sort((a, b) => b - a)
 ---
 
 <Seite
-  titel="Alle Formel-1-Rennen seit 1950"
-  beschreibung={`${rennen.length} Weltmeisterschaftsläufe mit Sieger, Strecke und Datum.`}
+  titel="All Formula 1 races since 1950"
+  beschreibung={`${rennen.length} World Championship rounds with winner, circuit and date.`}
 >
-  <h1>Rennen</h1>
+  <h1>Races</h1>
   <p class="lead">
-    {rennen.length} Weltmeisterschaftsläufe seit 1950, nach Saison gegliedert.
+    {rennen.length} World Championship rounds since 1950, arranged by season.
   </p>
 
-  <nav class="jahre" aria-label="Zu einer Saison springen">
+  <nav class="jahre" aria-label="Jump to a season">
     {jahre.map((j) => <a href={`#j${j}`}>{j}</a>)}
   </nav>
 
@@ -37,12 +37,12 @@ const jahre = [...proJahr.keys()].sort((a, b) => b - a)
     <section id={`j${j}`}>
       <h2>
         <a href={pfad.saison(j)}>{j}</a>
-        <span>{proJahr.get(j).length} Rennen</span>
+        <span>{proJahr.get(j).length} races</span>
       </h2>
       <div class="tabelle">
         <table>
           <thead>
-            <tr><th class="num">Runde</th><th>Rennen</th><th>Strecke</th><th>Datum</th><th>Sieger</th></tr>
+            <tr><th class="num">Round</th><th>Race</th><th>Circuit</th><th>Date</th><th>Winner</th></tr>
           </thead>
           <tbody>
             {proJahr.get(j).map((r) => (

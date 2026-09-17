@@ -216,7 +216,7 @@ export function altersrekordMeister(db, richtung = 'jung', anzahl = 10) {
       name: z.name,
       wert: z.alter_jahre,
       raceId: z.raceId,
-      rennen: `Titel ${z.jahr}`,
+      rennen: `Title ${z.jahr}`,
       jahr: z.jahr,
     }))
 }

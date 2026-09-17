@@ -62,7 +62,7 @@ export function unknown(caveat, sampleSize = 0) {
  * @returns {Metric<number>}
  */
 export function rate(part, whole, coverage = null) {
-  if (whole <= 0) return unknown('Keine Rennen in diesem Zeitraum.')
+  if (whole <= 0) return unknown('No races in this period.')
   return metric(part / whole, whole, coverage)
 }
 
@@ -79,10 +79,10 @@ export function rate(part, whole, coverage = null) {
  */
 export function mean(werte, opts = {}) {
   const { minSample = 1, coverage = null } = opts
-  if (werte.length === 0) return unknown('Keine Werte vorhanden.')
+  if (werte.length === 0) return unknown('No values available.')
   const wert = werte.reduce((a, b) => a + b, 0) / werte.length
   return werte.length < minSample
-    ? metric(wert, werte.length, coverage, `Beruht auf nur ${werte.length} Rennen.`)
+    ? metric(wert, werte.length, coverage, `Based on only ${werte.length} race${werte.length === 1 ? '' : 's'}.`)
     : metric(wert, werte.length, coverage)
 }
 

@@ -284,6 +284,19 @@ function siegeAufStrecke(db, streckeId) {
  *   strecke     – die Bestmarke auf dieser Strecke, einzustellen oder zu brechen
  *   bestenliste – Gleichstand oder Führung in einer ewigen Wertung
  */
+/**
+ * Englische Ordnungszahl: 1st, 2nd, 3rd, 4th – und 11th, 12th, 13th.
+ *
+ * Im Deutschen genügte der Punkt hinter der Ziffer („sein 250. Grand Prix"),
+ * im Englischen hängt die Endung an der Zahl selbst. Die Ausnahme der Zehner
+ * elf bis dreizehn steht zuerst, sonst käme „111st" heraus.
+ */
+const ordnung = (n) => {
+  const zehner = n % 100
+  if (zehner >= 11 && zehner <= 13) return `${n}th`
+  return `${n}${{ 1: 'st', 2: 'nd', 3: 'rd' }[n % 10] ?? 'th'}`
+}
+
 export function rekordeInReichweite(db, rennen, dasFeld) {
   const ids = dasFeld.map((f) => f.id)
   if (ids.length === 0) return []
@@ -296,9 +309,9 @@ export function rekordeInReichweite(db, rennen, dasFeld) {
   // ---- runde Zahlen in der Karriere
   const MARKEN = [
     { feld: 'starts', schritt: 50, wort: 'Grand Prix' },
-    { feld: 'siege', schritt: 10, wort: 'Sieg' },
-    { feld: 'podien', schritt: 25, wort: 'Podium' },
-    { feld: 'poles', schritt: 10, wort: 'Pole-Position' },
+    { feld: 'siege', schritt: 10, wort: 'win' },
+    { feld: 'podien', schritt: 25, wort: 'podium' },
+    { feld: 'poles', schritt: 10, wort: 'pole position' },
   ]
   for (const id of ids) {
     const k = zahlen.get(id)
@@ -314,14 +327,14 @@ export function rekordeInReichweite(db, rennen, dasFeld) {
         // das trennt die Formulierung, sonst verspricht die Seite etwas.
         text:
           m.feld === 'starts'
-            ? `Es wäre sein ${naechste}. ${m.wort}.`
-            : `Ein Erfolg wäre sein ${naechste}. ${m.wort}.`,
+            ? `It would be his ${ordnung(naechste)} ${m.wort}.`
+            : `A success would be his ${ordnung(naechste)} ${m.wort}.`,
       })
     }
   }
 
   /** „1 Sieg", nicht „1 Siegen" – die Zahl bestimmt die Form. */
-  const siegWort = (n) => (n === 1 ? '1 Sieg' : `${n} Siegen`)
+  const siegWort = (n) => (n === 1 ? '1 win' : `${n} wins`)
 
   // ---- Bestmarke auf dieser Strecke
   const aufStrecke = siegeAufStrecke(db, rennen.streckeId)
@@ -337,15 +350,15 @@ export function rekordeInReichweite(db, rennen, dasFeld) {
           name: name.get(z.id),
           text:
             gleichauf > 1
-              ? `Teilt sich mit ${siegWort(z.anzahl)} die Bestmarke hier – ein weiterer macht sie zu seiner allein.`
-              : `Hält mit ${siegWort(z.anzahl)} die Bestmarke hier und könnte sie ausbauen.`,
+              ? `Shares the record here on ${siegWort(z.anzahl)} – one more would make it his alone.`
+              : `Holds the record here on ${siegWort(z.anzahl)} and could extend it.`,
         })
       } else if (z.anzahl === spitze - 1) {
         treffer.push({
           art: 'strecke',
           fahrer: z.id,
           name: name.get(z.id),
-          text: `Mit ${siegWort(z.anzahl)} einen hinter der Bestmarke von ${spitze} – ein Sieg stellt sie ein.`,
+          text: `On ${siegWort(z.anzahl)}, one behind the record of ${spitze} – a win would equal it.`,
         })
       }
     }
@@ -353,10 +366,10 @@ export function rekordeInReichweite(db, rennen, dasFeld) {
 
   // ---- ewige Bestenlisten
   const LISTEN = [
-    { feld: 'siege', wort: 'Siegen' },
-    { feld: 'poles', wort: 'Pole-Positions' },
-    { feld: 'podien', wort: 'Podien' },
-    { feld: 'schnellsteRunden', wort: 'schnellsten Runden' },
+    { feld: 'siege', wort: 'wins' },
+    { feld: 'poles', wort: 'pole positions' },
+    { feld: 'podien', wort: 'podiums' },
+    { feld: 'schnellsteRunden', wort: 'fastest laps' },
   ]
   for (const l of LISTEN) {
     const liste = bestenliste(db, l.feld, 3)
@@ -372,7 +385,7 @@ export function rekordeInReichweite(db, rennen, dasFeld) {
           art: 'bestenliste',
           fahrer: id,
           name: name.get(id),
-          text: `Teilt sich mit ${eigene} ${l.wort} die ewige Bestmarke – einer mehr, und er steht allein vorn.`,
+          text: `Shares the all-time record on ${eigene} ${l.wort} – one more, and he stands alone.`,
         })
       } else if (eigene === best - 1) {
         const halter = fuehrende.map((x) => x.name).join(', ')
@@ -380,7 +393,7 @@ export function rekordeInReichweite(db, rennen, dasFeld) {
           art: 'bestenliste',
           fahrer: id,
           name: name.get(id),
-          text: `Einer fehlt zur ewigen Bestmarke von ${best} ${l.wort} (${halter}).`,
+          text: `One short of the all-time record of ${best} ${l.wort} (${halter}).`,
         })
       }
     }

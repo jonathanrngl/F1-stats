@@ -3,26 +3,26 @@ import Seite from '../../layouts/Seite.astro'
 import { streckenListe, pfad } from '../../lib/db.js'
 
 const strecken = streckenListe()
-const nf = new Intl.NumberFormat('de-DE')
+const nf = new Intl.NumberFormat('en-GB')
 const ein = (n) => (n === null || n === undefined ? '–' : nf.format(Math.round(n * 10) / 10))
 ---
 
 <Seite
-  titel="Alle Formel-1-Strecken"
-  beschreibung={`${strecken.length} Kurse, auf denen seit 1950 Weltmeisterschaftsläufe stattfanden.`}
+  titel="All Formula 1 circuits"
+  beschreibung={`${strecken.length} circuits that have hosted World Championship rounds since 1950.`}
 >
-  <h1>Strecken</h1>
+  <h1>Circuits</h1>
   <p class="lead">
-    {strecken.length} Kurse, auf denen seit 1950 Weltmeisterschaftsläufe stattfanden. Sortiert
-    nach der Zahl der Rennen.
+    {strecken.length} circuits that have hosted World Championship rounds since 1950. Sorted
+    by the number of races.
   </p>
 
   <div class="tabelle">
     <table>
       <thead>
         <tr>
-          <th>Strecke</th><th>Ort</th><th>Zeitraum</th>
-          <th class="num">Rennen</th><th class="num">Länge</th><th class="num">Kurven</th>
+          <th>Circuit</th><th>Location</th><th>Period</th>
+          <th class="num">Races</th><th class="num">Length</th><th class="num">Corners</th>
         </tr>
       </thead>
       <tbody>

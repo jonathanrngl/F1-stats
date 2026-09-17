@@ -2,7 +2,7 @@
 # gemeinsam auf GitHub Pages:
 #
 #   /F1-stats/            der Explorer (Astro, aus der importierten Datenbank)
-#   /F1-stats/klassisch/  die bisherige React-Anwendung
+#   /F1-stats/classic/    die bisherige React-Anwendung
 name: Deploy
 
 on:
@@ -71,8 +71,8 @@ jobs:
         run: |
           mkdir -p site
           cp -r explorer/dist/. site/
-          mkdir -p site/klassisch
-          cp -r dist/. site/klassisch/
+          mkdir -p site/classic
+          cp -r dist/. site/classic/
           # Astro legt seine Bundles nach _astro/. Der Pages-Deploy laeuft ohne
           # Jekyll, das Verzeichnisse mit Unterstrich verschluckt - die Datei
           # stellt das auch dann sicher, wenn sich das einmal aendert.

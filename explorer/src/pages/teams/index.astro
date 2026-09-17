@@ -5,11 +5,11 @@ import { teamListe, pfad } from '../../lib/db.js'
 const teams = teamListe().sort((a, b) => (b.siege ?? 0) - (a.siege ?? 0) || (b.starts ?? 0) - (a.starts ?? 0))
 ---
 
-<Seite titel="Alle Formel-1-Teams" beschreibung={`${teams.length} Konstrukteure seit 1950.`}>
+<Seite titel="All Formula 1 teams" beschreibung={`${teams.length} constructors since 1950.`}>
   <h1>Teams</h1>
   <p class="lead">
-    {teams.length} Konstrukteure, die seit 1950 angetreten sind. Namenswechsel und
-    Vorgängerteams stehen auf der jeweiligen Seite.
+    {teams.length} constructors that have competed since 1950. Name changes and
+    predecessor teams are set out on each team's own page.
   </p>
 
   <div class="tabelle">
@@ -17,11 +17,11 @@ const teams = teamListe().sort((a, b) => (b.siege ?? 0) - (a.siege ?? 0) || (b.s
       <thead>
         <tr>
           <th>Team</th>
-          <th>Zeitraum</th>
+          <th>Period</th>
           <th class="num">Starts</th>
-          <th class="num">Siege</th>
-          <th class="num">Doppelsiege</th>
-          <th class="num">Titel</th>
+          <th class="num">Wins</th>
+          <th class="num">One-twos</th>
+          <th class="num">Titles</th>
         </tr>
       </thead>
       <tbody>

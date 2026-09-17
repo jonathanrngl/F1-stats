@@ -60,70 +60,73 @@ export default function TitleRace({
       <div className={`verdict${pending ? ' pending' : verdict.decidedRound ? ' settled' : ''}`}>
         {pending ? (
           <>
-            <b>Der Titelkampf wird noch gerechnet</b>
+            <b>The title race is still being calculated</b>
             <span>
-              {pending.done} von {pending.total} Rennen geladen – der Graph wächst mit.
+              {pending.done} of {pending.total} races loaded – the chart grows as they arrive.
             </span>
           </>
         ) : verdict.decidedRound ? (
           <>
             <b>
-              {verdict.leader?.name} stand nach Runde {verdict.decidedRound} als Weltmeister fest
+              {verdict.leader?.name} was confirmed as World Champion after round{' '}
+              {verdict.decidedRound}
             </b>
             <span>
               {decidedRace ? `${decidedRace.name} – ` : ''}
               {verdict.totalRounds - verdict.decidedRound === 0
-                ? 'im letzten Rennen der Saison entschieden'
-                : `${verdict.totalRounds - verdict.decidedRound} Rennen vor Schluss war der Vorsprung nicht mehr einzuholen`}
+                ? 'decided in the final race of the season'
+                : `with ${verdict.totalRounds - verdict.decidedRound} ${
+                    verdict.totalRounds - verdict.decidedRound === 1 ? 'race' : 'races'
+                  } still to run, the lead could no longer be caught`}
             </span>
           </>
         ) : verdict.roundsLeft > 0 ? (
           <>
             <b>
-              Der Titel ist offen – {alive.length}{' '}
-              {alive.length === 1 ? 'Fahrer kann' : 'Fahrer können'} ihn noch gewinnen
+              The title is still open – {alive.length}{' '}
+              {alive.length === 1 ? 'driver can' : 'drivers can'} still win it
             </b>
             <span>
-              Noch {verdict.roundsLeft} {verdict.roundsLeft === 1 ? 'Rennen' : 'Rennen'} mit
-              höchstens {verdict.pointsLeft} Punkten. {verdict.leader?.name} führt.
+              {verdict.roundsLeft} {verdict.roundsLeft === 1 ? 'race' : 'races'} remaining, worth
+              at most {verdict.pointsLeft} points. {verdict.leader?.name} leads.
             </span>
           </>
         ) : (
           <>
-            <b>{verdict.leader?.name} gewann den Titel im letzten Rennen</b>
-            <span>Der Vorsprung reichte bis zum Schluss nicht, um die Sache vorher zu klären.</span>
+            <b>{verdict.leader?.name} won the title in the final race</b>
+            <span>Right to the end, the lead was never enough to settle the matter earlier.</span>
           </>
         )}
       </div>
 
       {dropped && !pending && (
         <p className="note">
-          In dieser Saison zählten nicht alle Ergebnisse zur Meisterschaft: Nur die besten
-          Rennen eines Fahrers gingen in die Wertung ein, der Rest verfiel. Die Rechnung oben
-          kennt diese Regel nicht und nimmt an, jeder Punkt zähle – sie datiert die
-          Entscheidung deshalb eher zu spät als zu früh. 1988 etwa stand Senna schon in Japan
-          fest, weil Prosts Mehrpunkte ohnehin gestrichen worden wären.
+          In this season not every result counted towards the championship: only a driver's best
+          races went into the standings, the rest were dropped. The calculation above does not
+          know that rule and assumes every point counts – so it dates the decision too late
+          rather than too early. In 1988, for instance, Senna was already confirmed in Japan,
+          because Prost's surplus points would have been dropped anyway.
         </p>
       )}
 
       <section className="block">
         <header>
-          <h3>Rückstand zur Spitze</h3>
+          <h3>Gap to the leader</h3>
           <p>
-            Abstand zum jeweils Führenden nach jedem Rennen. Null oben heißt Tabellenführung –
-            wer nach unten wegläuft, ist aus dem Titelkampf heraus.
+            The gap to whoever led after each race. Zero at the top means leading the championship –
+            a line running away downwards is out of the title fight.
           </p>
         </header>
-        <SeasonChart series={series} rounds={rounds} yLabel="Rückstand" invert />
+        <SeasonChart series={series} rounds={rounds} yLabel="Gap" invert />
       </section>
 
       <section className="block">
         <header>
-          <h3>{showMath ? 'Rechnung zum Titel' : pending ? 'Zwischenstand' : 'Endstand'}</h3>
+          <h3>{showMath ? 'The title arithmetic' : pending ? 'Standings so far' : 'Final standings'}</h3>
           {showMath && (
             <p>
-              Bestfall heißt: alle {verdict.roundsLeft} ausstehenden Rennen gewonnen, samt
-              Sprint und schnellster Runde. Wer damit nicht an die Spitze käme, ist raus.
+              Best case means winning all {verdict.roundsLeft} remaining races, sprint and
+              fastest lap included. A driver who still could not reach the top is out.
             </p>
           )}
         </header>
@@ -145,18 +148,18 @@ export default function TitleRace({
                 />
               </span>
               <span className="bar-value">
-                {c.gap === 0 ? 'führt' : `−${c.gap}`}
-                {showMath && <em>{c.alive ? `bis ${c.maxPossible}` : 'raus'}</em>}
+                {c.gap === 0 ? 'leads' : `−${c.gap}`}
+                {showMath && <em>{c.alive ? `up to ${c.maxPossible}` : 'out'}</em>}
               </span>
             </li>
           ))}
         </ul>
         {!pending && (
           <p className="foot">
-            Die Obergrenze je Rennwochenende kommt aus der Saison selbst – höchste
-            Rennpunktzahl plus Sprintbonus an den Sprint-Wochenenden. Bei Punktgleichheit
-            entscheidet die Zahl der Siege; die Rechnung hier führt Gleichstand deshalb als
-            noch offen.
+            The maximum per race weekend is taken from the season itself – the highest race
+            score plus the sprint bonus on sprint weekends. A points tie is settled by the number
+            of wins; this calculation therefore treats a tie as still
+            undecided.
           </p>
         )}
       </section>
