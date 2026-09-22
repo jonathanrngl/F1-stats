@@ -265,7 +265,7 @@ export default function Explorer() {
             placeholder="Who has the most wins at Monaco?"
             onChange={(e) => setFrage(e.target.value)}
           />
-          <button type="submit">Translate</button>
+          <button type="submit">Ask</button>
         </div>
         {uebersetzt && (
           <div className="verstanden">
@@ -390,9 +390,9 @@ export default function Explorer() {
       <div className="kopfzeile">
         <p>
           <b>{ergebnis.reihen.length.toLocaleString('en-GB')}</b>{' '}
-          {ergebnis.reihen.length === 1 ? dim.einzahl : dim.mehrzahl} from{' '}
-          <b>{ergebnis.betrachtet.toLocaleString('en-GB')}</b> of{' '}
-          {ergebnis.gesamt.toLocaleString('en-GB')} result rows
+          {ergebnis.reihen.length === 1 ? dim.einzahl : dim.mehrzahl}, counted over{' '}
+          <b>{ergebnis.betrachtet.toLocaleString('en-GB')}</b>{' '}
+          of {ergebnis.gesamt.toLocaleString('en-GB')} result rows
         </p>
         <div className="export">
           <button type="button" onClick={() => exportiere('csv')}>CSV</button>

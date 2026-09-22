@@ -148,7 +148,7 @@ const beschreibung =
       <li><span>Retirement rate</span><b>{proz(calculateDNFRate(rennen))}</b></li>
       <li><span>Pole-to-win conversion</span><b>{proz(calculatePoleToWinRate(rennen))}</b></li>
       <li><span>Positions gained</span><b>{wert(calculatePositionsGained(rennen), (v) => (v > 0 ? '+' : '') + zahl(v))}</b></li>
-      <li><span>Points scored in races</span><b>{ein(calculatePoints(rennen).value)}</b></li>
+      <li><span>Points scored</span><b>{ein(calculatePoints(rennen).value)}</b></li>
       <li><span>Longest winning streak</span><b>{serien.wins.length || '–'}</b></li>
       <li><span>Longest podium streak</span><b>{serien.podiums.length || '–'}</b></li>
       <li><span>Longest points-scoring streak</span><b>{serien.points.length || '–'}</b></li>
@@ -198,7 +198,7 @@ const beschreibung =
 
   {duelle.length > 0 && (
     <section>
-      <h2>Against the team-mates</h2>
+      <h2>Against team-mates</h2>
       <p class="lead">
         Same car, same races. In the race only those where both reached the finish are counted –
         a retirement says nothing about the head-to-head.

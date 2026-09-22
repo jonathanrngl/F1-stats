@@ -62,8 +62,8 @@ function satz(e) {
   if (e.art === 'eingestellt') {
     return `${wer} reaches ${zahlwort(e.wert, e.kategorie)} and now shares the record${alt ? ` with ${alt}` : ''}.`
   }
-  return `${wer} moves clear on ${zahlwort(e.wert, e.kategorie)}${
-    alt ? ` – ${alt} loses a share of the record` : ''
+  return `${wer} moves clear with ${zahlwort(e.wert, e.kategorie)}${
+    alt ? ` – ${alt} no longer shares it` : ''
   }.`
 }
 ---
@@ -97,7 +97,7 @@ function satz(e) {
       <section>
         <h2>Recently fallen</h2>
         <p class="unter">
-          Every record grows one at a time. To break one you must first equal it – so each broken
+          Every record grows one step at a time. To break one you must first equal it – so each broken
           record carries the date it was equalled, often weeks earlier. An entry without that line
           is a record currently being shared.
         </p>
@@ -150,7 +150,7 @@ function satz(e) {
         <h2>Currently being extended</h2>
         <p class="unter">
           A driver who holds a record and is still racing adds to it in every successful race.
-          That is gathered here as a single gain rather than one notice per race.
+          It is gathered here as a single gain rather than one entry per race.
         </p>
         <div class="tabelle">
           <table>
@@ -202,7 +202,7 @@ function satz(e) {
         <h2>Still within reach this season</h2>
         <p class="unter">
           Not a projection but a calculation: this many successes are needed, this many races
-          remain. Anything no longer possible on the arithmetic does not appear here at all.
+          remain. Anything the arithmetic has already ruled out never appears here.
         </p>
         <ul class="karten">
           {marken.map((m) => (
@@ -221,7 +221,7 @@ function satz(e) {
                   ? `Already level with the record; every further success sets a new one.`
                   : m.brechenMoeglich
                     ? `${m.fehltZumBrechen} more needed to break it, with ${stand.offen} races remaining.`
-                    : `Equalling it is still possible with ${m.fehltZumEinstellen} more; breaking it is not, with ${stand.offen} races remaining.`}
+                    : `With ${stand.offen} races left it can still be equalled – ${m.fehltZumEinstellen} more – but no longer broken.`}
               </p>
             </li>
           ))}
@@ -307,7 +307,7 @@ function satz(e) {
       <section>
         <h2>Active streaks</h2>
         <p class="unter">
-          Streaks still open at their driver's most recent start. A race sat out does not break
+          Streaks that were still running at the driver's last start. Missing a race does not break
           one – a driver who was not there had nothing to lose.
         </p>
         <div class="tabelle">
@@ -356,7 +356,7 @@ function satz(e) {
       <p>
         The history of every record is derived from the results themselves: all
         {' '}{zahl(rennenGesamt)} races held since 1950 are walked through in chronological
-        order, and after each one it is settled whether the top mark has moved. There is no
+        order, and after each one we know whether the top mark has moved. There is no
         curated list of record dates that anyone could forget to update.
       </p>
       <p>

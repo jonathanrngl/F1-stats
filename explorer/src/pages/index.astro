@@ -19,7 +19,7 @@ const saisons = saisonListe().slice(0, 6)
   titel="Formula 1 statistics – every season since 1950"
   beschreibung={`Results, standings and analysis from ${zahl(zahlen.rennen)} races between ${zahlen.von} and ${zahlen.bis}.`}
 >
-  <h1>Formula 1, in full</h1>
+  <h1>All of Formula 1</h1>
   <p class="lead">
     {zahl(zahlen.rennen)} races between {zahlen.von} and {zahlen.bis}, {zahl(zahlen.fahrer)} drivers, {zahlen.teams} teams, {zahlen.strecken} circuits.
     Every number on this site comes from {zahl(zahlen.ergebnisse)} result rows – not from a
@@ -29,10 +29,10 @@ const saisons = saisonListe().slice(0, 6)
   <ul class="karten">
     <li><a class="karte" href={pfad.seite('/preview/')}><b>Preview</b><span>The next race: circuit, championship standings and records within reach</span></a></li>
     <li><a class="karte" href={pfad.seite('/drivers/')}><b>Drivers</b><span>{zahl(zahlen.fahrer)} profiles with career, streaks and team-mates</span></a></li>
-    <li><a class="karte" href={pfad.seite('/teams/')}><b>Teams</b><span>{zahlen.teams} constructors, with their predecessors</span></a></li>
+    <li><a class="karte" href={pfad.seite('/teams/')}><b>Teams</b><span>{zahlen.teams} constructors, including the names they raced under before</span></a></li>
     <li><a class="karte" href={pfad.seite('/seasons/')}><b>Seasons</b><span>Standings, calendar and progression for each year</span></a></li>
-    <li><a class="karte" href={pfad.seite('/races/')}><b>Races</b><span>{zahl(zahlen.rennen)} individual results</span></a></li>
-    <li><a class="karte" href={pfad.seite('/circuits/')}><b>Circuits</b><span>{zahlen.strecken} circuits and who was strong there</span></a></li>
+    <li><a class="karte" href={pfad.seite('/races/')}><b>Races</b><span>Every race since 1950, result by result</span></a></li>
+    <li><a class="karte" href={pfad.seite('/circuits/')}><b>Circuits</b><span>{zahlen.strecken} circuits, and who has gone well at each</span></a></li>
     <li><a class="karte" href={pfad.seite('/records/')}><b>Records</b><span>Every record linked to the race behind it</span></a></li>
   </ul>
 
@@ -42,7 +42,7 @@ const saisons = saisonListe().slice(0, 6)
       <li>
         <a class="karte" href={pfad.saison(s.jahr)}>
           <b>{s.jahr}</b>
-          <span>{s.meister ?? 'still under way'}{s.teamMeister ? ` · Constructors: ${s.teamMeister}` : ''}</span>
+          <span>{s.meister ?? 'season in progress'}{s.teamMeister ? ` · Constructors’ champion: ${s.teamMeister}` : ''}</span>
         </a>
       </li>
     ))}
