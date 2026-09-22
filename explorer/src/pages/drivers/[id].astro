@@ -208,7 +208,7 @@ const beschreibung =
           <thead>
             <tr>
               <th>Team-mate</th><th>Years</th>
-              <th class="num">Races</th><th class="num">Qualifying</th><th class="num">Points</th>
+              <th class="num">Races</th><th class="num">Qualifying</th><th class="num">Points</th><th></th>
             </tr>
           </thead>
           <tbody>
@@ -221,6 +221,16 @@ const beschreibung =
                 <td class="num">{d.raceWins}:{d.raceDuels - d.raceWins}</td>
                 <td class="num">{d.qualiWins}:{d.qualiDuels - d.qualiWins}</td>
                 <td class="num">{ein(d.pointsSelf)} : {ein(d.pointsOther)}</td>
+                {/* Der Gedanke "und wer war besser?" entsteht genau hier.
+                    Die Vergleichsseite liest a und b aus der Adresse. */}
+                <td class="num">
+                  <a
+                    class="vergleichen"
+                    href={`${pfad.seite('/comparison/')}?a=${fahrer.id}&b=${d.driverId}`}
+                  >
+                    Compare
+                  </a>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -258,6 +268,9 @@ const beschreibung =
 </Seite>
 
 <style>
+  .vergleichen { color: var(--muted); font-size: 0.78rem; text-decoration: none; white-space: nowrap; }
+  .vergleichen:hover { color: var(--accent); }
+
   /* Der Name aus dem Pass: vorhanden, aber leise. */
   .vollname {
     margin: 0.1rem 0 0;
