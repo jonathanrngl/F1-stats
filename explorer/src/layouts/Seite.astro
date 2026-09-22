@@ -51,6 +51,8 @@ const istAktiv = (pfad: string) => hier === pfad || hier.startsWith(pfad)
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    {/* Fremde Ziele erfahren die Herkunft, nicht die besuchte Unterseite. */}
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
     <link rel="icon" type="image/svg+xml" href={`${BASIS}/favicon.svg`} />
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)" />

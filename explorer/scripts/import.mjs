@@ -8,6 +8,7 @@
  * eine mit falschen Zahlen.
  */
 import { DatabaseSync } from 'node:sqlite'
+import { createHash } from 'node:crypto'
 import { createWriteStream } from 'node:fs'
 import fs from 'node:fs/promises'
 import path from 'node:path'
@@ -17,7 +18,27 @@ import { pipeline } from 'node:stream/promises'
 
 const HIER = path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1'))
 const WURZEL = path.join(HIER, '..')
-const RELEASE = 'https://github.com/f1db/f1db/releases/latest/download/f1db-csv.zip'
+/*
+ * Standardmaessig gilt das neueste Release: Die Seite soll nach jedem
+ * Rennwochenende von selbst stimmen, ohne dass jemand eine Fassung nachtraegt.
+ *
+ * Geholt wird es aber nicht blind. Das Skript loest erst den Tag auf, laedt
+ * dann die "checksums_sha256.txt" des Releases und prueft das Archiv dagegen.
+ * Das faengt den abgerissenen oder unterwegs veraenderten Download.
+ *
+ * Was es nicht faengt: ein Release, das an der Quelle veraendert wurde - wer
+ * das Archiv austauschen koennte, koennte auch die Pruefsummendatei
+ * austauschen. Diese Grenze ist der Preis dafuer, dass neue Daten ohne
+ * Zutun hereinkommen. Die zweite Verteidigungslinie steht deshalb weiter
+ * unten und ist die wichtigere: Was aus dem Archiv zu einer Adresse wird,
+ * wird geprueft, bevor es eine wird (siehe `kennung`).
+ *
+ * Eine bestimmte Fassung baut man mit:  npm run import -- --version v2026.14.1
+ */
+const REPO = 'f1db/f1db'
+const ARCHIV = 'f1db-csv.zip'
+const releaseUrl = (version, datei) =>
+  `https://github.com/${REPO}/releases/download/${version}/${datei}`
 
 // --------------------------------------------------------------- Argumente
 
@@ -28,6 +49,8 @@ const argWert = (name) => {
 }
 const ZIEL = path.resolve(argWert('--out') ?? path.join(WURZEL, 'data', 'f1.sqlite'))
 let CSV = argWert('--csv') && path.resolve(argWert('--csv'))
+/** Eine bestimmte Fassung statt der neuesten - fuer wiederholbare Bauläufe. */
+const VERSION = argWert('--version')
 
 // ------------------------------------------------------------- CSV-Leser
 
@@ -86,6 +109,25 @@ const platz = (v) => {
 const ja = (v) => (v === 'true' ? 1 : 0)
 
 /*
+ * Kennungen aus dem Archiv werden zu Dateipfaden: aus driver.id entsteht in
+ * getStaticPaths unmittelbar /drivers/<id>/ und /api/v1/drivers/<id>.json.
+ * Eine Kennung mit "../" darin schriebe beim Bauen Dateien ausserhalb von
+ * dist/. Das Archiv ist fremde Eingabe - also geprueft, nicht geglaubt.
+ *
+ * Erlaubt ist genau das, was eine F1DB-Kennung ausmacht: Kleinbuchstaben,
+ * Ziffern und Bindestriche. Kein Punkt, kein Schraegstrich, kein Doppelpunkt.
+ */
+const KENNUNG = /^[a-z0-9][a-z0-9-]*$/
+const kennung = (wert, wo) => {
+  const v = txt(wert)
+  if (v === null) throw new Error(`Leere Kennung in ${wo}`)
+  if (v.length > 100 || !KENNUNG.test(v)) {
+    throw new Error(`Unzulaessige Kennung in ${wo}: ${JSON.stringify(v)}`)
+  }
+  return v
+}
+
+/*
  * positionText-Werte, die eine Nennung ohne Start bezeichnen: nicht
  * qualifiziert, nicht angetreten, zurückgezogen, ausgeschlossen. Mit genau
  * dieser Liste stimmen die Startzahlen für alle 860 Fahrer mit den
@@ -95,15 +137,62 @@ const NICHT_GESTARTET = new Set(['DNQ', 'DNPQ', 'DNS', 'WD', 'DNA', 'EX', 'DNP']
 
 // ------------------------------------------------------------- Beschaffung
 
+/** Die neueste veroeffentlichte Fassung. */
+async function neuesteVersion() {
+  const res = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`, {
+    headers: { accept: 'application/vnd.github+json', 'user-agent': 'f1-stats-import' },
+  })
+  if (!res.ok) throw new Error(`GitHub-API nicht erreichbar (HTTP ${res.status})`)
+  const tag = (await res.json()).tag_name
+  if (!tag) throw new Error('GitHub-API nennt keinen Tag')
+  return tag
+}
+
+/**
+ * Die Pruefsumme, die das Release selbst fuer das Archiv angibt.
+ *
+ * Sie beweist nicht, dass das Archiv in Ordnung ist - wer es austauschen kann,
+ * kann auch diese Datei austauschen. Sie beweist, dass angekommen ist, was
+ * abgeschickt wurde: gegen abgerissene Downloads und gegen Veraenderung auf
+ * dem Weg.
+ */
+async function veroeffentlichtePruefsumme(version) {
+  const res = await fetch(releaseUrl(version, 'checksums_sha256.txt'), { redirect: 'follow' })
+  if (!res.ok) throw new Error(`checksums_sha256.txt nicht erreichbar (HTTP ${res.status})`)
+  const zeile = (await res.text()).split('\n').find((z) => z.trim().endsWith(ARCHIV))
+  if (!zeile) throw new Error(`checksums_sha256.txt nennt ${ARCHIV} nicht`)
+  return zeile.trim().split(/\s+/)[0].toLowerCase()
+}
+
 async function holeRelease() {
   const tmp = path.join(WURZEL, 'data', '.f1db')
   await fs.mkdir(tmp, { recursive: true })
-  const zip = path.join(tmp, 'f1db-csv.zip')
+  const zip = path.join(tmp, ARCHIV)
 
-  console.log('Lade F1DB-Release …')
-  const res = await fetch(RELEASE, { redirect: 'follow' })
-  if (!res.ok) throw new Error(`Release nicht erreichbar (HTTP ${res.status})`)
+  const version = VERSION ?? (await neuesteVersion())
+  const erwartet = await veroeffentlichtePruefsumme(version)
+
+  console.log(`Lade F1DB ${version} …`)
+  const res = await fetch(releaseUrl(version, ARCHIV), { redirect: 'follow' })
+  if (!res.ok) throw new Error(`Release ${version} nicht erreichbar (HTTP ${res.status})`)
   await pipeline(Readable.fromWeb(res.body), createWriteStream(zip))
+
+  const ist = createHash('sha256').update(await fs.readFile(zip)).digest('hex')
+  if (ist !== erwartet) {
+    await fs.rm(zip, { force: true })
+    throw new Error(
+      `Pruefsumme von ${ARCHIV} weicht ab.\n` +
+        `  erwartet: ${erwartet}\n` +
+        `  bekommen: ${ist}\n` +
+        'Das Archiv ist nicht vollstaendig angekommen - es wird nicht benutzt.',
+    )
+  }
+  /*
+   * Fassung und Pruefsumme in den Bauprotokollen: Bei "latest" ist das die
+   * einzige Stelle, an der spaeter noch steht, aus welchen Daten eine
+   * bestimmte Fassung der Seite entstanden ist.
+   */
+  console.log(`  sha256 geprueft: ${ist}`)
 
   const ziel = path.join(tmp, 'csv')
   await fs.rm(ziel, { recursive: true, force: true })
@@ -167,7 +256,7 @@ async function importiere(db) {
     'country',
     ['id', 'alpha3', 'ioc', 'name', 'demonym'],
     await lies('f1db-countries.csv'),
-    (c) => [c.id, txt(c.alpha3Code), txt(c.iocCode), c.name, txt(c.demonym)],
+    (c) => [kennung(c.id, 'country.id'), txt(c.alpha3Code), txt(c.iocCode), c.name, txt(c.demonym)],
   )
 
   einfuegen(
@@ -181,7 +270,7 @@ async function importiere(db) {
     ],
     await lies('f1db-drivers.csv'),
     (d) => [
-      d.id, d.firstName, d.lastName, d.fullName, txt(d.abbreviation), txt(d.permanentNumber),
+      kennung(d.id, 'driver.id'), d.firstName, d.lastName, d.fullName, txt(d.abbreviation), txt(d.permanentNumber),
       txt(d.dateOfBirth), txt(d.dateOfDeath), txt(d.placeOfBirth), txt(d.nationalityCountryId),
       zahl(d.totalRaceEntries), zahl(d.totalRaceStarts), zahl(d.totalRaceWins), zahl(d.totalPodiums),
       zahl(d.totalPolePositions), zahl(d.totalFastestLaps), zahl(d.totalChampionshipWins),
@@ -198,7 +287,7 @@ async function importiere(db) {
     ],
     await lies('f1db-constructors.csv'),
     (c) => [
-      c.id, c.name, txt(c.fullName), txt(c.countryId), zahl(c.totalRaceEntries),
+      kennung(c.id, 'constructor.id'), c.name, txt(c.fullName), txt(c.countryId), zahl(c.totalRaceEntries),
       zahl(c.totalRaceStarts), zahl(c.totalRaceWins), zahl(c.total1And2Finishes),
       zahl(c.totalPodiums), zahl(c.totalPolePositions), zahl(c.totalFastestLaps),
       zahl(c.totalChampionshipWins),
@@ -216,7 +305,7 @@ async function importiere(db) {
     'circuit',
     ['id', 'name', 'full_name', 'previous_names', 'type', 'direction', 'place_name', 'country_id', 'latitude', 'longitude', 'length_km', 'turns'],
     await lies('f1db-circuits.csv'),
-    (c) => [c.id, c.name, txt(c.fullName), txt(c.previousNames), txt(c.type), txt(c.direction), txt(c.placeName), txt(c.countryId), zahl(c.latitude), zahl(c.longitude), zahl(c.length), zahl(c.turns)],
+    (c) => [kennung(c.id, 'circuit.id'), c.name, txt(c.fullName), txt(c.previousNames), txt(c.type), txt(c.direction), txt(c.placeName), txt(c.countryId), zahl(c.latitude), zahl(c.longitude), zahl(c.length), zahl(c.turns)],
   )
 
   einfuegen(
@@ -230,7 +319,7 @@ async function importiere(db) {
     'grand_prix',
     ['id', 'name', 'full_name', 'short_name', 'abbreviation', 'country_id'],
     await lies('f1db-grands-prix.csv'),
-    (g) => [g.id, g.name, txt(g.fullName), txt(g.shortName), txt(g.abbreviation), txt(g.countryId)],
+    (g) => [kennung(g.id, 'grand_prix.id'), g.name, txt(g.fullName), txt(g.shortName), txt(g.abbreviation), txt(g.countryId)],
   )
 
   // -- Saisons und Rennen --------------------------------------------------
@@ -401,7 +490,8 @@ async function importiere(db) {
 
 /** Sprechende, zugleich als Adresse taugliche Kennung eines Rennens. */
 function slugRennen(r) {
-  return `${r.grandPrixId}-grand-prix-${r.year}`
+  // Zusammengesetzt, aber genauso eine Adresse wie jede andere - also genauso geprueft.
+  return kennung(`${r.grandPrixId}-grand-prix-${r.year}`, 'race.id')
 }
 
 // ------------------------------------------------------------- Abgeleitetes
@@ -568,7 +658,16 @@ function pruefe(db) {
 
 const t0 = Date.now()
 await fs.mkdir(path.dirname(ZIEL), { recursive: true })
-if (!CSV) CSV = await holeRelease()
+if (!CSV) {
+  try {
+    CSV = await holeRelease()
+  } catch (e) {
+    // Sauber abbrechen statt mit Stapelspur - es ist kein Programmfehler,
+    // sondern ein Befund: Das Archiv ist nicht das erwartete.
+    console.error(`\nBESCHAFFUNG FEHLGESCHLAGEN: ${e.message}`)
+    process.exit(1)
+  }
+}
 
 await fs.rm(ZIEL, { force: true })
 const db = new DatabaseSync(ZIEL)
@@ -576,8 +675,26 @@ db.exec('PRAGMA journal_mode = WAL')
 db.exec(await fs.readFile(path.join(HIER, 'schema.sql'), 'utf8'))
 
 db.exec('BEGIN')
-const zaehler = await importiere(db)
-db.exec('COMMIT')
+let zaehler
+try {
+  zaehler = await importiere(db)
+  db.exec('COMMIT')
+} catch (e) {
+  /*
+   * Dieselbe Haltung wie bei den Proben unten: lieber keine Datenbank als eine
+   * aus einem Archiv, in dem etwas steht, das da nicht stehen sollte.
+   */
+  try {
+    db.exec('ROLLBACK')
+  } catch {
+    /* Transaktion war schon beendet. */
+  }
+  db.close()
+  await fs.rm(ZIEL, { force: true })
+  console.error(`\nIMPORT ABGEBROCHEN: ${e.message}`)
+  console.error('Datenbank wurde verworfen.')
+  process.exit(1)
+}
 
 const streich = markiereStreichresultate(db)
 const deckung = zaehleDeckung(db)

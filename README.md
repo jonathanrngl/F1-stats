@@ -132,13 +132,21 @@ Source: GitHub Actions**. Die Einstellung *Deploy from a branch* passt hier
 nicht, weil im Repo nur der Quelltext liegt und nicht die gebaute Seite.
 
 Der Explorer braucht vor dem Bauen seine Datenbank. Der Workflow importiert
-sie aus dem aktuellen F1DB-Release und lässt die 42 Prüfungen laufen, bevor
-gebaut wird – schlägt eine fehl, wird nichts veröffentlicht. Die Seite zeigt
-damit nach jedem Push den Datenstand des jüngsten Releases.
+sie aus dem neuesten F1DB-Release und lässt die Prüfungen laufen, bevor gebaut
+wird – schlägt eine fehl, wird nichts veröffentlicht. Die Seite zeigt damit
+nach jedem Push den Datenstand des jüngsten Releases.
 
 Zusätzlich läuft der Workflow einmal täglich um 4 Uhr UTC. Die Rennvorschau
 nennt das nächste Rennen und den Stand der Meisterschaft; beides veraltet
 ohne Neubau, weil die Seite statisch ist.
+
+Das Release ist fremde Eingabe und wird als solche behandelt: Der Import prüft
+es gegen die Prüfsummendatei des Releases und prüft jede Kennung darin, bevor
+daraus Adressen werden. Beides steht in `explorer/README.md`.
+
+Die Rechte des Workflows sind getrennt: Der `build`-Job, der fremden Code
+ausführt, darf nur lesen. Veröffentlichen darf allein der `deploy`-Job, der
+nichts weiter tut, als das fertige Artefakt entgegenzunehmen.
 
 Beide Anwendungen kennen den Unterpfad, unter dem sie liegen. Der Explorer
 nimmt ihn aus `base` in `explorer/astro.config.mjs`; jeder seiteninterne

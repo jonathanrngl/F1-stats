@@ -105,12 +105,35 @@ während der Verfolger aufholt – auch das steht an der Zeile.
 ## Import
 
 ```bash
-npm run import                  # lädt das aktuelle F1DB-Release und baut data/f1.sqlite
-npm run import -- --csv <pfad>  # aus einem bereits entpackten Verzeichnis
+npm run import                      # lädt das neueste F1DB-Release und baut data/f1.sqlite
+npm run import -- --version <tag>   # eine bestimmte Fassung, z. B. v2026.14.1
+npm run import -- --csv <pfad>      # aus einem bereits entpackten Verzeichnis
 ```
 
 Der Lauf dauert rund acht Sekunden und erzeugt eine 23 MB große SQLite-Datei.
 `data/` ist nicht eingecheckt – die Datenbank entsteht aus dem Release.
+
+### Was am Archiv geprüft wird
+
+Das Archiv ist fremde Eingabe, und aus ihm entsteht der gesamte Inhalt der
+Seite. Zwei Prüfungen stehen davor.
+
+**Die Prüfsumme.** Das Skript lädt die `checksums_sha256.txt` des Releases und
+vergleicht. Stimmt sie nicht, bricht der Import ab, ohne das Archiv
+anzufassen. Das fängt den abgerissenen oder unterwegs veränderten Download –
+nicht ein an der Quelle verändertes Release, denn wer das Archiv austauschen
+könnte, könnte auch die Prüfsummendatei austauschen. Fassung und Prüfsumme
+stehen im Bauprotokoll; dort ist später noch zu sehen, aus welchen Daten eine
+Fassung der Seite entstanden ist.
+
+**Die Kennungen.** Aus `driver.id` wird unmittelbar `/drivers/<id>/` – eine
+Kennung mit `../` darin schriebe beim Bauen Dateien außerhalb von `dist/`.
+Erlaubt sind deshalb nur Kleinbuchstaben, Ziffern und Bindestriche, geprüft
+für Fahrer, Teams, Strecken, Grands Prix, Länder und die zusammengesetzte
+Rennen-Kennung. Eine Kennung, die das verletzt, bricht den Import ab.
+
+Das ist die wichtigere der beiden Prüfungen: Sie hängt an nichts, was ein
+Angreifer mitliefern könnte.
 
 **Der Import schreibt nichts, wenn eine Prüfung fehlschlägt.** Lieber keine
 Datenbank als eine mit falschen Zahlen. Geprüft wird:
