@@ -51,4 +51,34 @@ export default defineConfig({
   redirects: Object.fromEntries(
     Object.entries(ALTE_ADRESSEN).map(([alt, neu]) => [`${alt}/`, `${BASIS}${neu}/`]),
   ),
+  /*
+   * Inhaltsrichtlinie.
+   *
+   * GitHub Pages lässt keine eigenen HTTP-Kopfzeilen zu; Astro schreibt die
+   * Richtlinie deshalb als <meta> in jede Seite. `script-src` und `style-src`
+   * setzt Astro selbst und trägt dort die Hashes der eigenen Inseln ein –
+   * deshalb stehen sie hier nicht und dürfen es auch nicht.
+   *
+   * Die Seite lädt ausschließlich Eigenes: den Datenwürfel und die JSON-API
+   * unter derselben Herkunft. `connect-src 'self'` heißt damit, dass ein
+   * eingeschleustes Skript seine Beute nirgendwohin schicken könnte.
+   *
+   * Nicht dabei: `frame-ancestors`. Browser werten die Direktive in einem
+   * <meta> nicht aus, sie bräuchte eine Kopfzeile. Schutz vor Clickjacking
+   * gibt es auf GitHub Pages also nicht – das ist eine Grenze der Plattform,
+   * kein Versehen.
+   */
+  security: {
+    csp: {
+      directives: [
+        "default-src 'self'",
+        "img-src 'self' data:",
+        "connect-src 'self'",
+        "font-src 'self'",
+        "object-src 'none'",
+        "base-uri 'none'",
+        "form-action 'none'",
+      ],
+    },
+  },
 })
