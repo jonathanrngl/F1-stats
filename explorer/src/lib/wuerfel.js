@@ -87,7 +87,7 @@ export function wuerfel() {
   // Namen zu den Kennungen, damit der Explorer sie anzeigen kann.
   const namen = (tabelle, ids) => {
     const karte = new Map(
-      alle(`SELECT id, ${tabelle === 'driver' ? 'full_name' : 'name'} AS name FROM ${tabelle}`).map(
+      alle(`SELECT id, ${tabelle === 'driver' ? 'display_name' : 'name'} AS name FROM ${tabelle}`).map(
         (z) => [z.id, z.name],
       ),
     )

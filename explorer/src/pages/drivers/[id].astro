@@ -43,7 +43,7 @@ const duelle = calculateTeamMateComparison(db(), id).slice(0, 8)
 const strecken = calculateTrackPerformance(db(), id, 2).slice(0, 10)
 
 const namen = new Map(
-  alle('SELECT id, full_name AS name FROM driver').map((d) => [d.id, d.name]),
+  alle('SELECT id, display_name AS name FROM driver').map((d) => [d.id, d.name]),
 )
 const teamNamen = new Map(alle('SELECT id, name FROM constructor').map((t) => [t.id, t.name]))
 const streckenNamen = new Map(alle('SELECT id, name FROM circuit').map((z) => [z.id, z.name]))
@@ -93,16 +93,24 @@ const jahre = (d) => {
 }
 
 const beschreibung =
-  `${fahrer.full_name}: ${calculateStarts(rennen).value} starts, ` +
+  `${fahrer.display_name}: ${calculateStarts(rennen).value} starts, ` +
   `${calculateWins(rennen).value} wins, ${calculatePodiums(rennen).value} podiums, ` +
   `${titel.titles.value} World Championships (${zeitraum}).`
 ---
 
-<Seite titel={`${fahrer.full_name} – statistics and career`} beschreibung={beschreibung}>
+<Seite titel={`${fahrer.display_name} – statistics and career`} beschreibung={beschreibung}>
   <header class="profil">
     <span class="kuerzel gross" title={heimat.name}>{heimat.code}</span>
     <div>
-      <h1>{fahrer.full_name}</h1>
+      <h1>{fahrer.display_name}</h1>
+      {/*
+        * Der Name aus dem Pass steht hier und nur hier. In der Überschrift
+        * wäre er falsch am Platz – niemand sucht nach „Andreas Nikolaus
+        * Lauda" –, aber auf der Profilseite gehört er dazu.
+        */}
+      {fahrer.full_name !== fahrer.display_name && (
+        <p class="vollname">{fahrer.full_name}</p>
+      )}
       <p class="lead">
         {[
           heimat.name,
@@ -250,6 +258,13 @@ const beschreibung =
 </Seite>
 
 <style>
+  /* Der Name aus dem Pass: vorhanden, aber leise. */
+  .vollname {
+    margin: 0.1rem 0 0;
+    font-size: 0.83rem;
+    color: var(--muted);
+  }
+
   .profil {
     display: flex;
     align-items: center;

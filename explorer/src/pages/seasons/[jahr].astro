@@ -21,7 +21,7 @@ const saison = eine(
 
 const fahrerWertung = alle(
   `SELECT sds.position, sds.points, sds.championship_won AS meister,
-          d.id, d.full_name AS name, d.abbreviation AS kuerzel,
+          d.id, d.display_name AS name, d.abbreviation AS kuerzel,
           (SELECT COUNT(*) FROM race_result rr JOIN race r ON r.id = rr.race_id
             WHERE r.year = ?1 AND rr.driver_id = d.id AND rr.position = 1) AS siege,
           (SELECT GROUP_CONCAT(DISTINCT k.name) FROM race_result rr

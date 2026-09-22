@@ -29,6 +29,11 @@ CREATE TABLE driver (
   first_name        TEXT NOT NULL,
   last_name         TEXT NOT NULL,
   full_name         TEXT NOT NULL,
+  -- Der Name, unter dem der Fahrer gefahren ist: 'Niki Lauda', nicht
+  -- 'Andreas Nikolaus Lauda'. Beim Import gebildet, weil ihn jede Liste, jede
+  -- Tabelle und jede Diagrammlegende braucht; zwanzig Abfragen muessten ihn
+  -- sonst zwanzigmal selbst zusammensetzen.
+  display_name      TEXT NOT NULL,
   abbreviation      TEXT,               -- 'VER'
   permanent_number  TEXT,
   date_of_birth     TEXT,

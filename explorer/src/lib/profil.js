@@ -87,7 +87,7 @@ export function fahrerProfil(id) {
 
   return {
     id: f.id,
-    name: f.full_name,
+    name: f.display_name,
     kurzname: `${f.first_name} ${f.last_name}`,
     kuerzel: f.abbreviation,
     land: heimat,
@@ -109,7 +109,7 @@ export function fahrerProfil(id) {
 /** Schlanke Liste für die Auswahl im Browser – nur, was die Suche braucht. */
 export function fahrerIndex() {
   return alle(`
-    SELECT d.id, d.full_name AS name, d.abbreviation AS kuerzel,
+    SELECT d.id, d.display_name AS name, d.abbreviation AS kuerzel,
            c.ioc AS land, d.date_of_birth AS geboren,
            d.f1db_race_starts AS starts, d.f1db_race_wins AS siege,
            MIN(r.year) AS von, MAX(r.year) AS bis

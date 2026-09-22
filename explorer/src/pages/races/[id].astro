@@ -25,7 +25,7 @@ const rennen = eine(
  * danach Ausfälle und Nichtstarter. display_order aus F1DB trägt genau das.
  */
 const ergebnisse = alle(
-  `SELECT rr.*, d.full_name AS fahrer, d.id AS fahrerId, k.name AS team, k.id AS teamId
+  `SELECT rr.*, d.display_name AS fahrer, d.id AS fahrerId, k.name AS team, k.id AS teamId
      FROM race_result rr
      JOIN driver d ON d.id = rr.driver_id
      JOIN constructor k ON k.id = rr.constructor_id
@@ -35,7 +35,7 @@ const ergebnisse = alle(
 )
 
 const boxenstopps = alle(
-  `SELECT p.driver_id AS fahrerId, d.full_name AS fahrer, COUNT(*) AS stopps,
+  `SELECT p.driver_id AS fahrerId, d.display_name AS fahrer, COUNT(*) AS stopps,
           MIN(p.duration_ms) AS schnellster
      FROM pit_stop p JOIN driver d ON d.id = p.driver_id
     WHERE p.race_id = ? GROUP BY p.driver_id ORDER BY stopps, schnellster`,

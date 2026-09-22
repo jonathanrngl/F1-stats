@@ -259,10 +259,47 @@ async function importiere(db) {
     (c) => [kennung(c.id, 'country.id'), txt(c.alpha3Code), txt(c.iocCode), c.name, txt(c.demonym)],
   )
 
+  /**
+   * Der Name, unter dem ein Fahrer gefahren ist.
+   *
+   * F1DB fuehrt zwei Namen. `fullName` ist der aus dem Pass - 'Andreas
+   * Nikolaus Lauda', 'Sir John Young Stewart', 'James Clark, Jr.'. Niemand
+   * kennt die Fahrer so, und in einer Tabelle mit 860 Zeilen oder einer
+   * Diagrammlegende richtet das echten Schaden an.
+   *
+   * Vor- und Nachname zusammen ergeben den bekannten Namen - mit einer
+   * Ausnahme: F1DB schreibt den Nachnamen gross, auch wo das Adelspartikel
+   * klein gehoert. So wuerde aus 'von Trips' ein 'Von Trips', aus 'de Angelis'
+   * ein 'De Angelis'; 28 Fahrer sind betroffen. Die richtige Schreibweise
+   * steht im vollen Namen, also wird sie von dort geholt: Kommt der Nachname
+   * darin vor (ohne Ruecksicht auf Gross- und Kleinschreibung), gilt dessen
+   * Schreibung.
+   */
+  const PARTIKEL = new Set(['de', 'del', 'della', 'di', 'da', 'dos', 'van', 'von', 'ter', 'ten', 'la', 'le'])
+
+  const anzeigename = (d) => {
+    const voll = d.fullName ?? ''
+    const i = voll.toLowerCase().lastIndexOf((d.lastName ?? '').toLowerCase())
+    let nach = i >= 0 && d.lastName ? voll.slice(i, i + d.lastName.length) : d.lastName
+
+    /*
+     * Rueckfall, wenn der volle Name den Nachnamen gar nicht enthaelt. Das
+     * trifft genau einen Fahrer: 'De Portago' taucht in 'Alfonso Antonio
+     * Vicente Eduardo Angel Blas Francisco de Borja Cabeza de Vaca y Leighton'
+     * nicht auf. Dann entscheidet die Liste der Partikel, die im Namensinneren
+     * klein bleiben.
+     */
+    if (i < 0 && nach) {
+      const [erstes, ...rest] = nach.split(' ')
+      if (PARTIKEL.has(erstes.toLowerCase())) nach = [erstes.toLowerCase(), ...rest].join(' ')
+    }
+    return `${d.firstName} ${nach}`.trim()
+  }
+
   einfuegen(
     'driver',
     [
-      'id', 'first_name', 'last_name', 'full_name', 'abbreviation', 'permanent_number',
+      'id', 'first_name', 'last_name', 'full_name', 'display_name', 'abbreviation', 'permanent_number',
       'date_of_birth', 'date_of_death', 'place_of_birth', 'nationality_id',
       'f1db_race_entries', 'f1db_race_starts', 'f1db_race_wins', 'f1db_podiums',
       'f1db_pole_positions', 'f1db_fastest_laps', 'f1db_championship_wins',
@@ -270,7 +307,8 @@ async function importiere(db) {
     ],
     await lies('f1db-drivers.csv'),
     (d) => [
-      kennung(d.id, 'driver.id'), d.firstName, d.lastName, d.fullName, txt(d.abbreviation), txt(d.permanentNumber),
+      kennung(d.id, 'driver.id'), d.firstName, d.lastName, d.fullName, anzeigename(d),
+      txt(d.abbreviation), txt(d.permanentNumber),
       txt(d.dateOfBirth), txt(d.dateOfDeath), txt(d.placeOfBirth), txt(d.nationalityCountryId),
       zahl(d.totalRaceEntries), zahl(d.totalRaceStarts), zahl(d.totalRaceWins), zahl(d.totalPodiums),
       zahl(d.totalPolePositions), zahl(d.totalFastestLaps), zahl(d.totalChampionshipWins),

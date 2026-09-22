@@ -16,7 +16,7 @@ export function circuitRaces(db, circuitId) {
       `SELECT r.id, r.year, r.round, g.name AS grandPrix, r.date,
               r.course_length_km AS laenge, r.laps AS runden,
               (SELECT rr.driver_id FROM race_result rr WHERE rr.race_id = r.id AND rr.position = 1 LIMIT 1) AS siegerId,
-              (SELECT d.full_name FROM race_result rr JOIN driver d ON d.id = rr.driver_id
+              (SELECT d.display_name FROM race_result rr JOIN driver d ON d.id = rr.driver_id
                 WHERE rr.race_id = r.id AND rr.position = 1 LIMIT 1) AS sieger,
               (SELECT rr.constructor_id FROM race_result rr WHERE rr.race_id = r.id AND rr.position = 1 LIMIT 1) AS siegerTeamId,
               (SELECT k.name FROM race_result rr JOIN constructor k ON k.id = rr.constructor_id
@@ -40,7 +40,7 @@ export function circuitLeaders(db, circuitId, art = 'siege', anzahl = 10) {
 
   return db
     .prepare(
-      `SELECT rr.driver_id AS id, d.full_name AS name, COUNT(*) AS anzahl,
+      `SELECT rr.driver_id AS id, d.display_name AS name, COUNT(*) AS anzahl,
               MIN(r.year) AS von, MAX(r.year) AS bis
          FROM race_result rr
          JOIN race r ON r.id = rr.race_id
@@ -91,7 +91,7 @@ export function circuitStats(db, circuitId) {
 
   const vonHinten = db
     .prepare(
-      `SELECT d.full_name AS name, rr.driver_id AS id, r.year, rr.grid_position AS start
+      `SELECT d.display_name AS name, rr.driver_id AS id, r.year, rr.grid_position AS start
          FROM race_result rr
          JOIN race r ON r.id = rr.race_id
          JOIN driver d ON d.id = rr.driver_id
@@ -130,7 +130,7 @@ export function circuitStats(db, circuitId) {
 export function circuitSpecialists(db, circuitId, minStarts = 3, anzahl = 8) {
   const zeilen = db
     .prepare(
-      `SELECT rr.driver_id AS id, d.full_name AS name,
+      `SELECT rr.driver_id AS id, d.display_name AS name,
               AVG(CASE WHEN r.circuit_id = ?1 THEN rr.position END) AS hier,
               AVG(CASE WHEN r.circuit_id <> ?1 THEN rr.position END) AS sonst,
               COUNT(CASE WHEN r.circuit_id = ?1 THEN 1 END) AS startsHier,
