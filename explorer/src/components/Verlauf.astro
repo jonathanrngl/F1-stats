@@ -27,6 +27,7 @@ interface Props {
   streichresultate?: boolean
 }
 
+import { zahl } from '../lib/format.js'
 const { fahrer, runden, streichresultate = false } = Astro.props
 
 const BENANNT = 8
@@ -74,7 +75,6 @@ benannt.slice(0, 5).forEach((f, i) => {
 /* Vorsatz der Seite: auf GitHub Pages "/F1-stats", beim Entwickeln leer. */
 const BASIS = import.meta.env.BASE_URL.replace(/\/$/, '')
 
-const nf = new Intl.NumberFormat('en-GB')
 ---
 
 <figure class="verlauf">
@@ -118,7 +118,7 @@ const nf = new Intl.NumberFormat('en-GB')
       <li>
         <span class="strich" style={`background: var(--s${i + 1})`}></span>
         <a href={`${BASIS}/drivers/${f.id}/`}>{f.name}</a>
-        <b>{nf.format(f.punkte.at(-1) ?? 0)}</b>
+        <b>{zahl(f.punkte.at(-1) ?? 0)}</b>
       </li>
     ))}
     {rest.length > 0 && (

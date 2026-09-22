@@ -1,4 +1,5 @@
 ---
+import { zahl } from '../../lib/format.js'
 import Seite from '../../layouts/Seite.astro'
 import { pfad, db } from '../../lib/db.js'
 import {
@@ -11,14 +12,13 @@ import {
 const d = db()
 const N = 10
 
-const nf = new Intl.NumberFormat('en-GB')
-const ganz = (v) => nf.format(Math.round(v))
+const ganz = (v) => zahl(Math.round(v))
 const jahreAlt = (v) => {
   const j = Math.floor(v)
   const tage = Math.round((v - j) * 365.25)
   return `${j}y ${tage}d`
 }
-const jahreSpanne = (v) => `${nf.format(Math.round(v * 10) / 10)} years`
+const jahreSpanne = (v) => `${zahl(Math.round(v * 10) / 10)} years`
 
 /*
  * Jeder Block nennt seine eigene Einheit und, wo nötig, seine Einschränkung.
@@ -60,7 +60,7 @@ const bloecke = [
   {
     titel: 'Most points scored in races',
     liste: meistePunkte(d, N),
-    format: (v) => nf.format(Math.round(v)),
+    format: (v) => zahl(Math.round(v)),
     hinweis:
       'Comparable only up to a point: the points system has changed more than a dozen times since 1950, and until 1990 some of the points lapsed as dropped scores.',
   },
@@ -119,8 +119,8 @@ const teamTitel = teamRekorde(d, 'titel', N)
 
   <h2 class="gruppe">Streaks</h2>
   <p class="lead">
-    Unbroken runs across a driver's starts. Races he sat out do not break a streak – he was not
-    there, so he had nothing to lose.
+    Unbroken runs across a driver's starts. A race missed does not break a streak – a driver who
+    was not there had nothing to lose.
   </p>
   <div class="raster">
     {serien.map((s) => (

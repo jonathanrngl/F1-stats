@@ -6,6 +6,7 @@
  * Zeitpunkt des Bauens – deshalb steht das Datum des Datenstands sichtbar
  * darunter, statt den Eindruck von Echtzeit zu erwecken.
  */
+import { datum, ein, prozent as proz, zahl } from '../../lib/format.js'
 import Seite from '../../layouts/Seite.astro'
 import { db, pfad } from '../../lib/db.js'
 import { land } from '../../lib/laender.js'
@@ -38,16 +39,6 @@ const letzteHier = rennen
   : []
 
 const heimat = rennen ? land(rennen.demonym, rennen.land, rennen.ioc) : null
-
-const nf = new Intl.NumberFormat('en-GB')
-const ein = (n) => (n === null || n === undefined ? '–' : nf.format(Math.round(n * 10) / 10))
-const proz = (m) => (!m || m.value === null ? '–' : `${Math.round(m.value * 100)}%`)
-const datum = (s) =>
-  s
-    ? new Intl.DateTimeFormat('en-GB', { dateStyle: 'long', timeZone: 'UTC' }).format(
-        new Date(`${s}T12:00:00Z`),
-      )
-    : '–'
 
 /** Ganze Tage bis zum Rennen, gerechnet auf dem Datenstand. */
 const tageBis = rennen

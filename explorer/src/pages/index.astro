@@ -1,4 +1,5 @@
 ---
+import { zahl } from '../lib/format.js'
 import Seite from '../layouts/Seite.astro'
 import { eine, saisonListe, pfad } from '../lib/db.js'
 
@@ -12,26 +13,25 @@ const zahlen = eine(`
          (SELECT MAX(year) FROM season)     AS bis`)
 
 const saisons = saisonListe().slice(0, 6)
-const nf = new Intl.NumberFormat('en-GB')
 ---
 
 <Seite
   titel="Formula 1 statistics – every season since 1950"
-  beschreibung={`Results, standings and analysis from ${zahlen.rennen} races between ${zahlen.von} and ${zahlen.bis}.`}
+  beschreibung={`Results, standings and analysis from ${zahl(zahlen.rennen)} races between ${zahlen.von} and ${zahlen.bis}.`}
 >
   <h1>Formula 1, in full</h1>
   <p class="lead">
-    {nf.format(zahlen.rennen)} races between {zahlen.von} and {zahlen.bis}, {nf.format(zahlen.fahrer)} drivers, {zahlen.teams} teams, {zahlen.strecken} circuits.
-    Every number on this site comes from {nf.format(zahlen.ergebnisse)} result rows – not from a
+    {zahl(zahlen.rennen)} races between {zahlen.von} and {zahlen.bis}, {zahl(zahlen.fahrer)} drivers, {zahlen.teams} teams, {zahlen.strecken} circuits.
+    Every number on this site comes from {zahl(zahlen.ergebnisse)} result rows – not from a
     curated list of records.
   </p>
 
   <ul class="karten">
     <li><a class="karte" href={pfad.seite('/preview/')}><b>Preview</b><span>The next race: circuit, championship standings and records within reach</span></a></li>
-    <li><a class="karte" href={pfad.seite('/drivers/')}><b>Drivers</b><span>{nf.format(zahlen.fahrer)} profiles with career, streaks and team-mates</span></a></li>
+    <li><a class="karte" href={pfad.seite('/drivers/')}><b>Drivers</b><span>{zahl(zahlen.fahrer)} profiles with career, streaks and team-mates</span></a></li>
     <li><a class="karte" href={pfad.seite('/teams/')}><b>Teams</b><span>{zahlen.teams} constructors, with their predecessors</span></a></li>
     <li><a class="karte" href={pfad.seite('/seasons/')}><b>Seasons</b><span>Standings, calendar and progression for each year</span></a></li>
-    <li><a class="karte" href={pfad.seite('/races/')}><b>Races</b><span>{nf.format(zahlen.rennen)} individual results</span></a></li>
+    <li><a class="karte" href={pfad.seite('/races/')}><b>Races</b><span>{zahl(zahlen.rennen)} individual results</span></a></li>
     <li><a class="karte" href={pfad.seite('/circuits/')}><b>Circuits</b><span>{zahlen.strecken} circuits and who was strong there</span></a></li>
     <li><a class="karte" href={pfad.seite('/records/')}><b>Records</b><span>Every record linked to the race behind it</span></a></li>
   </ul>

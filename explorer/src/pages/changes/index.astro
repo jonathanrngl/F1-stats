@@ -10,6 +10,7 @@
  * genannt ist, nicht für den Augenblick des Lesens. Deshalb steht das Rennen,
  * auf dem gerechnet wurde, im Kopf und nicht im Kleingedruckten.
  */
+import { datum, ein, zahl } from '../../lib/format.js'
 import Seite from '../../layouts/Seite.astro'
 import { db, pfad } from '../../lib/db.js'
 import {
@@ -34,13 +35,6 @@ const marken = saisonMarken(db(), stand)
 const aussichten = inReichweite(db(), verlaeufe, stand)
 const serien = laufendeSerien(db(), stand)
 
-const nf = new Intl.NumberFormat('en-GB')
-const datum = (s) =>
-  new Intl.DateTimeFormat('en-GB', { dateStyle: 'long', timeZone: 'UTC' }).format(
-    new Date(`${s}T12:00:00Z`),
-  )
-/** Eine Saison und ein Bruchteil – „5,7" sagt hier mehr als „6". */
-const ein = (n) => nf.format(Math.round(n * 10) / 10)
 const tageZwischen = (a, b) =>
   Math.round((Date.parse(`${b}T12:00:00Z`) - Date.parse(`${a}T12:00:00Z`)) / 86400000)
 
@@ -128,8 +122,8 @@ function satz(e) {
                   </p>
                 )}
                 <p class="spur">
-                  {e.vorher.wert > 0 ? `${nf.format(e.vorher.wert)} → ` : ''}
-                  {nf.format(e.wert)}
+                  {e.vorher.wert > 0 ? `${zahl(e.vorher.wert)} → ` : ''}
+                  {zahl(e.wert)}
                   {' · '}
                   {e.halter.map((h, i) => (
                     <>
@@ -138,7 +132,7 @@ function satz(e) {
                     </>
                   ))}
                   {e.wert !== e.rekordJetzt &&
-                    ` · stands today at ${nf.format(e.rekordJetzt)}`}
+                    ` · stands today at ${zahl(e.rekordJetzt)}`}
                 </p>
               </div>
             </li>
@@ -182,7 +176,7 @@ function satz(e) {
                     ))}
                   </td>
                   <td class="zahl">
-                    {nf.format(a.von)} → <b>{nf.format(a.bis)}</b>
+                    {zahl(a.von)} → <b>{zahl(a.bis)}</b>
                     <span class="neben">in {a.schritte} steps</span>
                   </td>
                   <td>
@@ -268,7 +262,7 @@ function satz(e) {
                   <td>
                     {a.kategorie.titel}
                     <span class="neben">
-                      {nf.format(a.rekord)} ·{' '}
+                      {zahl(a.rekord)} ·{' '}
                       {a.halter.map((h, i) => (
                         <>
                           {i > 0 && ', '}
@@ -278,9 +272,9 @@ function satz(e) {
                       {a.halterAktiv && ' – still racing, so the record keeps growing'}
                     </span>
                   </td>
-                  <td class="zahl">{nf.format(a.eigene)}</td>
+                  <td class="zahl">{zahl(a.eigene)}</td>
                   <td class="zahl">
-                    <b>{nf.format(a.fehlt)}</b>
+                    <b>{zahl(a.fehlt)}</b>
                     {a.naechstesRennen && <span class="neben">next race</span>}
                   </td>
                   <td>
@@ -288,11 +282,11 @@ function satz(e) {
                       <span class="luecke">{a.hochrechnung.caveat}</span>
                     ) : (
                       <>
-                        {nf.format(a.hochrechnung.value)} races
+                        {zahl(a.hochrechnung.value)} races
                         <span class="neben">
                           ≈ {ein(a.saisonNoetig)} seasons
                           {a.alterAmZiel !== null &&
-                            ` – he would then be ${Math.round(a.alterAmZiel)}`}
+                            ` – aged ${Math.round(a.alterAmZiel)} by then`}
                         </span>
                       </>
                     )}
@@ -361,7 +355,7 @@ function satz(e) {
     <div class="methode">
       <p>
         The history of every record is derived from the results themselves: all
-        {' '}{nf.format(rennenGesamt)} races held since 1950 are walked through in chronological
+        {' '}{zahl(rennenGesamt)} races held since 1950 are walked through in chronological
         order, and after each one it is settled whether the top mark has moved. There is no
         curated list of record dates that anyone could forget to update.
       </p>
@@ -376,7 +370,7 @@ function satz(e) {
         <b>A projection is not a prediction.</b> It takes the strike rate of the past three
         seasons and carries it forward. A driver with too few starts in that window, or no
         success of that kind at all, gets no number – "infinitely many races" would be false
-        precision. Where an active driver holds the record himself, it keeps growing while the
+        precision. Where the record is held by a driver who is still racing, it keeps growing while the
         challenger closes in; that is noted on the relevant row.
       </p>
       <p>

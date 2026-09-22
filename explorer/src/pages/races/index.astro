@@ -1,10 +1,10 @@
 ---
+import { datumKurz as datum } from '../../lib/format.js'
 import Seite from '../../layouts/Seite.astro'
 import { rennenListe, saisonListe, pfad } from '../../lib/db.js'
 
 const rennen = rennenListe()
 const saisons = saisonListe()
-const datum = (d) => new Date(d).toLocaleDateString('en-GB')
 
 /*
  * Alle 1172 Rennen auf einer Seite, nach Saison gegliedert. Das ist viel, aber

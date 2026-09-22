@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { ein, prozent as proz, zahl } from '../lib/format.js'
 
 /*
  * Fahrervergleich im Browser.
@@ -16,10 +17,7 @@ import { useEffect, useMemo, useState } from 'react'
 /* Vorsatz der Seite: auf GitHub Pages "/F1-stats", beim Entwickeln leer. */
 const BASIS = import.meta.env.BASE_URL.replace(/\/$/, '')
 
-const nf = new Intl.NumberFormat('en-GB')
-const ein = (v) => (v === null || v === undefined ? '–' : nf.format(Math.round(v * 10) / 10))
-const zwei = (v) => (v === null || v === undefined ? '–' : nf.format(Math.round(v * 100) / 100))
-const proz = (v) => (v === null || v === undefined ? '–' : `${Math.round(v * 100)}%`)
+const zwei = (v) => (v === null || v === undefined ? '–' : zahl(Math.round(v * 100) / 100))
 
 /** Summiert die Saisons eines Profils im gewählten Zeitraum. */
 function summe(profil, von, bis) {
@@ -71,14 +69,14 @@ function summe(profil, von, bis) {
  */
 const ZEILEN = [
   { gruppe: 'Scope' },
-  { k: 'starts', label: 'Starts', f: nf.format, besser: 'gross' },
-  { k: 'jahre', label: 'Seasons', f: nf.format, besser: 'gross' },
+  { k: 'starts', label: 'Starts', f: zahl, besser: 'gross' },
+  { k: 'jahre', label: 'Seasons', f: zahl, besser: 'gross' },
   { gruppe: 'Achievements' },
-  { k: 'siege', label: 'Wins', f: nf.format, besser: 'gross' },
-  { k: 'podien', label: 'Podiums', f: nf.format, besser: 'gross' },
-  { k: 'poles', label: 'Pole positions', f: nf.format, besser: 'gross' },
-  { k: 'schnellsteRunden', label: 'Fastest laps', f: nf.format, besser: 'gross' },
-  { k: 'titel', label: 'World Championships', f: nf.format, besser: 'gross' },
+  { k: 'siege', label: 'Wins', f: zahl, besser: 'gross' },
+  { k: 'podien', label: 'Podiums', f: zahl, besser: 'gross' },
+  { k: 'poles', label: 'Pole positions', f: zahl, besser: 'gross' },
+  { k: 'schnellsteRunden', label: 'Fastest laps', f: zahl, besser: 'gross' },
+  { k: 'titel', label: 'World Championships', f: zahl, besser: 'gross' },
   { k: 'besterWMPlatz', label: 'Best championship finish', f: (v) => (v ? 'P' + v : '–'), besser: 'klein' },
   { gruppe: 'Rates' },
   { k: 'siegquote', label: 'Win rate', f: proz, besser: 'gross' },
@@ -337,12 +335,12 @@ export default function Vergleich({ index }) {
               <table className="gegen">
                 <tbody>
                   <Zeile
-                    z={{ label: 'Race head-to-head', f: nf.format, besser: 'gross' }}
+                    z={{ label: 'Race head-to-head', f: zahl, besser: 'gross' }}
                     a={duell.rennSiege}
                     b={duell.rennDuelle - duell.rennSiege}
                   />
                   <Zeile
-                    z={{ label: 'Qualifying head-to-head', f: nf.format, besser: 'gross' }}
+                    z={{ label: 'Qualifying head-to-head', f: zahl, besser: 'gross' }}
                     a={duell.qualiSiege}
                     b={duell.qualiDuelle - duell.qualiSiege}
                   />

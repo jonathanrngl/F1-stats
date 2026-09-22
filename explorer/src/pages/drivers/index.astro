@@ -1,9 +1,9 @@
 ---
+import { zahl } from '../../lib/format.js'
 import Seite from '../../layouts/Seite.astro'
 import { fahrerListe, pfad } from '../../lib/db.js'
 
 const fahrer = fahrerListe()
-const nf = new Intl.NumberFormat('en-GB')
 // Nach Siegen sortiert zeigt die Übersicht sofort, worauf es ankommt.
 const nachSiegen = [...fahrer].sort(
   (a, b) => (b.siege ?? 0) - (a.siege ?? 0) || (b.starts ?? 0) - (a.starts ?? 0),
@@ -16,7 +16,7 @@ const nachSiegen = [...fahrer].sort(
 >
   <h1>Drivers</h1>
   <p class="lead">
-    {nf.format(fahrer.length)} drivers who were entered at least once since 1950. Sorted by
+    {zahl(fahrer.length)} drivers who were entered at least once since 1950. Sorted by
     wins.
   </p>
 

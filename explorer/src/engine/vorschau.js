@@ -327,8 +327,8 @@ export function rekordeInReichweite(db, rennen, dasFeld) {
         // das trennt die Formulierung, sonst verspricht die Seite etwas.
         text:
           m.feld === 'starts'
-            ? `It would be his ${ordnung(naechste)} ${m.wort}.`
-            : `A success would be his ${ordnung(naechste)} ${m.wort}.`,
+            ? `It would be their ${ordnung(naechste)} ${m.wort}.`
+            : `A success would be their ${ordnung(naechste)} ${m.wort}.`,
       })
     }
   }
@@ -350,7 +350,7 @@ export function rekordeInReichweite(db, rennen, dasFeld) {
           name: name.get(z.id),
           text:
             gleichauf > 1
-              ? `Shares the record here on ${siegWort(z.anzahl)} – one more would make it his alone.`
+              ? `Shares the record here on ${siegWort(z.anzahl)} – one more would make it theirs alone.`
               : `Holds the record here on ${siegWort(z.anzahl)} and could extend it.`,
         })
       } else if (z.anzahl === spitze - 1) {
@@ -385,7 +385,7 @@ export function rekordeInReichweite(db, rennen, dasFeld) {
           art: 'bestenliste',
           fahrer: id,
           name: name.get(id),
-          text: `Shares the all-time record on ${eigene} ${l.wort} – one more, and he stands alone.`,
+          text: `Shares the all-time record on ${eigene} ${l.wort} – one more, and it is theirs alone.`,
         })
       } else if (eigene === best - 1) {
         const halter = fuehrende.map((x) => x.name).join(', ')
