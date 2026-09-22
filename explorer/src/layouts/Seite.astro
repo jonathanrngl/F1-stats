@@ -8,6 +8,7 @@
  * selbst zu markieren.
  */
 import '../styles/theme.css'
+import Suche from '../components/Suche.jsx'
 
 interface Props {
   titel: string
@@ -27,7 +28,7 @@ const NAV = [
   { pfad: '/circuits/', label: 'Circuits' },
   { pfad: '/records/', label: 'Records' },
   { pfad: '/changes/', label: 'Changes' },
-  { pfad: '/comparison/', label: 'Comparison' },
+  { pfad: '/comparison/', label: 'Compare' },
   { pfad: '/explorer/', label: 'Explorer' },
 ]
 
@@ -78,6 +79,12 @@ const istAktiv = (pfad: string) => hier === pfad || hier.startsWith(pfad)
             ))
           }
         </nav>
+        {/*
+          * Die Suche ist die einzige Insel im Gerüst, und sie lädt ihren Index
+          * erst beim ersten Tastendruck. Ohne sie führte der Weg zu einem von
+          * 917 Fahrern nur über eine Liste mit 860 Zeilen.
+          */}
+        <Suche client:idle />
       </div>
     </header>
 
