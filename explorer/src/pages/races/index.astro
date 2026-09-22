@@ -1,5 +1,5 @@
 ---
-import { datumKurz as datum } from '../../lib/format.js'
+import { datumKurz as datum, zahl } from '../../lib/format.js'
 import Seite from '../../layouts/Seite.astro'
 import { rennenListe, saisonListe, pfad } from '../../lib/db.js'
 
@@ -22,12 +22,29 @@ const jahre = [...proJahr.keys()].sort((a, b) => b - a)
 
 <Seite
   titel="All Formula 1 races since 1950"
-  beschreibung={`${rennen.length} World Championship rounds with winner, circuit and date.`}
+  beschreibung={`${zahl(rennen.length)} World Championship rounds with winner, circuit and date.`}
 >
   <h1>Races</h1>
   <p class="lead">
-    {rennen.length} World Championship rounds since 1950, arranged by season.
+    {zahl(rennen.length)} World Championship rounds since 1950, arranged by season.
   </p>
+
+  {/*
+    * Die Sprungleiste bringt einen zu einer Saison. Sie hilft nicht, wenn die
+    * Frage quer dazu liegt – alle Rennen in Monaco, alle Siege von Senna. Der
+    * Filter arbeitet im Browser über das fertige HTML: Es ist schon alles da,
+    * es muss nur das Übrige verschwinden.
+    */}
+  <div class="filter">
+    <label for="rennenfilter">Filter</label>
+    <input
+      id="rennenfilter"
+      type="search"
+      placeholder="Race, circuit or winner – try “Monaco” or “Senna”"
+      autocomplete="off"
+    />
+    <output id="rennenzahl" aria-live="polite"></output>
+  </div>
 
   <nav class="jahre" aria-label="Jump to a season">
     {jahre.map((j) => <a href={`#j${j}`}>{j}</a>)}
@@ -65,7 +82,87 @@ const jahre = [...proJahr.keys()].sort((a, b) => b - a)
   ))}
 </Seite>
 
+<script>
+  /*
+   * Filtern im Browser, über das bereits gelieferte HTML. Kein Nachladen, kein
+   * Gerüst – 1.249 Zeilen durchzugehen kostet Millisekunden.
+   *
+   * Der Suchtext wird einmal je Zeile vorbereitet und am Element hinterlegt:
+   * Sonst liefe bei jedem Tastendruck `textContent` über die ganze Tabelle,
+   * und das ist die einzige Stelle, an der es bei dieser Menge spürbar würde.
+   */
+  const feld = document.querySelector('#rennenfilter')
+  const anzeige = document.querySelector('#rennenzahl')
+  const abschnitte = [...document.querySelectorAll('main section[id^="j"]')]
+  const sprungleiste = document.querySelector('.jahre')
+
+  const falte = (s) => s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase()
+
+  const zeilen = [...document.querySelectorAll('main tbody tr')].map((tr) => {
+    tr.dataset.suche = falte(tr.textContent.replace(/\s+/g, ' '))
+    return tr
+  })
+
+  const gesamt = zeilen.length
+
+  function filtere() {
+    const q = falte(feld.value).trim()
+    let sichtbar = 0
+
+    for (const tr of zeilen) {
+      const passt = q === '' || tr.dataset.suche.includes(q)
+      tr.hidden = !passt
+      if (passt) sichtbar++
+    }
+
+    /* Eine Saison ohne Treffer verschwindet mitsamt Überschrift. */
+    for (const s of abschnitte) {
+      s.hidden = ![...s.querySelectorAll('tbody tr')].some((tr) => !tr.hidden)
+    }
+
+    /* Die Sprungleiste ist sinnlos, solange gefiltert wird. */
+    if (sprungleiste) sprungleiste.hidden = q !== ''
+
+    anzeige.textContent = q === '' ? '' : `${sichtbar} of ${gesamt} races`
+  }
+
+  feld.addEventListener('input', filtere)
+  filtere()
+</script>
+
 <style>
+  .filter {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 0.75rem;
+    margin-top: 1.5rem;
+  }
+
+  .filter label {
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .filter input {
+    flex: 1 1 18rem;
+    min-width: 0;
+    padding: 0.45rem 0.7rem;
+    font: inherit;
+    font-size: 0.88rem;
+    color: var(--ink);
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 0.4rem;
+    appearance: none;
+  }
+
+  .filter input:focus { border-color: var(--accent); outline: none; }
+  .filter output { font-size: 0.82rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+
   .jahre {
     display: flex; flex-wrap: wrap; gap: 0.25rem; margin: 1.5rem 0 0;
     padding: 0.85rem 1rem; background: var(--surface); border: 1px solid var(--border);

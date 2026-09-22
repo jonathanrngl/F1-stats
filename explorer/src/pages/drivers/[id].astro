@@ -9,6 +9,7 @@
  */
 import { datum, ein, prozent as proz, zahl } from '../../lib/format.js'
 import Seite from '../../layouts/Seite.astro'
+import Karriere from '../../components/Karriere.astro'
 import { alle, eine, fahrerListe, pfad } from '../../lib/db.js'
 import { land } from '../../lib/laender.js'
 import { db } from '../../lib/db.js'
@@ -92,6 +93,22 @@ const jahre = (d) => {
   return datum(d)
 }
 
+/*
+ * Die Saisonzahlen fuer das Bild – aus denselben Quellen wie die Tabelle
+ * darunter, damit Bild und Tabelle nicht auseinanderlaufen koennen.
+ */
+const karriere = titel.seasons.map((s) => {
+  const jahrRennen = rennen.filter((r) => r.year === s.year)
+  return {
+    jahr: s.year,
+    starts: jahrRennen.filter((r) => r.started).length,
+    siege: jahrRennen.filter((r) => r.position === 1).length,
+    podien: jahrRennen.filter((r) => r.classified && r.position <= 3).length,
+    wmPlatz: s.position ?? null,
+    meister: Boolean(s.won),
+  }
+})
+
 const beschreibung =
   `${fahrer.display_name}: ${calculateStarts(rennen).value} starts, ` +
   `${calculateWins(rennen).value} wins, ${calculatePodiums(rennen).value} podiums, ` +
@@ -160,6 +177,13 @@ const beschreibung =
       coincide.
     </p>
   </section>
+
+  {karriere.length > 1 && (
+    <section>
+      <h2>The career at a glance</h2>
+      <Karriere saisons={karriere} name={fahrer.display_name} />
+    </section>
+  )}
 
   {titel.seasons.length > 0 && (
     <section>

@@ -435,3 +435,30 @@ footer {
   .suche { width: 100%; order: 3; }
   .suche .ergebnisse { width: 100%; }
 }
+
+/* --------------------------------------------------- sortierbare Tabellen */
+
+/*
+ * Ein Spaltenkopf zum Anklicken. Der Knopf sieht aus wie der Text daneben,
+ * bis der Zeiger ihn trifft – ein Kopf soll ein Kopf bleiben.
+ *
+ * Die Regel steht global und nicht auf der Seite: Ein <style>-Block hängt in
+ * Astro jedem Element der Seite ein Bereichsattribut an, und bei 860 Zeilen
+ * mal sieben Elementen waren das 170 KB für sechs Zeilen CSS.
+ */
+thead button {
+  padding: 0;
+  font: inherit;
+  font-size: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: var(--muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+thead button:hover { color: var(--ink); }
+thead button[data-aktiv='1'] { color: var(--accent); }
+thead button[data-aktiv='1']::after { content: ' ▾'; font-size: 0.8em; }
+thead button[data-aktiv='1'][data-richtung='auf']::after { content: ' ▴'; }
