@@ -68,7 +68,7 @@ export function saisonNeuRechnen(db, jahr, systemId, optionen = {}) {
 
   const zeilen = db
     .prepare(
-      `SELECT rr.race_id AS raceId, rr.driver_id AS driverId, d.full_name AS name,
+      `SELECT rr.race_id AS raceId, rr.driver_id AS driverId, d.display_name AS name,
               rr.position, rr.classified, rr.shared_car AS geteilt, rr.fastest_lap AS schnellste,
               rr.points AS echtePunkte, r.round
          FROM race_result rr
@@ -170,7 +170,7 @@ export function saisonNeuRechnen(db, jahr, systemId, optionen = {}) {
 export function amtlicherEndstand(db, jahr) {
   return db
     .prepare(
-      `SELECT sds.position AS platz, sds.driver_id AS driverId, d.full_name AS name,
+      `SELECT sds.position AS platz, sds.driver_id AS driverId, d.display_name AS name,
               sds.points AS punkte, sds.championship_won AS meister
          FROM season_driver_standing sds JOIN driver d ON d.id = sds.driver_id
         WHERE sds.year = ? ORDER BY sds.position`,

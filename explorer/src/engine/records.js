@@ -34,7 +34,7 @@ const eintrag = (z) => ({
 function bestenliste(db, bedingung, anzahl = 10) {
   return db
     .prepare(
-      `SELECT rr.driver_id AS driverId, d.full_name AS name,
+      `SELECT rr.driver_id AS driverId, d.display_name AS name,
               COUNT(DISTINCT rr.race_id) AS wert
          FROM race_result rr
          JOIN race r ON r.id = rr.race_id
@@ -65,7 +65,7 @@ export const meisteSchnellsteRunden = (db, n) => bestenliste(db, 'rr.fastest_lap
 export function meistePunkte(db, anzahl = 10) {
   return db
     .prepare(
-      `SELECT rr.driver_id AS driverId, d.full_name AS name, SUM(rr.points) AS wert
+      `SELECT rr.driver_id AS driverId, d.display_name AS name, SUM(rr.points) AS wert
          FROM race_result rr JOIN driver d ON d.id = rr.driver_id
         GROUP BY rr.driver_id HAVING wert > 0
         ORDER BY wert DESC LIMIT ?`,
@@ -77,7 +77,7 @@ export function meistePunkte(db, anzahl = 10) {
 export function meisteTitel(db, anzahl = 10) {
   return db
     .prepare(
-      `SELECT sds.driver_id AS driverId, d.full_name AS name,
+      `SELECT sds.driver_id AS driverId, d.display_name AS name,
               COUNT(*) AS wert, MIN(sds.year) AS jahr
          FROM season_driver_standing sds JOIN driver d ON d.id = sds.driver_id
         WHERE sds.championship_won = 1
@@ -105,7 +105,7 @@ export function laengsteSerien(db, art, anzahl = 10) {
 
   const zeilen = db
     .prepare(
-      `SELECT rr.driver_id AS driverId, d.full_name AS name,
+      `SELECT rr.driver_id AS driverId, d.display_name AS name,
               r.id AS raceId, r.year, r.round,
               g.name AS grandPrix,
               MIN(rr.position) AS position, MAX(rr.classified) AS classified,
@@ -171,7 +171,7 @@ export function altersrekord(db, ereignis, richtung = 'jung', anzahl = 10) {
 
   return db
     .prepare(
-      `SELECT rr.driver_id AS driverId, d.full_name AS name,
+      `SELECT rr.driver_id AS driverId, d.display_name AS name,
               r.id AS raceId, r.year AS jahr, g.name AS grandPrix, r.date,
               (julianday(r.date) - julianday(d.date_of_birth)) / 365.25 AS alter_jahre
          FROM race_result rr
@@ -197,7 +197,7 @@ export function altersrekord(db, ereignis, richtung = 'jung', anzahl = 10) {
 export function altersrekordMeister(db, richtung = 'jung', anzahl = 10) {
   return db
     .prepare(
-      `SELECT sds.driver_id AS driverId, d.full_name AS name, sds.year AS jahr,
+      `SELECT sds.driver_id AS driverId, d.display_name AS name, sds.year AS jahr,
               (julianday(letztes.date) - julianday(d.date_of_birth)) / 365.25 AS alter_jahre,
               letztes.id AS raceId, g.name AS grandPrix
          FROM season_driver_standing sds
@@ -230,7 +230,7 @@ export function altersrekordMeister(db, richtung = 'jung', anzahl = 10) {
 export function groessteAufholjagden(db, anzahl = 10) {
   return db
     .prepare(
-      `SELECT rr.driver_id AS driverId, d.full_name AS name, rr.grid_position AS wert,
+      `SELECT rr.driver_id AS driverId, d.display_name AS name, rr.grid_position AS wert,
               r.id AS raceId, r.year AS jahr, g.name AS grandPrix
          FROM race_result rr
          JOIN race r ON r.id = rr.race_id
@@ -247,7 +247,7 @@ export function groessteAufholjagden(db, anzahl = 10) {
 export function meistePlaetzeGutgemacht(db, anzahl = 10) {
   return db
     .prepare(
-      `SELECT rr.driver_id AS driverId, d.full_name AS name,
+      `SELECT rr.driver_id AS driverId, d.display_name AS name,
               rr.grid_position - rr.position AS wert,
               r.id AS raceId, r.year AS jahr, g.name AS grandPrix
          FROM race_result rr
@@ -270,7 +270,7 @@ export function meistePlaetzeGutgemacht(db, anzahl = 10) {
 export function laengsteKarrieren(db, anzahl = 10) {
   return db
     .prepare(
-      `SELECT rr.driver_id AS driverId, d.full_name AS name,
+      `SELECT rr.driver_id AS driverId, d.display_name AS name,
               (julianday(MAX(r.date)) - julianday(MIN(r.date))) / 365.25 AS wert,
               MIN(r.year) AS jahr, MAX(r.year) AS bis
          FROM race_result rr
@@ -293,7 +293,7 @@ export function laengsteKarrieren(db, anzahl = 10) {
 export function laengstePauseZwischenSiegen(db, anzahl = 10) {
   const siege = db
     .prepare(
-      `SELECT rr.driver_id AS driverId, d.full_name AS name, r.id AS raceId,
+      `SELECT rr.driver_id AS driverId, d.display_name AS name, r.id AS raceId,
               r.date, r.year, g.name AS grandPrix
          FROM race_result rr
          JOIN race r ON r.id = rr.race_id

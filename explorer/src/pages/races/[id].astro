@@ -1,4 +1,5 @@
 ---
+import { datum, ein, zahl } from '../../lib/format.js'
 import Seite from '../../layouts/Seite.astro'
 import { alle, eine, rennenListe, pfad } from '../../lib/db.js'
 
@@ -24,7 +25,7 @@ const rennen = eine(
  * danach Ausfälle und Nichtstarter. display_order aus F1DB trägt genau das.
  */
 const ergebnisse = alle(
-  `SELECT rr.*, d.full_name AS fahrer, d.id AS fahrerId, k.name AS team, k.id AS teamId
+  `SELECT rr.*, d.display_name AS fahrer, d.id AS fahrerId, k.name AS team, k.id AS teamId
      FROM race_result rr
      JOIN driver d ON d.id = rr.driver_id
      JOIN constructor k ON k.id = rr.constructor_id
@@ -34,7 +35,7 @@ const ergebnisse = alle(
 )
 
 const boxenstopps = alle(
-  `SELECT p.driver_id AS fahrerId, d.full_name AS fahrer, COUNT(*) AS stopps,
+  `SELECT p.driver_id AS fahrerId, d.display_name AS fahrer, COUNT(*) AS stopps,
           MIN(p.duration_ms) AS schnellster
      FROM pit_stop p JOIN driver d ON d.id = p.driver_id
     WHERE p.race_id = ? GROUP BY p.driver_id ORDER BY stopps, schnellster`,
@@ -49,9 +50,6 @@ const nachbarn = alle(
 const vorher = nachbarn.find((n) => n.round === rennen.round - 1)
 const nachher = nachbarn.find((n) => n.round === rennen.round + 1)
 
-const nf = new Intl.NumberFormat('en-GB')
-const ein = (n) => (n === null || n === undefined ? '' : nf.format(Math.round(n * 10) / 10))
-const datum = (d) => new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
 
 /** Millisekunden als Rennzeit oder Abstand. */
 function zeit(ms) {

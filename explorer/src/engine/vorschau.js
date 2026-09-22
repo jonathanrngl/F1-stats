@@ -148,7 +148,7 @@ function letztesRennenVor(db, jahr) {
 function fahrerStand(db, raceId, anzahl = 10) {
   return db
     .prepare(
-      `SELECT s.driver_id AS id, d.full_name AS name, s.position, s.points AS punkte,
+      `SELECT s.driver_id AS id, d.display_name AS name, s.position, s.points AS punkte,
               (SELECT k.name
                  FROM race_result rr
                  JOIN race r2 ON r2.id = rr.race_id
@@ -217,13 +217,13 @@ function offeneRennen(db, rennen) {
 export function feld(db, raceId) {
   return db
     .prepare(
-      `SELECT rr.driver_id AS id, d.full_name AS name, d.abbreviation AS kuerzel,
+      `SELECT rr.driver_id AS id, d.display_name AS name, d.abbreviation AS kuerzel,
               MIN(k.name) AS team, MIN(rr.display_order) AS reihenfolge
          FROM race_result rr
          JOIN driver d ON d.id = rr.driver_id
          JOIN constructor k ON k.id = rr.constructor_id
         WHERE rr.race_id = ? AND rr.started = 1
-        GROUP BY rr.driver_id, d.full_name, d.abbreviation
+        GROUP BY rr.driver_id, d.display_name, d.abbreviation
         ORDER BY reihenfolge`,
     )
     .all(raceId)
@@ -250,7 +250,7 @@ function karriere(db, ids) {
 function bestenliste(db, feldName, anzahl = 3) {
   return db
     .prepare(
-      `SELECT x.fahrer AS id, d.full_name AS name, x.${feldName} AS anzahl
+      `SELECT x.fahrer AS id, d.display_name AS name, x.${feldName} AS anzahl
          FROM (SELECT fahrer, ${ZAEHLUNGEN} FROM (${JE_RENNEN}) GROUP BY fahrer) x
          JOIN driver d ON d.id = x.fahrer
         ORDER BY x.${feldName} DESC
@@ -327,8 +327,8 @@ export function rekordeInReichweite(db, rennen, dasFeld) {
         // das trennt die Formulierung, sonst verspricht die Seite etwas.
         text:
           m.feld === 'starts'
-            ? `It would be his ${ordnung(naechste)} ${m.wort}.`
-            : `A success would be his ${ordnung(naechste)} ${m.wort}.`,
+            ? `It would be their ${ordnung(naechste)} ${m.wort}.`
+            : `A success would be their ${ordnung(naechste)} ${m.wort}.`,
       })
     }
   }
@@ -350,7 +350,7 @@ export function rekordeInReichweite(db, rennen, dasFeld) {
           name: name.get(z.id),
           text:
             gleichauf > 1
-              ? `Shares the record here on ${siegWort(z.anzahl)} – one more would make it his alone.`
+              ? `Shares the record here on ${siegWort(z.anzahl)} – one more would make it theirs alone.`
               : `Holds the record here on ${siegWort(z.anzahl)} and could extend it.`,
         })
       } else if (z.anzahl === spitze - 1) {
@@ -385,7 +385,7 @@ export function rekordeInReichweite(db, rennen, dasFeld) {
           art: 'bestenliste',
           fahrer: id,
           name: name.get(id),
-          text: `Shares the all-time record on ${eigene} ${l.wort} – one more, and he stands alone.`,
+          text: `Shares the all-time record on ${eigene} ${l.wort} – one more, and it is theirs alone.`,
         })
       } else if (eigene === best - 1) {
         const halter = fuehrende.map((x) => x.name).join(', ')

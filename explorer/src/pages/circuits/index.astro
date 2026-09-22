@@ -1,10 +1,9 @@
 ---
+import { ein, zahl } from '../../lib/format.js'
 import Seite from '../../layouts/Seite.astro'
 import { streckenListe, pfad } from '../../lib/db.js'
 
 const strecken = streckenListe()
-const nf = new Intl.NumberFormat('en-GB')
-const ein = (n) => (n === null || n === undefined ? '–' : nf.format(Math.round(n * 10) / 10))
 ---
 
 <Seite

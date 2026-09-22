@@ -1,6 +1,9 @@
 ---
+import { datum, zahl } from '../lib/format.js'
 import Seite from '../layouts/Seite.astro'
-import { eine, saisonListe, pfad } from '../lib/db.js'
+import { db, eine, saisonListe, pfad } from '../lib/db.js'
+import { naechstesRennen, standVorRennen } from '../engine/vorschau.js'
+import { datenstand, juengsteAenderungen, rekordVerlaeufe, zahlwort } from '../engine/aenderungen.js'
 
 const zahlen = eine(`
   SELECT (SELECT COUNT(*) FROM race)        AS rennen,
@@ -12,27 +15,97 @@ const zahlen = eine(`
          (SELECT MAX(year) FROM season)     AS bis`)
 
 const saisons = saisonListe().slice(0, 6)
-const nf = new Intl.NumberFormat('en-GB')
+
+/*
+ * Die Startseite zeigte bisher nur Verweise auf Daten, keine Daten. Bei 2.384
+ * Seiten und einem nächsten Rennen in der Datenbank war das verschenkt – die
+ * drei Dinge unten sind genau die, wegen derer jemand eine Statistikseite
+ * überhaupt aufruft, und alle drei werden auf Unterseiten ohnehin gerechnet.
+ *
+ * Jedes Stück steht für sich: Fehlt eines, fällt nur dieses weg. Am
+ * Saisonende gibt es kein nächstes Rennen, und die Seite soll dann nicht
+ * mit einer leeren Kachel dastehen.
+ */
+const heute = new Date().toISOString().slice(0, 10)
+const naechstes = naechstesRennen(db(), heute)
+const stand = naechstes ? standVorRennen(db(), naechstes) : null
+const fuehrend = stand?.fahrer?.[0] ?? null
+
+const tageBis = naechstes
+  ? Math.round(
+      (Date.parse(`${naechstes.datum}T12:00:00Z`) - Date.parse(`${heute}T12:00:00Z`)) / 86400000,
+    )
+  : null
+
+/*
+ * Die jüngste Rekordbewegung. Der Verlauf über alle Bestmarken kostet beim
+ * Bauen rund eine Sekunde; das ist für eine einzelne Seite vertretbar und
+ * spart eine zweite, vereinfachte Rechnung, die auseinanderlaufen könnte.
+ */
+const datenStand = datenstand(db())
+const letzteMarke = datenStand
+  ? (juengsteAenderungen(rekordVerlaeufe(db()), { seit: `${datenStand.jahr - 12}-01-01` })
+      .einzeln[0] ?? null)
+  : null
 ---
 
 <Seite
   titel="Formula 1 statistics – every season since 1950"
-  beschreibung={`Results, standings and analysis from ${zahlen.rennen} races between ${zahlen.von} and ${zahlen.bis}.`}
+  beschreibung={`Results, standings and analysis from ${zahl(zahlen.rennen)} races between ${zahlen.von} and ${zahlen.bis}.`}
 >
-  <h1>Formula 1, in full</h1>
+  <h1>All of Formula 1</h1>
   <p class="lead">
-    {nf.format(zahlen.rennen)} races between {zahlen.von} and {zahlen.bis}, {nf.format(zahlen.fahrer)} drivers, {zahlen.teams} teams, {zahlen.strecken} circuits.
-    Every number on this site comes from {nf.format(zahlen.ergebnisse)} result rows – not from a
+    {zahl(zahlen.rennen)} races between {zahlen.von} and {zahlen.bis}, {zahl(zahlen.fahrer)} drivers, {zahlen.teams} teams, {zahlen.strecken} circuits.
+    Every number on this site comes from {zahl(zahlen.ergebnisse)} result rows – not from a
     curated list of records.
   </p>
 
+  {(naechstes || fuehrend || letzteMarke) && (
+    <ul class="jetzt">
+      {naechstes && (
+        <li>
+          <span class="etikett">Next race</span>
+          <a class="gross" href={pfad.seite('/preview/')}>{naechstes.grandPrix} {naechstes.jahr}</a>
+          <span class="dazu">
+            {naechstes.strecke} · {datum(naechstes.datum)}
+            {tageBis > 1 ? ` · in ${tageBis} days` : tageBis === 1 ? ' · tomorrow' : tageBis === 0 ? ' · today' : ''}
+          </span>
+        </li>
+      )}
+      {fuehrend && (
+        <li>
+          <span class="etikett">Championship leader</span>
+          <a class="gross" href={pfad.fahrer(fuehrend.id)}>{fuehrend.name}</a>
+          <span class="dazu">
+            {zahl(fuehrend.punkte)} points
+            {stand.fahrer[1] && ` · ${zahl(fuehrend.punkte - stand.fahrer[1].punkte)} ahead of ${stand.fahrer[1].name}`}
+          </span>
+        </li>
+      )}
+      {letzteMarke && (
+        <li>
+          <span class="etikett">
+            Latest record change
+          </span>
+          <a class="gross" href={pfad.seite('/changes/')}>
+            {letzteMarke.kategorie.titel}
+          </a>
+          <span class="dazu">
+            {letzteMarke.halter.map((h) => h.name).join(' and ')} ·{' '}
+            {zahlwort(letzteMarke.wert, letzteMarke.kategorie)} · {datum(letzteMarke.datum)}
+          </span>
+        </li>
+      )}
+    </ul>
+  )}
+
   <ul class="karten">
     <li><a class="karte" href={pfad.seite('/preview/')}><b>Preview</b><span>The next race: circuit, championship standings and records within reach</span></a></li>
-    <li><a class="karte" href={pfad.seite('/drivers/')}><b>Drivers</b><span>{nf.format(zahlen.fahrer)} profiles with career, streaks and team-mates</span></a></li>
-    <li><a class="karte" href={pfad.seite('/teams/')}><b>Teams</b><span>{zahlen.teams} constructors, with their predecessors</span></a></li>
+    <li><a class="karte" href={pfad.seite('/drivers/')}><b>Drivers</b><span>{zahl(zahlen.fahrer)} profiles with career, streaks and team-mates</span></a></li>
+    <li><a class="karte" href={pfad.seite('/teams/')}><b>Teams</b><span>{zahlen.teams} constructors, including the names they raced under before</span></a></li>
     <li><a class="karte" href={pfad.seite('/seasons/')}><b>Seasons</b><span>Standings, calendar and progression for each year</span></a></li>
-    <li><a class="karte" href={pfad.seite('/races/')}><b>Races</b><span>{nf.format(zahlen.rennen)} individual results</span></a></li>
-    <li><a class="karte" href={pfad.seite('/circuits/')}><b>Circuits</b><span>{zahlen.strecken} circuits and who was strong there</span></a></li>
+    <li><a class="karte" href={pfad.seite('/races/')}><b>Races</b><span>Every race since 1950, result by result</span></a></li>
+    <li><a class="karte" href={pfad.seite('/circuits/')}><b>Circuits</b><span>{zahlen.strecken} circuits, and who has gone well at each</span></a></li>
     <li><a class="karte" href={pfad.seite('/records/')}><b>Records</b><span>Every record linked to the race behind it</span></a></li>
   </ul>
 
@@ -42,9 +115,47 @@ const nf = new Intl.NumberFormat('en-GB')
       <li>
         <a class="karte" href={pfad.saison(s.jahr)}>
           <b>{s.jahr}</b>
-          <span>{s.meister ?? 'still under way'}{s.teamMeister ? ` · Constructors: ${s.teamMeister}` : ''}</span>
+          <span>{s.meister ?? 'season in progress'}{s.teamMeister ? ` · Constructors’ champion: ${s.teamMeister}` : ''}</span>
         </a>
       </li>
     ))}
   </ul>
 </Seite>
+
+<style>
+  /*
+   * Das Band mit dem, was gerade gilt. Drei Felder nebeneinander, am Telefon
+   * untereinander. Kein Kasten mit Rahmen: Es ist kein Hinweis, sondern der
+   * Inhalt, mit dem die Seite anfängt.
+   */
+  .jetzt {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr));
+    gap: 0.9rem 1.75rem;
+    margin: 1.75rem 0 0;
+    padding: 1.1rem 0 0;
+    border-top: 1px solid var(--border);
+    list-style: none;
+  }
+
+  .jetzt li { display: grid; gap: 0.15rem; align-content: start; min-width: 0; }
+
+  .jetzt .etikett {
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .jetzt .gross {
+    font-size: 1.12rem;
+    font-weight: 650;
+    color: var(--ink);
+    text-decoration: none;
+    letter-spacing: -0.01em;
+  }
+
+  .jetzt .gross:hover { color: var(--accent); }
+  .jetzt .dazu { font-size: 0.82rem; color: var(--muted); text-wrap: pretty; }
+</style>

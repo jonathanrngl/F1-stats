@@ -6,8 +6,10 @@
     "import": "node scripts/import.mjs",
     "import:lokal": "node scripts/import.mjs --csv ../.cache/f1db-csv",
     "test": "node scripts/test-engine.mjs",
+    "test:ausgabe": "node scripts/pruefe-ausgabe.mjs",
     "dev": "astro dev",
-    "build": "astro build",
+    "build": "astro build && node scripts/pruefe-ausgabe.mjs",
+    "build:schnell": "astro build",
     "preview": "astro preview"
   },
   "devDependencies": {

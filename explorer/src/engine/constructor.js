@@ -160,7 +160,7 @@ export function calculateTeamChampionships(db, constructorId) {
 export function calculateTeamDrivers(db, constructorId) {
   return db
     .prepare(
-      `SELECT rr.driver_id AS driverId, d.full_name AS name,
+      `SELECT rr.driver_id AS driverId, d.display_name AS name,
               MIN(r.year) AS von, MAX(r.year) AS bis,
               COUNT(DISTINCT CASE WHEN rr.started = 1 THEN rr.race_id END) AS starts,
               COUNT(DISTINCT CASE WHEN rr.position = 1 THEN rr.race_id END) AS siege,

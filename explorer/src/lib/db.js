@@ -86,7 +86,7 @@ export const pfad = {
 /** Alle Fahrer mit den Eckdaten für Übersicht und Suche. */
 export function fahrerListe() {
   return alle(`
-    SELECT d.id, d.full_name AS name, d.first_name AS vorname, d.last_name AS nachname,
+    SELECT d.id, d.display_name AS name, d.first_name AS vorname, d.last_name AS nachname,
            d.abbreviation AS kuerzel, d.date_of_birth AS geboren, d.date_of_death AS gestorben,
            c.ioc AS land, c.name AS landName,
            d.f1db_race_starts AS starts, d.f1db_race_wins AS siege,
@@ -120,7 +120,7 @@ export function saisonListe() {
   return alle(`
     SELECT s.year AS jahr, s.race_count AS rennen, s.dropped_scores AS streichresultate,
            s.has_constructors_championship AS mitTeamWM,
-           (SELECT d.full_name FROM season_driver_standing sds
+           (SELECT d.display_name FROM season_driver_standing sds
               JOIN driver d ON d.id = sds.driver_id
              WHERE sds.year = s.year AND sds.championship_won = 1 LIMIT 1) AS meister,
            (SELECT sds.driver_id FROM season_driver_standing sds
@@ -150,7 +150,7 @@ export function rennenListe(jahr) {
     `SELECT r.id, r.year AS jahr, r.round AS runde, g.name AS name, r.date AS datum,
             r.circuit_id AS streckeId, z.name AS strecke, c.ioc AS land,
             r.drivers_title_decider AS titelentscheidung,
-            (SELECT d.full_name FROM race_result rr JOIN driver d ON d.id = rr.driver_id
+            (SELECT d.display_name FROM race_result rr JOIN driver d ON d.id = rr.driver_id
               WHERE rr.race_id = r.id AND rr.position = 1 LIMIT 1) AS sieger,
             (SELECT rr.driver_id FROM race_result rr
               WHERE rr.race_id = r.id AND rr.position = 1 LIMIT 1) AS siegerId

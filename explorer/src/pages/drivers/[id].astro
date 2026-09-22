@@ -7,7 +7,9 @@
  * Quelle stammt. Wo eine Kennzahl nicht belegt ist, steht „nicht überliefert“
  * statt einer Null.
  */
+import { datum, ein, prozent as proz, zahl } from '../../lib/format.js'
 import Seite from '../../layouts/Seite.astro'
+import Karriere from '../../components/Karriere.astro'
 import { alle, eine, fahrerListe, pfad } from '../../lib/db.js'
 import { land } from '../../lib/laender.js'
 import { db } from '../../lib/db.js'
@@ -42,7 +44,7 @@ const duelle = calculateTeamMateComparison(db(), id).slice(0, 8)
 const strecken = calculateTrackPerformance(db(), id, 2).slice(0, 10)
 
 const namen = new Map(
-  alle('SELECT id, full_name AS name FROM driver').map((d) => [d.id, d.name]),
+  alle('SELECT id, display_name AS name FROM driver').map((d) => [d.id, d.name]),
 )
 const teamNamen = new Map(alle('SELECT id, name FROM constructor').map((t) => [t.id, t.name]))
 const streckenNamen = new Map(alle('SELECT id, name FROM circuit').map((z) => [z.id, z.name]))
@@ -76,11 +78,8 @@ const spannen = (jahre) => {
 }
 const teams = [...proTeam.values()].sort((a, b) => Math.min(...a.jahre) - Math.min(...b.jahre))
 
-const nf = new Intl.NumberFormat('en-GB')
-const ein = (n) => (n === null || n === undefined ? '–' : nf.format(Math.round(n * 10) / 10))
-const proz = (m) => (m.value === null ? '–' : `${Math.round(m.value * 100)}%`)
 /** Zeigt den Wert, oder den Grund, warum es keinen gibt. */
-const wert = (m, f = (v) => nf.format(v)) => (m.value === null ? '–' : f(m.value))
+const wert = (m, f = (v) => zahl(v)) => (m.value === null ? '–' : f(m.value))
 
 const zeitraum =
   rennen.length === 0
@@ -89,23 +88,46 @@ const zeitraum =
       ? String(rennen[0].year)
       : `${rennen[0].year}–${rennen.at(-1).year}`
 
-const datum = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
 const jahre = (d) => {
   if (!d) return ''
-  return datum.format(new Date(d))
+  return datum(d)
 }
 
+/*
+ * Die Saisonzahlen fuer das Bild – aus denselben Quellen wie die Tabelle
+ * darunter, damit Bild und Tabelle nicht auseinanderlaufen koennen.
+ */
+const karriere = titel.seasons.map((s) => {
+  const jahrRennen = rennen.filter((r) => r.year === s.year)
+  return {
+    jahr: s.year,
+    starts: jahrRennen.filter((r) => r.started).length,
+    siege: jahrRennen.filter((r) => r.position === 1).length,
+    podien: jahrRennen.filter((r) => r.classified && r.position <= 3).length,
+    wmPlatz: s.position ?? null,
+    meister: Boolean(s.won),
+  }
+})
+
 const beschreibung =
-  `${fahrer.full_name}: ${calculateStarts(rennen).value} starts, ` +
+  `${fahrer.display_name}: ${calculateStarts(rennen).value} starts, ` +
   `${calculateWins(rennen).value} wins, ${calculatePodiums(rennen).value} podiums, ` +
   `${titel.titles.value} World Championships (${zeitraum}).`
 ---
 
-<Seite titel={`${fahrer.full_name} – statistics and career`} beschreibung={beschreibung}>
+<Seite titel={`${fahrer.display_name} – statistics and career`} beschreibung={beschreibung}>
   <header class="profil">
     <span class="kuerzel gross" title={heimat.name}>{heimat.code}</span>
     <div>
-      <h1>{fahrer.full_name}</h1>
+      <h1>{fahrer.display_name}</h1>
+      {/*
+        * Der Name aus dem Pass steht hier und nur hier. In der Überschrift
+        * wäre er falsch am Platz – niemand sucht nach „Andreas Nikolaus
+        * Lauda" –, aber auf der Profilseite gehört er dazu.
+        */}
+      {fahrer.full_name !== fahrer.display_name && (
+        <p class="vollname">{fahrer.full_name}</p>
+      )}
       <p class="lead">
         {[
           heimat.name,
@@ -142,8 +164,8 @@ const beschreibung =
       <li><span>Avg finish</span><b>{ein(calculateAverageFinish(rennen).value)}</b></li>
       <li><span>Retirement rate</span><b>{proz(calculateDNFRate(rennen))}</b></li>
       <li><span>Pole-to-win conversion</span><b>{proz(calculatePoleToWinRate(rennen))}</b></li>
-      <li><span>Positions gained</span><b>{wert(calculatePositionsGained(rennen), (v) => (v > 0 ? '+' : '') + nf.format(v))}</b></li>
-      <li><span>Points scored in races</span><b>{ein(calculatePoints(rennen).value)}</b></li>
+      <li><span>Positions gained</span><b>{wert(calculatePositionsGained(rennen), (v) => (v > 0 ? '+' : '') + zahl(v))}</b></li>
+      <li><span>Points scored</span><b>{ein(calculatePoints(rennen).value)}</b></li>
       <li><span>Longest winning streak</span><b>{serien.wins.length || '–'}</b></li>
       <li><span>Longest podium streak</span><b>{serien.podiums.length || '–'}</b></li>
       <li><span>Longest points-scoring streak</span><b>{serien.points.length || '–'}</b></li>
@@ -155,6 +177,13 @@ const beschreibung =
       coincide.
     </p>
   </section>
+
+  {karriere.length > 1 && (
+    <section>
+      <h2>The career at a glance</h2>
+      <Karriere saisons={karriere} name={fahrer.display_name} />
+    </section>
+  )}
 
   {titel.seasons.length > 0 && (
     <section>
@@ -193,7 +222,7 @@ const beschreibung =
 
   {duelle.length > 0 && (
     <section>
-      <h2>Against the team-mates</h2>
+      <h2>Against team-mates</h2>
       <p class="lead">
         Same car, same races. In the race only those where both reached the finish are counted –
         a retirement says nothing about the head-to-head.
@@ -203,7 +232,7 @@ const beschreibung =
           <thead>
             <tr>
               <th>Team-mate</th><th>Years</th>
-              <th class="num">Races</th><th class="num">Qualifying</th><th class="num">Points</th>
+              <th class="num">Races</th><th class="num">Qualifying</th><th class="num">Points</th><th></th>
             </tr>
           </thead>
           <tbody>
@@ -216,6 +245,16 @@ const beschreibung =
                 <td class="num">{d.raceWins}:{d.raceDuels - d.raceWins}</td>
                 <td class="num">{d.qualiWins}:{d.qualiDuels - d.qualiWins}</td>
                 <td class="num">{ein(d.pointsSelf)} : {ein(d.pointsOther)}</td>
+                {/* Der Gedanke "und wer war besser?" entsteht genau hier.
+                    Die Vergleichsseite liest a und b aus der Adresse. */}
+                <td class="num">
+                  <a
+                    class="vergleichen"
+                    href={`${pfad.seite('/comparison/')}?a=${fahrer.id}&b=${d.driverId}`}
+                  >
+                    Compare
+                  </a>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -253,6 +292,16 @@ const beschreibung =
 </Seite>
 
 <style>
+  .vergleichen { color: var(--muted); font-size: 0.78rem; text-decoration: none; white-space: nowrap; }
+  .vergleichen:hover { color: var(--accent); }
+
+  /* Der Name aus dem Pass: vorhanden, aber leise. */
+  .vollname {
+    margin: 0.1rem 0 0;
+    font-size: 0.83rem;
+    color: var(--muted);
+  }
+
   .profil {
     display: flex;
     align-items: center;

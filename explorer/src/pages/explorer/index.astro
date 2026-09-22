@@ -12,9 +12,9 @@ const z = eine('SELECT COUNT(*) AS n FROM race_result')
 >
   <h1>Explorer</h1>
   <p class="lead">
-    Your own queries across {z.n.toLocaleString('en-GB')} result rows since 1950. Choose what the
-    count is grouped by and what is counted – the result appears at once, because the whole
-    dataset sits in the browser and no request is needed.
+    Ask anything of {z.n.toLocaleString('en-GB')} result rows going back to 1950. Pick what to count
+    and what to count it over; the answer appears at once, because the whole dataset is already
+    in your browser and nothing has to be fetched.
   </p>
 
   <details class="beispiele">

@@ -1,0 +1,200 @@
+---
+/**
+ * Eine Karriere als Bild: je Saison ein Balken.
+ *
+ * Die Saisontabelle darunter hat alle Zahlen, aber keine Form. Erst das Bild
+ * zeigt, was eine Karriere war – ein kurzer Blitz, ein langes Mittelfeld, ein
+ * später Aufstieg, ein Comeback nach Jahren.
+ *
+ * Die Balkenhöhe ist die Zahl der Starts, nicht die der Siege. Das ist die
+ * Entscheidung, an der alles hängt: Über Siege gezeichnet wären 800 der 860
+ * Fahrer ein leeres Bild. Über Starts hat jeder eine Gestalt, und der Erfolg
+ * sitzt als Färbung darin – Siege unten in der Akzentfarbe, weitere Podien
+ * darüber blasser, der Rest grau.
+ *
+ * Gezeichnet beim Bauen. Die Seite braucht dafür kein JavaScript.
+ */
+interface Saison {
+  jahr: number
+  starts: number
+  siege: number
+  podien: number
+  wmPlatz: number | null
+  meister: boolean
+}
+
+interface Props {
+  saisons: Saison[]
+  /** Für die Beschriftung unter dem Bild. */
+  name: string
+}
+
+const { saisons, name } = Astro.props
+
+const W = 900
+const H = 200
+const PAD = { oben: 12, rechts: 10, unten: 30, links: 30 }
+const PLOT_B = W - PAD.links - PAD.rechts
+const PLOT_H = H - PAD.oben - PAD.unten
+
+const maxStarts = Math.max(1, ...saisons.map((s) => s.starts))
+
+/*
+ * Die Achse läuft über Jahre, nicht über Saisons.
+ *
+ * Das ist keine Kleinigkeit: Schumacher fuhr 1991 bis 2006 und noch einmal
+ * 2010 bis 2012. Balken dicht an dicht gesetzt, verschwände die Pause von drei
+ * Jahren spurlos, und das Bild behauptete eine ununterbrochene Karriere. Über
+ * die Jahre gesetzt, steht die Lücke da, wo sie war.
+ */
+const vonJahr = saisons[0]?.jahr ?? 0
+const bisJahr = saisons.at(-1)?.jahr ?? 0
+const spanne = bisJahr - vonJahr + 1
+
+const schritt = PLOT_B / Math.max(spanne, 1)
+const breite = Math.min(schritt * 0.72, 34)
+
+const x = (jahr: number) => PAD.links + schritt * (jahr - vonJahr) + (schritt - breite) / 2
+const hoehe = (n: number) => (n / maxStarts) * PLOT_H
+const y = (n: number) => PAD.oben + PLOT_H - hoehe(n)
+
+/*
+ * Nur jede k-te Jahreszahl, sonst kleben sie. Vier Stellen, nicht zwei: Die
+ * Seite reicht von 1950 bis 2026, und „05" wäre nicht von „50" zu
+ * unterscheiden.
+ */
+const jede = Math.max(1, Math.ceil(spanne / 8))
+const beschriftet = saisons.filter(
+  (s, i) => (s.jahr - vonJahr) % jede === 0 || i === saisons.length - 1,
+)
+
+/** Eine Achsenmarke oben, damit die Höhe lesbar ist. */
+const achse = [maxStarts]
+---
+
+<figure class="karriere">
+  <svg
+    viewBox={`0 0 ${W} ${H}`}
+    role="img"
+    aria-label={`${name}: starts, podiums and wins per season from ${saisons[0]?.jahr} to ${saisons.at(-1)?.jahr}. The figures are in the table below.`}
+  >
+    {achse.map((v) => (
+      <>
+        <line class="gitter" x1={PAD.links} x2={W - PAD.rechts} y1={y(v)} y2={y(v)} />
+        <text class="achse" x={PAD.links - 6} y={y(v)} text-anchor="end" dominant-baseline="middle">
+          {v}
+        </text>
+      </>
+    ))}
+    <line class="achslinie" x1={PAD.links} x2={W - PAD.rechts} y1={y(0)} y2={y(0)} />
+
+    {
+      saisons.map((s) => {
+        const andere = Math.max(0, s.starts - s.podien)
+        const podienOhneSiege = Math.max(0, s.podien - s.siege)
+        return (
+          <g>
+            <title>
+              {s.jahr}: {s.starts} starts, {s.podien} podiums, {s.siege} wins
+              {s.wmPlatz ? `, championship P${s.wmPlatz}` : ''}
+            </title>
+            {/* Von unten: Siege, weitere Podien, alles Übrige. */}
+            {s.siege > 0 && (
+              <rect class="siege" x={x(s.jahr)} width={breite} y={y(s.siege)} height={hoehe(s.siege)} />
+            )}
+            {podienOhneSiege > 0 && (
+              <rect
+                class="podien"
+                x={x(s.jahr)}
+                width={breite}
+                y={y(s.siege + podienOhneSiege)}
+                height={hoehe(podienOhneSiege)}
+              />
+            )}
+            {andere > 0 && (
+              <rect
+                class="rest"
+                x={x(s.jahr)}
+                width={breite}
+                y={y(s.starts)}
+                height={hoehe(andere)}
+              />
+            )}
+            {/* Ein Titel ist die Aussage des Bildes – er bekommt eine Marke. */}
+            {s.meister && <circle class="titel" cx={x(s.jahr) + breite / 2} cy={y(s.starts) - 7} r="3" />}
+          </g>
+        )
+      })
+    }
+
+    {
+      beschriftet.map((s) => (
+        <text
+          class="achse"
+          x={x(s.jahr) + breite / 2}
+          y={y(0) + 15}
+          text-anchor="middle"
+        >
+          {s.jahr}
+        </text>
+      ))
+    }
+  </svg>
+
+  <figcaption>
+    <span class="schluessel"><i class="siege"></i>Wins</span>
+    <span class="schluessel"><i class="podien"></i>Other podiums</span>
+    <span class="schluessel"><i class="rest"></i>Other starts</span>
+    <span class="schluessel"><i class="titel"></i>Title</span>
+    <span class="notiz">Bar height is the number of starts in that season.</span>
+  </figcaption>
+</figure>
+
+<style>
+  .karriere {
+    margin: 0;
+    padding: 0.9rem 1rem 0.8rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0.6rem;
+  }
+
+  svg { display: block; width: 100%; height: auto; }
+
+  .gitter { stroke: var(--grid); stroke-width: 1; shape-rendering: crispEdges; }
+  .achslinie { stroke: var(--axis); stroke-width: 1; shape-rendering: crispEdges; }
+  .achse { fill: var(--muted); font-size: 10.5px; font-variant-numeric: tabular-nums; }
+
+  /*
+   * Drei Stufen einer Farbe statt drei Farben: Die Reihenfolge Sieg – Podium –
+   * Rest ist eine Rangfolge, und eine Rangfolge zeichnet man mit Helligkeit,
+   * nicht mit verschiedenen Farbtönen.
+   */
+  rect.siege { fill: var(--accent); }
+  rect.podien { fill: var(--accent); opacity: 0.45; }
+  rect.rest { fill: var(--s-rest); opacity: 0.55; }
+  circle.titel { fill: var(--accent); }
+
+  figcaption {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem 1rem;
+    margin-top: 0.7rem;
+    padding-top: 0.7rem;
+    border-top: 1px solid var(--border);
+    font-size: 0.76rem;
+    color: var(--muted);
+  }
+
+  .schluessel { display: flex; align-items: center; gap: 0.35rem; }
+  .schluessel i { width: 0.7rem; height: 0.7rem; border-radius: 0.15rem; flex: none; }
+  .schluessel i.siege { background: var(--accent); }
+  .schluessel i.podien { background: var(--accent); opacity: 0.45; }
+  .schluessel i.rest { background: var(--s-rest); opacity: 0.55; }
+  .schluessel i.titel { background: var(--accent); border-radius: 50%; width: 0.5rem; height: 0.5rem; }
+  .notiz { margin-left: auto; text-wrap: pretty; }
+
+  @media (max-width: 34rem) {
+    .notiz { margin-left: 0; }
+  }
+</style>
