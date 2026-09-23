@@ -69,6 +69,39 @@ CREATE TABLE constructor (
   f1db_championship_wins INTEGER
 );
 
+-- Motorenhersteller.
+--
+-- Eine eigene Grösse neben dem Team, und keine kleine: Ein Ford-Cosworth DFV
+-- gewann in zehn verschiedenen Chassis, und Ferrari hat Titel als Motorlieferant
+-- an Teams geliefert, die nicht Ferrari hiessen. Ohne diese Tabelle waere
+-- `race_result.engine_id` nur eine Kennung ohne Namen.
+CREATE TABLE engine_manufacturer (
+  id                TEXT PRIMARY KEY,
+  name              TEXT NOT NULL,
+  country_id        TEXT REFERENCES country(id),
+  f1db_race_entries      INTEGER,
+  f1db_race_starts       INTEGER,
+  f1db_race_wins         INTEGER,
+  f1db_podiums           INTEGER,
+  f1db_pole_positions    INTEGER,
+  f1db_fastest_laps      INTEGER,
+  f1db_championship_wins INTEGER
+);
+
+-- Reifenhersteller. Neun in der ganzen Geschichte, und die Epochen, die sie
+-- markieren, erklaeren mehr als ihre Zahl vermuten laesst.
+CREATE TABLE tyre_manufacturer (
+  id                TEXT PRIMARY KEY,
+  name              TEXT NOT NULL,
+  country_id        TEXT REFERENCES country(id),
+  f1db_race_entries      INTEGER,
+  f1db_race_starts       INTEGER,
+  f1db_race_wins         INTEGER,
+  f1db_podiums           INTEGER,
+  f1db_pole_positions    INTEGER,
+  f1db_fastest_laps      INTEGER
+);
+
 -- Jaguar wurde Red Bull, Toro Rosso wurde AlphaTauri wurde RB. Ohne diese
 -- Tabelle ist jede Team-Historie falsch.
 CREATE TABLE constructor_chronology (
@@ -160,8 +193,8 @@ CREATE TABLE race_result (
   race_id         TEXT NOT NULL REFERENCES race(id),
   driver_id       TEXT NOT NULL REFERENCES driver(id),
   constructor_id  TEXT NOT NULL REFERENCES constructor(id),
-  engine_id       TEXT,
-  tyre_id         TEXT,
+  engine_id       TEXT REFERENCES engine_manufacturer(id),
+  tyre_id         TEXT REFERENCES tyre_manufacturer(id),
   -- Laufende Nummer je Fahrer und Rennen. In den 1950ern übernahm man das
   -- Auto eines Teamkollegen; dann gibt es zwei Zeilen für denselben Fahrer.
   -- 127 solcher Zeilen stecken in den Daten, markiert über shared_car.

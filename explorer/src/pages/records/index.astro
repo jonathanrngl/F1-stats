@@ -6,13 +6,19 @@ import {
   altersrekord, altersrekordMeister, groessteAufholjagden, laengsteKarrieren,
   laengstePauseZwischenSiegen, laengsteSerien, meistePlaetzeGutgemacht, meistePodien,
   meistePoles, meistePunkte, meisteSchnellsteRunden, meisteSiege, meisteStarts,
-  meisteTitel, teamRekorde,
+  meisteTitel, teamRekorde, grandSlams, zielabstand,
 } from '../../engine/records.js'
 
 const d = db()
 const N = 10
 
+const slams = grandSlams(d, N)
+const knapp = zielabstand(d, 'knapp', N)
+const weit = zielabstand(d, 'weit', N)
+
 const ganz = (v) => zahl(Math.round(v))
+/** Ein Zielabstand: unter zehn Sekunden auf Tausendstel, darueber auf Zehntel. */
+const sekunden = (v) => (v < 10 ? v.toFixed(3) : v.toFixed(1)) + 's'
 const jahreAlt = (v) => {
   const j = Math.floor(v)
   const tage = Math.round((v - j) * 365.25)
@@ -140,6 +146,68 @@ const teamTitel = teamRekorde(d, 'titel', N)
       </section>
     ))}
   </div>
+
+  <h2 class="gruppe">Winning margins</h2>
+  <p class="lead">
+    The gap is recorded against the second-placed car. Races that ended a lap or more apart
+    have no gap in seconds and are left out – a lap is not a number of seconds, and treating
+    it as an enormous one would say something different.
+  </p>
+  <div class="raster">
+    <section>
+      <h2>Closest finishes</h2>
+      <ol class="rangliste breit">
+        {knapp.map((e) => (
+          <li>
+            <span>
+              <a href={pfad.fahrer(e.driverId)}>{e.name}</a>
+              <i><a class="leise" href={pfad.rennen(e.raceId)}>{e.rennen}</a></i>
+            </span>
+            <b>{sekunden(e.wert)}</b>
+          </li>
+        ))}
+      </ol>
+    </section>
+
+    <section>
+      <h2>Biggest winning margins</h2>
+      <ol class="rangliste breit">
+        {weit.map((e) => (
+          <li>
+            <span>
+              <a href={pfad.fahrer(e.driverId)}>{e.name}</a>
+              <i><a class="leise" href={pfad.rennen(e.raceId)}>{e.rennen}</a></i>
+            </span>
+            <b>{sekunden(e.wert)}</b>
+          </li>
+        ))}
+      </ol>
+    </section>
+
+    <section>
+      <h2>Grand Slams</h2>
+      <p class="hinweis">
+        Pole position, win, fastest lap and every lap led – all in one race.
+      </p>
+      <ol class="rangliste breit">
+        {slams.map((e) => (
+          <li>
+            <span>
+              <a href={pfad.fahrer(e.driverId)}>{e.name}</a>
+              <i><a class="leise" href={pfad.rennen(e.raceId)}>most recently</a></i>
+            </span>
+            <b>{e.wert}</b>
+          </li>
+        ))}
+      </ol>
+    </section>
+  </div>
+
+  <p class="quelle">
+    The Grand Slam is the one figure on this page that is not recalculated here: “led every
+    lap” appears in no result row, and the lap data that would settle it is not loaded. It is
+    taken from F1DB as it stands.
+  </p>
 
   <h2 class="gruppe">Age</h2>
   <p class="lead">
@@ -275,6 +343,15 @@ const teamTitel = teamRekorde(d, 'titel', N)
   }
 
   h2.gruppe + .lead { margin-top: 0.4rem; }
+
+  /* Eine Anmerkung zur Herkunft einer Zahl – leiser als ein Hinweis. */
+  .quelle {
+    max-width: 46rem;
+    margin: 1rem 0 0;
+    font-size: 0.79rem;
+    color: var(--muted);
+    text-wrap: pretty;
+  }
 
   .hinweis {
     margin: 0 0 0.5rem;

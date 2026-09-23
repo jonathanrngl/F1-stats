@@ -316,6 +316,40 @@ async function importiere(db) {
     ],
   )
 
+  /*
+   * Motoren- und Reifenhersteller vor den Ergebnissen: Die Ergebniszeilen
+   * verweisen darauf, und die Fremdschluesselpruefung am Ende laeuft ueber
+   * alles.
+   */
+  einfuegen(
+    'engine_manufacturer',
+    [
+      'id', 'name', 'country_id', 'f1db_race_entries', 'f1db_race_starts', 'f1db_race_wins',
+      'f1db_podiums', 'f1db_pole_positions', 'f1db_fastest_laps', 'f1db_championship_wins',
+    ],
+    await lies('f1db-engine-manufacturers.csv'),
+    (m) => [
+      kennung(m.id, 'engine_manufacturer.id'), m.name, txt(m.countryId),
+      zahl(m.totalRaceEntries), zahl(m.totalRaceStarts), zahl(m.totalRaceWins),
+      zahl(m.totalPodiums), zahl(m.totalPolePositions), zahl(m.totalFastestLaps),
+      zahl(m.totalChampionshipWins),
+    ],
+  )
+
+  einfuegen(
+    'tyre_manufacturer',
+    [
+      'id', 'name', 'country_id', 'f1db_race_entries', 'f1db_race_starts', 'f1db_race_wins',
+      'f1db_podiums', 'f1db_pole_positions', 'f1db_fastest_laps',
+    ],
+    await lies('f1db-tyre-manufacturers.csv'),
+    (m) => [
+      kennung(m.id, 'tyre_manufacturer.id'), m.name, txt(m.countryId),
+      zahl(m.totalRaceEntries), zahl(m.totalRaceStarts), zahl(m.totalRaceWins),
+      zahl(m.totalPodiums), zahl(m.totalPolePositions), zahl(m.totalFastestLaps),
+    ],
+  )
+
   einfuegen(
     'constructor',
     [

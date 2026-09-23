@@ -27,7 +27,12 @@ import {
 } from '../src/engine/aenderungen.js'
 import {
   meistePodien, meistePoles, meisteSchnellsteRunden, meisteSiege, meisteStarts, teamRekorde,
+  grandSlams, zielabstand,
 } from '../src/engine/records.js'
+import {
+  motorProfil, motorTeams, motorTitel, motorenListe,
+} from '../src/engine/motor.js'
+import { fahrerWertung, rangliste, zusammenhang } from '../src/engine/duell.js'
 
 const HIER = path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1'))
 const DB = path.join(HIER, '..', 'data', 'f1.sqlite')
@@ -376,6 +381,118 @@ pruefe(
   ),
 )
 console.log(`   ✓ ${serienJetzt.length} laufende Serien, ${alleAusbauten.length} Ausbauläufe`)
+
+// -------------------------------------------------- 6. Motorenhersteller
+
+console.log('\n6. Motorenhersteller')
+
+const motoren = motorenListe(db)
+gleich('78 Hersteller importiert', motoren.length, 78)
+
+/*
+ * Derselbe Massenabgleich wie bei Fahrern und Teams: F1DB liefert die
+ * Gesamtzahlen mit, und sie entstehen auf einem anderen Weg als unsere. Weicht
+ * einer ab, ist eine Annahme ueber die Daten falsch - etwa die, dass ein Motor
+ * je Rennen einmal zaehlt und nicht je Auto.
+ */
+const motorAbweichungen = []
+for (const m of motoren) {
+  const p = motorProfil(db, m.id)
+  if (p.siege !== p.f1dbSiege) motorAbweichungen.push(`${p.name}: ${p.siege} statt ${p.f1dbSiege}`)
+}
+pruefe(
+  'Siege stimmen fuer alle Motorenhersteller mit F1DB ueberein',
+  motorAbweichungen.length === 0,
+  motorAbweichungen.slice(0, 3).join(', '),
+)
+console.log(`   ✓ ${motoren.length} Hersteller, Siege gegen F1DB abgeglichen`)
+
+/* Ein Motor gewinnt nicht oefter, als er Rennen bestritten hat. */
+pruefe(
+  'kein Hersteller hat mehr Siege als Rennen',
+  motoren.every((m) => m.siege <= m.rennen && m.podien <= m.rennen),
+)
+
+/*
+ * Der Grund, warum es diese Seiten gibt: Ferrari kommt als Motor auf einen
+ * Sieg mehr als als Rennstall, weil ein Kundenteam gewann. Faellt diese
+ * Pruefung, ist die Trennung von Motor und Team verlorengegangen.
+ */
+const ferrariMotor = motorProfil(db, 'ferrari')
+const ferrariTeam = teamRekorde(db, 'siege', 20).find((t) => t.id === 'ferrari')
+pruefe(
+  'Ferrari hat als Motor mehr Siege als als Team',
+  ferrariMotor.siege > ferrariTeam.wert,
+  `${ferrariMotor.siege} vs ${ferrariTeam.wert}`,
+)
+console.log(`   ✓ Ferrari: ${ferrariMotor.siege} Siege als Motor, ${ferrariTeam.wert} als Team`)
+
+/* Der Ford-Cosworth belieferte ein halbes Feld - das ist die Geschichte. */
+const fordTeams = motorTeams(db, 'ford', 200)
+pruefe('Ford belieferte mehr als fuenfzig Teams', fordTeams.length > 50, `${fordTeams.length}`)
+pruefe('Ford-Titel ueber mehrere Konstrukteure', new Set(motorTitel(db, 'ford').map((t) => t.team)).size >= 5)
+console.log(`   ✓ Ford: ${fordTeams.length} Teams, ${motorTitel(db, 'ford').length} Fahrertitel`)
+
+// -------------------------------------------------- 7. Neue Rekordlisten
+
+console.log('\n7. Zielabstaende und Grand Slams')
+
+const knappste = zielabstand(db, 'knapp', 5)
+const weiteste = zielabstand(db, 'weit', 5)
+
+pruefe('knappster Zielabstand ist Monza 1971', knappste[0]?.rennen === 'Italy 1971', knappste[0]?.rennen)
+nahe('… und betraegt 0,010 s', knappste[0]?.wert, 0.01, 0.0005)
+pruefe('knappste aufsteigend sortiert', knappste.every((x, i, a) => i === 0 || a[i - 1].wert <= x.wert))
+pruefe('weiteste absteigend sortiert', weiteste.every((x, i, a) => i === 0 || a[i - 1].wert >= x.wert))
+pruefe('kein Zielabstand ueber eine Runde in der Liste', weiteste.every((x) => x.wert < 3600))
+console.log(`   ✓ knappster ${knappste[0]?.wert.toFixed(3)} s (${knappste[0]?.rennen}), weitester ${weiteste[0]?.wert.toFixed(1)} s`)
+
+const slamListe = grandSlams(db, 5)
+pruefe('Jim Clark fuehrt die Grand Slams an', slamListe[0]?.name === 'Jim Clark', slamListe[0]?.name)
+gleich('… mit acht', slamListe[0]?.wert, 8)
+console.log(`   ✓ Grand Slams: ${slamListe.map((s) => `${s.name} ${s.wert}`).join(', ')}`)
+
+// -------------------------------------------------- 8. Teamkollegen-Wertung
+
+console.log('\n8. Teamkollegen-Wertung')
+
+const netz = zusammenhang(db, 'rennen')
+pruefe('die Kette haengt weitgehend zusammen', netz.groessteGruppe / netz.fahrer > 0.9,
+  `${netz.groessteGruppe} von ${netz.fahrer}`)
+
+const wertungRennen = rangliste(db, { art: 'rennen', minDuelle: 30, anzahl: 40 })
+const wertungQuali = rangliste(db, { art: 'qualifying', minDuelle: 30, anzahl: 40 })
+
+pruefe('Rangliste absteigend sortiert',
+  wertungRennen.every((x, i, a) => i === 0 || a[i - 1].wertung >= x.wertung))
+pruefe('Mindestzahl an Duellen eingehalten', wertungRennen.every((x) => x.duelle >= 30))
+pruefe('Siege nie mehr als Duelle', wertungRennen.every((x) => x.siege <= x.duelle))
+
+/*
+ * Indianapolis muss draussen bleiben. Mike Nazaruk bestritt ausschliesslich
+ * Indy-Rennen und stand ohne diesen Schnitt auf Platz zehn der ewigen Wertung
+ * - weil Kurtis Kraft 1955 dreiundzwanzig der fuenfunddreissig Autos stellte
+ * und deren Fahrer als Teamkollegen galten. Faellt diese Pruefung, ist der
+ * Schnitt verlorengegangen.
+ */
+gleich('Indy-Fahrer ohne Wertung (Nazaruk)', fahrerWertung(db, 'mike-nazaruk'), null)
+
+/*
+ * Der Kern der Sache: Die Wertung soll ungefaehr die Fahrer nach vorn bringen,
+ * die als gross gelten. Das ist keine mathematische Notwendigkeit, sondern die
+ * Probe darauf, ob das Verfahren ueberhaupt etwas misst.
+ */
+const obenRennen = new Set(wertungRennen.slice(0, 12).map((x) => x.id))
+for (const id of ['juan-manuel-fangio', 'jim-clark', 'ayrton-senna', 'max-verstappen']) {
+  pruefe(`${id} unter den ersten zwoelf der Rennwertung`, obenRennen.has(id))
+}
+console.log(`   ✓ Rennwertung: ${wertungRennen.slice(0, 5).map((x) => x.name).join(', ')}`)
+
+/* Rennen und Qualifying sind nicht dieselbe Frage und ergeben nicht dieselbe Reihenfolge. */
+pruefe('Rennen- und Qualifyingwertung unterscheiden sich',
+  wertungRennen[0].id !== wertungQuali[0].id,
+  `beide ${wertungRennen[0].name}`)
+console.log(`   ✓ Qualifying:  ${wertungQuali.slice(0, 5).map((x) => x.name).join(', ')}`)
 
 db.close()
 
