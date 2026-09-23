@@ -418,7 +418,7 @@ async function importiere(db) {
       'id', 'f1db_id', 'year', 'round', 'grand_prix_id', 'official_name', 'circuit_id',
       'circuit_layout_id', 'date', 'course_length_km', 'turns', 'laps', 'distance_km',
       'scheduled_laps', 'qualifying_format', 'had_sprint',
-      'drivers_title_decider', 'constructors_title_decider',
+      'drivers_title_decider', 'constructors_title_decider', 'formula_one',
     ],
     rennen,
     (r) => [
@@ -427,6 +427,9 @@ async function importiere(db) {
       zahl(r.courseLength), zahl(r.turns), zahl(r.laps), zahl(r.distance),
       zahl(r.scheduledLaps), txt(r.qualifyingFormat), r.sprintRaceDate ? 1 : 0,
       ja(r.driversChampionshipDecider), ja(r.constructorsChampionshipDecider),
+      // Siehe schema.sql: Indianapolis zaehlte zur WM, war aber kein
+      // Formel-1-Rennen. Die Kennung ist stabil, das Feld selbst hat F1DB nicht.
+      r.grandPrixId === 'indianapolis' ? 0 : 1,
     ],
   )
 

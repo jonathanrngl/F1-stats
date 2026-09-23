@@ -184,6 +184,19 @@ CREATE TABLE race (
   -- Unabhängige Gegenprobe für den eigenen Titelrechner.
   drivers_title_decider      INTEGER NOT NULL DEFAULT 0,
   constructors_title_decider INTEGER NOT NULL DEFAULT 0,
+  -- War es ein Formel-1-Rennen?
+  --
+  -- Elfmal lautet die Antwort nein: Das Indianapolis 500 zaehlte von 1950 bis
+  -- 1960 zur Fahrerweltmeisterschaft, wurde aber nach dem Reglement der
+  -- amerikanischen AAA/USAC gefahren, mit anderen Autos und anderem Feld. Von
+  -- den 107 Fahrern, die dort in diesen Jahren antraten, sassen ganze vier je
+  -- in einem Formel-1-Wagen.
+  --
+  -- Die Punkte zaehlten trotzdem, also bleibt das Rennen in jeder Wertung und
+  -- in jedem Saisonkalender. Was es nicht soll, ist Bestenlisten fuellen, die
+  -- Fahren in der Formel 1 vergleichen: Bei 33 Startern sind dreissig
+  -- gutgemachte Plaetze Alltag, in einem Grand Prix waeren sie beispiellos.
+  formula_one         INTEGER NOT NULL DEFAULT 1,
   UNIQUE (year, round)
 );
 

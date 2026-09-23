@@ -4,6 +4,7 @@ import Seite from '../../layouts/Seite.astro'
 import { fahrerListe, pfad } from '../../lib/db.js'
 
 const fahrer = fahrerListe()
+const nurIndy = fahrer.filter((f) => f.inFormel1 === 0).length
 // Nach Siegen sortiert zeigt die Übersicht sofort, worauf es ankommt.
 const nachSiegen = [...fahrer].sort(
   (a, b) => (b.siege ?? 0) - (a.siege ?? 0) || (b.starts ?? 0) - (a.starts ?? 0),
@@ -18,6 +19,12 @@ const nachSiegen = [...fahrer].sort(
   <p class="lead">
     {zahl(fahrer.length)} drivers who were entered at least once since 1950. Click a column
     heading to sort by it.
+  </p>
+  <p class="lead indy">
+    {nurIndy} of them never drove a Formula 1 race. The Indianapolis 500 counted towards the
+    drivers' championship from 1950 to 1960 but was run to different regulations with a
+    different field – their points counted, so they belong in the standings, and they are
+    marked here.
   </p>
 
   <div class="tabelle">
@@ -43,6 +50,7 @@ const nachSiegen = [...fahrer].sort(
             <td>
               <span class="kuerzel" title={f.landName ?? ''}>{f.land ?? '—'}</span>
               <a class="zeile" href={pfad.fahrer(f.id)}>{f.name}</a>
+              {f.inFormel1 === 0 && <span class="nichtF1" title="Indianapolis 500 only – never drove a Formula 1 race">Indy</span>}
             </td>
             <td style="color:var(--muted)">{f.von === f.bis ? f.von : `${f.von}–${f.bis}`}</td>
             <td class="num">{f.starts ?? 0}</td>

@@ -27,7 +27,7 @@ import {
 } from '../src/engine/aenderungen.js'
 import {
   meistePodien, meistePoles, meisteSchnellsteRunden, meisteSiege, meisteStarts, teamRekorde,
-  grandSlams, zielabstand,
+  grandSlams, zielabstand, groessteAufholjagden, meistePlaetzeGutgemacht,
 } from '../src/engine/records.js'
 import {
   motorProfil, motorTeams, motorTitel, motorenListe,
@@ -493,6 +493,58 @@ pruefe('Rennen- und Qualifyingwertung unterscheiden sich',
   wertungRennen[0].id !== wertungQuali[0].id,
   `beide ${wertungRennen[0].name}`)
 console.log(`   ✓ Qualifying:  ${wertungQuali.slice(0, 5).map((x) => x.name).join(', ')}`)
+
+// -------------------------------------------------- 9. Nur Formel 1
+
+console.log('\n9. Was Formel 1 ist und was nicht')
+
+/*
+ * Das Indianapolis 500 zaehlte von 1950 bis 1960 zur Fahrerweltmeisterschaft,
+ * war aber eine andere Rennserie: anderes Reglement, andere Autos, anderes
+ * Feld. Von 107 Fahrern dort sassen vier je in einem Formel-1-Wagen.
+ *
+ * Die Punkte zaehlten, also bleibt das Rennen in jeder Wertung. Bestenlisten,
+ * die Fahren in der Formel 1 vergleichen, darf es nicht fuellen - bei 33
+ * Startern fuellte es acht der zehn Plaetze bei den gutgemachten Positionen.
+ */
+gleich(
+  'elf Rennen sind als nicht-Formel-1 markiert',
+  db.prepare('SELECT COUNT(*) AS n FROM race WHERE formula_one = 0').get().n,
+  11,
+)
+
+const nurIndy = db
+  .prepare(
+    `SELECT COUNT(*) AS n FROM (
+       SELECT rr.driver_id FROM race_result rr JOIN race r ON r.id = rr.race_id
+        GROUP BY rr.driver_id
+       HAVING MAX(r.formula_one) = 0)`,
+  )
+  .get().n
+gleich('103 Fahrer bestritten nie ein Formel-1-Rennen', nurIndy, 103)
+
+/* Die beiden Listen, die das Startfeld verzerrte, sind jetzt reine F1-Listen. */
+const indyRennen = new Set(
+  db
+    .prepare("SELECT id FROM race WHERE formula_one = 0")
+    .all()
+    .map((r) => r.id),
+)
+for (const [name, liste] of [
+  ['Aufholjagden', groessteAufholjagden(db, 10)],
+  ['gutgemachte Plaetze', meistePlaetzeGutgemacht(db, 10)],
+]) {
+  pruefe(
+    `${name}: kein Indianapolis in der Liste`,
+    liste.every((e) => !indyRennen.has(e.raceId)),
+    liste.filter((e) => indyRennen.has(e.raceId)).map((e) => e.rennen).join(', '),
+  )
+}
+
+const vonHinten = groessteAufholjagden(db, 3)
+pruefe('Sieg von P22 fuehrt die Aufholjagden an', vonHinten[0]?.wert === 22, `P${vonHinten[0]?.wert}`)
+console.log(`   ✓ ${vonHinten[0]?.name} von P${vonHinten[0]?.wert} (${vonHinten[0]?.rennen})`)
+console.log(`   ✓ ${nurIndy} Fahrer markiert, die nie ein Formel-1-Rennen bestritten`)
 
 db.close()
 

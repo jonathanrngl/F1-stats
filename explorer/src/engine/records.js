@@ -226,6 +226,10 @@ export function altersrekordMeister(db, richtung = 'jung', anzahl = 10) {
  *
  * Nur Rennen mit überliefertem Startplatz – in den frühesten Jahren fehlt er
  * gelegentlich, und ein fehlender Startplatz ist keine Pole.
+ *
+ * Und nur Formel-1-Rennen: Das Indianapolis 500 zählte von 1950 bis 1960 zur
+ * Weltmeisterschaft, startete aber 33 Autos. Ein Sieg von Startplatz 19 ist
+ * dort etwas anderes als in einem Grand Prix mit zwanzig Wagen.
  */
 export function groessteAufholjagden(db, anzahl = 10) {
   return db
@@ -236,14 +240,21 @@ export function groessteAufholjagden(db, anzahl = 10) {
          JOIN race r ON r.id = rr.race_id
          JOIN grand_prix g ON g.id = r.grand_prix_id
          JOIN driver d ON d.id = rr.driver_id
-        WHERE rr.position = 1 AND rr.grid_position IS NOT NULL
+        WHERE rr.position = 1 AND rr.grid_position IS NOT NULL AND r.formula_one = 1
         ORDER BY rr.grid_position DESC LIMIT ?`,
     )
     .all(anzahl)
     .map((z) => ({ ...eintrag(z), rennen: `${z.grandPrix} ${z.jahr}` }))
 }
 
-/** Meiste in einem einzelnen Rennen gutgemachte Plätze. */
+/**
+ * Meiste in einem einzelnen Rennen gutgemachte Plätze.
+ *
+ * Ohne Indianapolis. Mit 33 Startern füllte es acht der zehn Plätze dieser
+ * Liste; dreißig gutgemachte Positionen waren dort Alltag und wären in einem
+ * Grand Prix beispiellos. Das Rennen zählte zur Meisterschaft, aber es war
+ * kein Formel-1-Rennen.
+ */
 export function meistePlaetzeGutgemacht(db, anzahl = 10) {
   return db
     .prepare(
@@ -254,7 +265,7 @@ export function meistePlaetzeGutgemacht(db, anzahl = 10) {
          JOIN race r ON r.id = rr.race_id
          JOIN grand_prix g ON g.id = r.grand_prix_id
          JOIN driver d ON d.id = rr.driver_id
-        WHERE rr.classified = 1 AND rr.grid_position IS NOT NULL
+        WHERE rr.classified = 1 AND rr.grid_position IS NOT NULL AND r.formula_one = 1
         ORDER BY wert DESC LIMIT ?`,
     )
     .all(anzahl)
