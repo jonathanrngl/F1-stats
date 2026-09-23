@@ -69,6 +69,39 @@ CREATE TABLE constructor (
   f1db_championship_wins INTEGER
 );
 
+-- Motorenhersteller.
+--
+-- Eine eigene Grösse neben dem Team, und keine kleine: Ein Ford-Cosworth DFV
+-- gewann in zehn verschiedenen Chassis, und Ferrari hat Titel als Motorlieferant
+-- an Teams geliefert, die nicht Ferrari hiessen. Ohne diese Tabelle waere
+-- `race_result.engine_id` nur eine Kennung ohne Namen.
+CREATE TABLE engine_manufacturer (
+  id                TEXT PRIMARY KEY,
+  name              TEXT NOT NULL,
+  country_id        TEXT REFERENCES country(id),
+  f1db_race_entries      INTEGER,
+  f1db_race_starts       INTEGER,
+  f1db_race_wins         INTEGER,
+  f1db_podiums           INTEGER,
+  f1db_pole_positions    INTEGER,
+  f1db_fastest_laps      INTEGER,
+  f1db_championship_wins INTEGER
+);
+
+-- Reifenhersteller. Neun in der ganzen Geschichte, und die Epochen, die sie
+-- markieren, erklaeren mehr als ihre Zahl vermuten laesst.
+CREATE TABLE tyre_manufacturer (
+  id                TEXT PRIMARY KEY,
+  name              TEXT NOT NULL,
+  country_id        TEXT REFERENCES country(id),
+  f1db_race_entries      INTEGER,
+  f1db_race_starts       INTEGER,
+  f1db_race_wins         INTEGER,
+  f1db_podiums           INTEGER,
+  f1db_pole_positions    INTEGER,
+  f1db_fastest_laps      INTEGER
+);
+
 -- Jaguar wurde Red Bull, Toro Rosso wurde AlphaTauri wurde RB. Ohne diese
 -- Tabelle ist jede Team-Historie falsch.
 CREATE TABLE constructor_chronology (
@@ -151,6 +184,19 @@ CREATE TABLE race (
   -- Unabhängige Gegenprobe für den eigenen Titelrechner.
   drivers_title_decider      INTEGER NOT NULL DEFAULT 0,
   constructors_title_decider INTEGER NOT NULL DEFAULT 0,
+  -- War es ein Formel-1-Rennen?
+  --
+  -- Elfmal lautet die Antwort nein: Das Indianapolis 500 zaehlte von 1950 bis
+  -- 1960 zur Fahrerweltmeisterschaft, wurde aber nach dem Reglement der
+  -- amerikanischen AAA/USAC gefahren, mit anderen Autos und anderem Feld. Von
+  -- den 107 Fahrern, die dort in diesen Jahren antraten, sassen ganze vier je
+  -- in einem Formel-1-Wagen.
+  --
+  -- Die Punkte zaehlten trotzdem, also bleibt das Rennen in jeder Wertung und
+  -- in jedem Saisonkalender. Was es nicht soll, ist Bestenlisten fuellen, die
+  -- Fahren in der Formel 1 vergleichen: Bei 33 Startern sind dreissig
+  -- gutgemachte Plaetze Alltag, in einem Grand Prix waeren sie beispiellos.
+  formula_one         INTEGER NOT NULL DEFAULT 1,
   UNIQUE (year, round)
 );
 
@@ -160,8 +206,8 @@ CREATE TABLE race_result (
   race_id         TEXT NOT NULL REFERENCES race(id),
   driver_id       TEXT NOT NULL REFERENCES driver(id),
   constructor_id  TEXT NOT NULL REFERENCES constructor(id),
-  engine_id       TEXT,
-  tyre_id         TEXT,
+  engine_id       TEXT REFERENCES engine_manufacturer(id),
+  tyre_id         TEXT REFERENCES tyre_manufacturer(id),
   -- Laufende Nummer je Fahrer und Rennen. In den 1950ern übernahm man das
   -- Auto eines Teamkollegen; dann gibt es zwei Zeilen für denselben Fahrer.
   -- 127 solcher Zeilen stecken in den Daten, markiert über shared_car.

@@ -37,6 +37,20 @@ const fahrer = eine(
 
 const heimat = land(fahrer.demonym, fahrer.landName, fahrer.land)
 
+/*
+ * Sass dieser Fahrer je in einem Formel-1-Wagen? Fuer 103 der 860 lautet die
+ * Antwort nein: Sie traten nur beim Indianapolis 500 an, das von 1950 bis 1960
+ * zur Weltmeisterschaft zaehlte. Ihre Seite sieht sonst aus wie jede andere,
+ * und das waere eine stille Behauptung.
+ */
+const inFormel1 =
+  eine(
+    `SELECT MAX(r.formula_one) AS ja
+       FROM race_result rr JOIN race r ON r.id = rr.race_id
+      WHERE rr.driver_id = ?`,
+    id,
+  ).ja === 1
+
 const rennen = driverRaces(db(), id)
 const titel = calculateChampionships(db(), id)
 const serien = calculateStreaks(rennen)
@@ -127,6 +141,13 @@ const beschreibung =
         */}
       {fahrer.full_name !== fahrer.display_name && (
         <p class="vollname">{fahrer.full_name}</p>
+      )}
+      {!inFormel1 && (
+        <p class="nurIndy">
+          Never drove a Formula 1 race. All of these appearances were at the Indianapolis 500,
+          which counted towards the drivers' championship from 1950 to 1960 but was run to
+          different regulations with a different field.
+        </p>
       )}
       <p class="lead">
         {[
@@ -294,6 +315,19 @@ const beschreibung =
 <style>
   .vergleichen { color: var(--muted); font-size: 0.78rem; text-decoration: none; white-space: nowrap; }
   .vergleichen:hover { color: var(--accent); }
+
+  /* Ein Hinweis, der die Zahlen darunter einordnet – er gehoert nach oben. */
+  .nurIndy {
+    max-width: 40rem;
+    margin: 0.5rem 0 0;
+    padding: 0.5rem 0.7rem;
+    font-size: 0.82rem;
+    color: var(--ink-2);
+    background: var(--surface-2);
+    border-left: 3px solid var(--warn);
+    border-radius: 0.35rem;
+    text-wrap: pretty;
+  }
 
   /* Der Name aus dem Pass: vorhanden, aber leise. */
   .vollname {

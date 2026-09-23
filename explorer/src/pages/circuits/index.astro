@@ -1,9 +1,19 @@
 ---
 import { ein, zahl } from '../../lib/format.js'
 import Seite from '../../layouts/Seite.astro'
-import { streckenListe, pfad } from '../../lib/db.js'
+import { eine, streckenListe, pfad } from '../../lib/db.js'
+import Weltkarte from '../../components/Weltkarte.astro'
 
 const strecken = streckenListe()
+
+/*
+ * Was heisst "heute benutzt"? Der Kalender wechselt, und eine Strecke faellt
+ * auch mal ein Jahr aus. Fuenf Saisons sind lang genug, um Imola und Zandvoort
+ * nicht faelschlich fuer verschwunden zu erklaeren, und kurz genug, um
+ * Hockenheim nicht als aktuell auszugeben.
+ */
+const neuestesJahr = eine('SELECT MAX(year) AS jahr FROM race').jahr
+const aktuellAb = neuestesJahr - 4
 ---
 
 <Seite
@@ -15,6 +25,8 @@ const strecken = streckenListe()
     {strecken.length} circuits that have hosted World Championship rounds since 1950. Sorted
     by the number of races.
   </p>
+
+  <Weltkarte strecken={strecken} aktuellAb={aktuellAb} pfadZu={pfad.strecke} />
 
   <div class="tabelle">
     <table>

@@ -91,7 +91,15 @@ export function fahrerListe() {
            c.ioc AS land, c.name AS landName,
            d.f1db_race_starts AS starts, d.f1db_race_wins AS siege,
            d.f1db_podiums AS podien, d.f1db_championship_wins AS titel,
-           MIN(r.year) AS von, MAX(r.year) AS bis
+           MIN(r.year) AS von, MAX(r.year) AS bis,
+           -- Hat dieser Fahrer je ein Formel-1-Rennen bestritten?
+           --
+           -- Das Indianapolis 500 zaehlte von 1950 bis 1960 zur
+           -- Fahrerweltmeisterschaft, war aber eine andere Rennserie. 103 der
+           -- 860 Fahrer in dieser Liste erscheinen nur deshalb darin und
+           -- sassen nie in einem Formel-1-Wagen. Sie zu loeschen waere falsch
+           -- - ihre Punkte zaehlten -, sie unmarkiert zu lassen aber auch.
+           MAX(r.formula_one) AS inFormel1
       FROM driver d
       LEFT JOIN country c ON c.id = d.nationality_id
       LEFT JOIN race_result rr ON rr.driver_id = d.id
@@ -136,6 +144,7 @@ export function streckenListe() {
   return alle(`
     SELECT z.id, z.name, z.full_name AS vollerName, z.place_name AS ort,
            c.ioc AS land, c.name AS landName, z.length_km AS laenge, z.turns AS kurven,
+           z.latitude AS breite, z.longitude AS laenge_grad,
            COUNT(r.id) AS rennen, MIN(r.year) AS von, MAX(r.year) AS bis
       FROM circuit z
       LEFT JOIN race r ON r.circuit_id = z.id

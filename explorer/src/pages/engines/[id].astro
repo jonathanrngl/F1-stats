@@ -1,0 +1,192 @@
+---
+/**
+ * Ein Motorenhersteller.
+ *
+ * Die interessanteste Tabelle ist die der Teams: Bei einem Werksmotor steht
+ * dort ein Name, beim Ford-Cosworth DFV siebenundsechzig. Genau dieser
+ * Unterschied ist der Grund, warum es diese Seiten gibt.
+ */
+import Seite from '../../layouts/Seite.astro'
+import Karriere from '../../components/Karriere.astro'
+import { ein, prozent, zahl } from '../../lib/format.js'
+import { db, pfad } from '../../lib/db.js'
+import { land } from '../../lib/laender.js'
+import {
+  motorProSaison, motorProfil, motorSieger, motorTeams, motorTitel, motorenListe,
+} from '../../engine/motor.js'
+
+export async function getStaticPaths() {
+  return motorenListe(db()).map((m) => ({ params: { id: m.id } }))
+}
+
+const { id } = Astro.params
+const motor = motorProfil(db(), id)
+const heimat = land(null, motor.landName, motor.land)
+/*
+ * Ohne Grenze holen und erst danach kürzen. Mit dem Standardwert von 40 stand
+ * auf der Ford-Seite „40 teams", obwohl es 67 sind – die Zahl im Text kam aus
+ * der abgeschnittenen Liste. Eine Obergrenze fürs Anzeigen darf die Aussage
+ * darüber nicht verändern.
+ */
+const alleTeams = motorTeams(db(), id, 1000)
+const teams = alleTeams.slice(0, 25)
+const sieger = motorSieger(db(), id)
+const titel = motorTitel(db(), id)
+const saisons = motorProSaison(db(), id)
+
+const zeitraum = motor.von === motor.bis ? String(motor.von) : `${motor.von}–${motor.bis}`
+
+/*
+ * Dasselbe Bild wie bei einer Fahrerkarriere – die Balken bedeuten hier nur
+ * etwas anderes: Rennen statt Starts, und ein Sieg ist der Sieg irgendeines
+ * Autos mit diesem Motor. Ein Titel trägt keine Marke, weil ein Motor keinen
+ * Titel gewinnt; das tut der Fahrer im Auto.
+ */
+const bild = saisons.map((s) => ({
+  jahr: s.jahr,
+  starts: s.rennen,
+  siege: s.siege,
+  podien: s.podien,
+  wmPlatz: null,
+  meister: false,
+}))
+
+const beschreibung =
+  `${motor.name} in Formula 1: ${zahl(motor.rennen)} races, ${motor.siege} wins, ` +
+  `${motor.podien} podiums (${zeitraum}).`
+---
+
+<Seite titel={`${motor.name} – Formula 1 engine statistics`} beschreibung={beschreibung}>
+  <header class="profil">
+    <span class="kuerzel gross" title={heimat.name}>{heimat.code}</span>
+    <div>
+      <h1>{motor.name}</h1>
+      <p class="lead">Engine manufacturer · {heimat.name} · {zeitraum}</p>
+    </div>
+  </header>
+
+  <ul class="kacheln">
+    <li><b>{zahl(motor.rennen)}</b><span>Races</span></li>
+    <li><b>{motor.siege}</b><span>Wins</span>
+      {motor.rennen > 0 && <i>{prozent(motor.siege / motor.rennen)} of races</i>}</li>
+    <li><b>{motor.podien}</b><span>Podiums</span></li>
+    <li><b>{motor.poles}</b><span>Pole positions</span></li>
+    <li><b>{motor.schnellsteRunden}</b><span>Fastest laps</span></li>
+    <li><b>{motor.titel ?? 0}</b><span>Constructors' titles</span></li>
+  </ul>
+
+  <p class="fussnote">
+    Counted per race, not per car: an engine that powered four cars in one race was in one
+    race. A win means that a car with this engine won – it was not necessarily a works team.
+  </p>
+
+  {bild.length > 1 && (
+    <section>
+      <h2>Season by season</h2>
+      <Karriere saisons={bild} name={motor.name} />
+    </section>
+  )}
+
+  {titel.length > 0 && (
+    <section>
+      <h2>Drivers' titles won with this engine</h2>
+      <p class="lead">
+        The engine does not win the championship – the driver does. These are the seasons in
+        which the champion raced with it.
+      </p>
+      <ul class="titelliste">
+        {titel.map((t) => (
+          <li>
+            <b>{t.jahr}</b>
+            <a class="zeile" href={pfad.fahrer(t.fahrerId)}>{t.fahrer}</a>
+            <span>{t.team}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )}
+
+  <section>
+    <h2>Teams that used it</h2>
+    <p class="lead">
+      {alleTeams.length === 1
+        ? 'One team, which built the engine itself or had it exclusively.'
+        : `${alleTeams.length} teams. A customer engine makes its supplier part of several teams' histories at once.`}
+      {alleTeams.length > teams.length && ` The ${teams.length} most successful are listed.`}
+    </p>
+    <div class="tabelle">
+      <table>
+        <thead>
+          <tr><th>Team</th><th>Period</th><th class="num">Races</th><th class="num">Wins</th></tr>
+        </thead>
+        <tbody>
+          {teams.map((t) => (
+            <tr>
+              <td><a class="zeile" href={pfad.team(t.id)}>{t.name}</a></td>
+              <td style="color:var(--muted)">{t.von === t.bis ? t.von : `${t.von}–${t.bis}`}</td>
+              <td class="num">{t.rennen}</td>
+              <td class="num">{t.siege || ''}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  {sieger.length > 0 && (
+    <section>
+      <h2>Drivers who won with it</h2>
+      <ol class="rangliste">
+        {sieger.map((f) => (
+          <li>
+            <a href={pfad.fahrer(f.id)}>{f.name}</a>
+            <b>{f.siege}</b>
+          </li>
+        ))}
+      </ol>
+    </section>
+  )}
+</Seite>
+
+<style>
+  .profil { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
+  .kuerzel.gross {
+    flex: none; min-width: 3.6rem; padding: 0.5rem 0.35rem; margin: 0;
+    font-size: 0.86rem; color: var(--accent); background: var(--accent-wash);
+  }
+  .kacheln {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(min(9rem, 100%), 1fr));
+    gap: 0.75rem; margin: 0 0 1rem; padding: 0; list-style: none;
+  }
+  .kacheln li {
+    display: flex; flex-direction: column; gap: 0.1rem; padding: 0.9rem 1rem;
+    background: var(--surface-2); border: 1px solid var(--border); border-radius: 0.6rem;
+  }
+  .kacheln b {
+    font-size: 1.6rem; font-weight: 680; line-height: 1.1; color: var(--ink);
+    font-variant-numeric: tabular-nums; letter-spacing: -0.02em;
+  }
+  .kacheln span { font-size: 0.78rem; color: var(--muted); }
+  .kacheln i { font-style: normal; font-size: 0.72rem; color: var(--muted); opacity: 0.8; }
+
+  .fussnote { margin: 0; font-size: 0.79rem; color: var(--muted); max-width: 46rem; text-wrap: pretty; }
+  section { margin-top: 2.5rem; }
+  h2 { font-size: 1.15rem; margin: 0 0 0.5rem; }
+
+  .titelliste {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(min(15rem, 100%), 1fr));
+    gap: 0.4rem 1.25rem; margin: 1rem 0 0; padding: 0; list-style: none;
+  }
+  .titelliste li { display: flex; align-items: baseline; gap: 0.5rem; font-size: 0.88rem; }
+  .titelliste b { color: var(--accent); font-variant-numeric: tabular-nums; }
+  .titelliste span { color: var(--muted); font-size: 0.8rem; margin-left: auto; }
+
+  .rangliste { margin: 1rem 0 0; padding: 0; list-style: none; }
+  .rangliste li {
+    display: flex; justify-content: space-between; gap: 1rem;
+    padding: 0.4rem 0; border-bottom: 1px solid var(--border); font-size: 0.9rem;
+  }
+  .rangliste a { color: var(--ink); text-decoration: none; }
+  .rangliste a:hover { color: var(--accent); }
+  .rangliste b { color: var(--muted); font-variant-numeric: tabular-nums; }
+</style>

@@ -19,17 +19,31 @@ interface Props {
 
 const { titel, beschreibung } = Astro.props
 
+/*
+ * Die Leiste zerfiel in zwei Arten von Punkten, und mit zwölf davon lief sie
+ * über: Ab „Engines" waren „Compare" und „Explorer" bei 1280 px nicht mehr zu
+ * sehen. Sie sind deshalb getrennt.
+ *
+ * NAV führt zu den Dingen selbst – Fahrer, Teams, Rennen. WERKZEUGE führt zu
+ * dem, was man mit ihnen anstellt. Das ist keine Notlösung für zu wenig Platz,
+ * sondern die Gliederung, die ohnehin bestand.
+ */
 const NAV = [
   { pfad: '/preview/', label: 'Preview' },
   { pfad: '/drivers/', label: 'Drivers' },
   { pfad: '/teams/', label: 'Teams' },
+  { pfad: '/engines/', label: 'Engines' },
   { pfad: '/seasons/', label: 'Seasons' },
   { pfad: '/races/', label: 'Races' },
   { pfad: '/circuits/', label: 'Circuits' },
-  { pfad: '/records/', label: 'Records' },
-  { pfad: '/changes/', label: 'Changes' },
-  { pfad: '/comparison/', label: 'Compare' },
-  { pfad: '/explorer/', label: 'Explorer' },
+]
+
+const WERKZEUGE = [
+  { pfad: '/records/', label: 'Records', dazu: 'Every all-time mark, linked to its race' },
+  { pfad: '/changes/', label: 'Changes', dazu: 'What has moved, and what is close' },
+  { pfad: '/teammates/', label: 'Team-mates', dazu: 'Drivers rated against the same car' },
+  { pfad: '/comparison/', label: 'Compare', dazu: 'Two careers side by side' },
+  { pfad: '/explorer/', label: 'Explorer', dazu: 'Your own queries over every result' },
 ]
 
 /*
@@ -79,6 +93,30 @@ const istAktiv = (pfad: string) => hier === pfad || hier.startsWith(pfad)
             ))
           }
         </nav>
+        {/*
+          * <details> statt eines Skripts: Ein Ausklappmenü braucht kein
+          * JavaScript, und ohne eines funktioniert es auch dann, wenn nichts
+          * lädt. `open` bleibt gesetzt, solange man auf einer der Seiten
+          * darunter steht – sonst verschwände der aktive Punkt.
+          */}
+        <details class="werkzeuge" open={WERKZEUGE.some((w) => istAktiv(w.pfad))}>
+          <summary aria-label="Analysis tools">Analysis</summary>
+          <ul>
+            {
+              WERKZEUGE.map((w) => (
+                <li>
+                  <a
+                    href={`${BASIS}${w.pfad}`}
+                    aria-current={istAktiv(w.pfad) ? 'page' : undefined}
+                  >
+                    <b>{w.label}</b>
+                    <span>{w.dazu}</span>
+                  </a>
+                </li>
+              ))
+            }
+          </ul>
+        </details>
         {/*
           * Die Suche ist die einzige Insel im Gerüst, und sie lädt ihren Index
           * erst beim ersten Tastendruck. Ohne sie führte der Weg zu einem von

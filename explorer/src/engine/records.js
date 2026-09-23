@@ -226,6 +226,10 @@ export function altersrekordMeister(db, richtung = 'jung', anzahl = 10) {
  *
  * Nur Rennen mit überliefertem Startplatz – in den frühesten Jahren fehlt er
  * gelegentlich, und ein fehlender Startplatz ist keine Pole.
+ *
+ * Und nur Formel-1-Rennen: Das Indianapolis 500 zählte von 1950 bis 1960 zur
+ * Weltmeisterschaft, startete aber 33 Autos. Ein Sieg von Startplatz 19 ist
+ * dort etwas anderes als in einem Grand Prix mit zwanzig Wagen.
  */
 export function groessteAufholjagden(db, anzahl = 10) {
   return db
@@ -236,14 +240,21 @@ export function groessteAufholjagden(db, anzahl = 10) {
          JOIN race r ON r.id = rr.race_id
          JOIN grand_prix g ON g.id = r.grand_prix_id
          JOIN driver d ON d.id = rr.driver_id
-        WHERE rr.position = 1 AND rr.grid_position IS NOT NULL
+        WHERE rr.position = 1 AND rr.grid_position IS NOT NULL AND r.formula_one = 1
         ORDER BY rr.grid_position DESC LIMIT ?`,
     )
     .all(anzahl)
     .map((z) => ({ ...eintrag(z), rennen: `${z.grandPrix} ${z.jahr}` }))
 }
 
-/** Meiste in einem einzelnen Rennen gutgemachte Plätze. */
+/**
+ * Meiste in einem einzelnen Rennen gutgemachte Plätze.
+ *
+ * Ohne Indianapolis. Mit 33 Startern füllte es acht der zehn Plätze dieser
+ * Liste; dreißig gutgemachte Positionen waren dort Alltag und wären in einem
+ * Grand Prix beispiellos. Das Rennen zählte zur Meisterschaft, aber es war
+ * kein Formel-1-Rennen.
+ */
 export function meistePlaetzeGutgemacht(db, anzahl = 10) {
   return db
     .prepare(
@@ -254,7 +265,7 @@ export function meistePlaetzeGutgemacht(db, anzahl = 10) {
          JOIN race r ON r.id = rr.race_id
          JOIN grand_prix g ON g.id = r.grand_prix_id
          JOIN driver d ON d.id = rr.driver_id
-        WHERE rr.classified = 1 AND rr.grid_position IS NOT NULL
+        WHERE rr.classified = 1 AND rr.grid_position IS NOT NULL AND r.formula_one = 1
         ORDER BY wert DESC LIMIT ?`,
     )
     .all(anzahl)
@@ -351,4 +362,65 @@ export function teamRekorde(db, art, anzahl = 10) {
         GROUP BY rr.constructor_id ORDER BY wert DESC LIMIT ?`,
     )
     .all(anzahl)
+}
+
+/**
+ * Grand Slams: Pole-Position, Sieg, schnellste Runde und jede Runde geführt.
+ *
+ * Die schwerste der klassischen Marken, weil sie vier Dinge in einem Rennen
+ * verlangt. F1DB führt sie als eigenes Merkmal; nachrechnen liesse sie sich
+ * ohne Rundendaten nicht, denn „jede Runde geführt" steht in keiner
+ * Ergebniszeile. Deshalb kommt sie hier aus der Quelle und nicht aus der
+ * eigenen Rechnung – die Seite sagt das dazu.
+ */
+export function grandSlams(db, anzahl = 10) {
+  return db
+    .prepare(
+      `SELECT rr.driver_id AS driverId, d.display_name AS name, COUNT(*) AS wert,
+              MIN(r.year) AS jahr,
+              (SELECT r2.id FROM race_result x JOIN race r2 ON r2.id = x.race_id
+                WHERE x.driver_id = rr.driver_id AND x.grand_slam = 1
+                ORDER BY r2.year DESC, r2.round DESC LIMIT 1) AS raceId
+         FROM race_result rr
+         JOIN race r ON r.id = rr.race_id
+         JOIN driver d ON d.id = rr.driver_id
+        WHERE rr.grand_slam = 1
+        GROUP BY rr.driver_id
+        ORDER BY wert DESC, jahr
+        LIMIT ?`,
+    )
+    .all(anzahl)
+    .map(eintrag)
+}
+
+/**
+ * Die knappsten und die grössten Zielabstände.
+ *
+ * Der Abstand steht beim Zweiten, nicht beim Sieger – gemessen wird immer zum
+ * Führenden. Rennen, die mit einer Runde Rückstand endeten, haben keinen
+ * Zeitabstand und fallen heraus: Eine Runde ist kein Wert in Sekunden, und
+ * sie als riesigen Abstand zu führen wäre eine andere Aussage.
+ *
+ * @param {'knapp'|'weit'} richtung
+ */
+export function zielabstand(db, richtung = 'knapp', anzahl = 10) {
+  return db
+    .prepare(
+      `SELECT sieger.driver_id AS driverId, d.display_name AS name,
+              zweiter.gap_ms / 1000.0 AS wert,
+              r.id AS raceId, r.year AS jahr, g.name AS grandPrix
+         FROM race_result zweiter
+         JOIN race r ON r.id = zweiter.race_id
+         JOIN grand_prix g ON g.id = r.grand_prix_id
+         JOIN race_result sieger ON sieger.race_id = r.id AND sieger.position = 1
+         JOIN driver d ON d.id = sieger.driver_id
+        WHERE zweiter.position = 2
+          AND zweiter.gap_ms IS NOT NULL
+          AND zweiter.gap_laps IS NULL
+          AND zweiter.gap_ms > 0
+        ORDER BY wert ${richtung === 'knapp' ? 'ASC' : 'DESC'}
+        LIMIT ?`,
+    )
+    .all(anzahl)
+    .map((z) => ({ ...eintrag(z), rennen: `${z.grandPrix} ${z.jahr}` }))
 }

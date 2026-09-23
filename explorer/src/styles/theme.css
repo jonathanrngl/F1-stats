@@ -462,3 +462,94 @@ thead button:hover { color: var(--ink); }
 thead button[data-aktiv='1'] { color: var(--accent); }
 thead button[data-aktiv='1']::after { content: ' ▾'; font-size: 0.8em; }
 thead button[data-aktiv='1'][data-richtung='auf']::after { content: ' ▴'; }
+
+/* ------------------------------------------------------- Werkzeug-Ausklapp */
+
+/*
+ * Das Ausklappmenü der Analysewerkzeuge. Ein <details> reicht dafür: Es
+ * braucht kein JavaScript, und es öffnet und schliesst sich auch dann, wenn
+ * nichts geladen hat.
+ *
+ * Es steht neben der Navigation, nicht darin: `.hauptnav` scrollt waagerecht
+ * und hat deshalb `overflow-x: auto` – darin wäre das ausgeklappte Feld
+ * beschnitten worden und blieb unsichtbar.
+ */
+.werkzeuge {
+  position: relative;
+  flex: none;
+}
+
+.werkzeuge summary {
+  padding: 0.45rem 0.7rem;
+  font-size: 0.88rem;
+  font-weight: 550;
+  color: var(--muted);
+  border-radius: 0.4rem;
+  cursor: pointer;
+  white-space: nowrap;
+  list-style: none;
+}
+
+.werkzeuge summary::-webkit-details-marker { display: none; }
+.werkzeuge summary::after { content: ' ▾'; font-size: 0.75em; opacity: 0.7; }
+.werkzeuge summary:hover { color: var(--ink); background: var(--surface-2); }
+.werkzeuge[open] > summary { color: var(--accent); background: var(--accent-wash); }
+
+.werkzeuge ul {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  right: 0;
+  z-index: 30;
+  width: max(16rem, 100%);
+  margin: 0;
+  padding: 0.3rem;
+  list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  box-shadow: var(--shadow);
+}
+
+.werkzeuge a {
+  display: grid;
+  text-decoration: none;
+  gap: 0.05rem;
+  padding: 0.45rem 0.55rem;
+  border-radius: 0.35rem;
+  white-space: normal;
+}
+
+.werkzeuge a:hover { background: var(--surface-2); }
+.werkzeuge b { color: var(--ink); font-size: 0.88rem; font-weight: 600; }
+.werkzeuge span { color: var(--muted); font-size: 0.76rem; }
+.werkzeuge a[aria-current='page'] b { color: var(--accent); }
+
+/* Am Telefon klappt das Menü im Fluss auf, nicht darüber: Ein schwebendes
+   Feld über einer scrollenden Leiste ist dort nicht zu treffen. */
+@media (max-width: 46rem) {
+  .werkzeuge ul {
+    position: static;
+    width: auto;
+    margin-top: 0.3rem;
+  }
+}
+
+/*
+ * Fahrer, die nur beim Indianapolis 500 antraten. Eine Markierung, kein
+ * Ausschluss: Ihre Punkte zaehlten zur Weltmeisterschaft, aber sie sassen nie
+ * in einem Formel-1-Wagen.
+ */
+.nichtF1 {
+  margin-left: 0.45rem;
+  padding: 0.05rem 0.3rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: var(--surface-3);
+  border-radius: 0.25rem;
+  vertical-align: 0.1em;
+}
+
+.lead.indy { max-width: 46rem; margin-top: 0.4rem; font-size: 0.85rem; }

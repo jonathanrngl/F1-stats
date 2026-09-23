@@ -27,7 +27,12 @@ import {
 } from '../src/engine/aenderungen.js'
 import {
   meistePodien, meistePoles, meisteSchnellsteRunden, meisteSiege, meisteStarts, teamRekorde,
+  grandSlams, zielabstand, groessteAufholjagden, meistePlaetzeGutgemacht,
 } from '../src/engine/records.js'
+import {
+  motorProfil, motorTeams, motorTitel, motorenListe,
+} from '../src/engine/motor.js'
+import { fahrerWertung, rangliste, zusammenhang } from '../src/engine/duell.js'
 
 const HIER = path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1'))
 const DB = path.join(HIER, '..', 'data', 'f1.sqlite')
@@ -376,6 +381,212 @@ pruefe(
   ),
 )
 console.log(`   ✓ ${serienJetzt.length} laufende Serien, ${alleAusbauten.length} Ausbauläufe`)
+
+// -------------------------------------------------- 6. Motorenhersteller
+
+console.log('\n6. Motorenhersteller')
+
+const motoren = motorenListe(db)
+gleich('78 Hersteller importiert', motoren.length, 78)
+
+/*
+ * Derselbe Massenabgleich wie bei Fahrern und Teams: F1DB liefert die
+ * Gesamtzahlen mit, und sie entstehen auf einem anderen Weg als unsere. Weicht
+ * einer ab, ist eine Annahme ueber die Daten falsch - etwa die, dass ein Motor
+ * je Rennen einmal zaehlt und nicht je Auto.
+ */
+const motorAbweichungen = []
+for (const m of motoren) {
+  const p = motorProfil(db, m.id)
+  if (p.siege !== p.f1dbSiege) motorAbweichungen.push(`${p.name}: ${p.siege} statt ${p.f1dbSiege}`)
+}
+pruefe(
+  'Siege stimmen fuer alle Motorenhersteller mit F1DB ueberein',
+  motorAbweichungen.length === 0,
+  motorAbweichungen.slice(0, 3).join(', '),
+)
+console.log(`   ✓ ${motoren.length} Hersteller, Siege gegen F1DB abgeglichen`)
+
+/* Ein Motor gewinnt nicht oefter, als er Rennen bestritten hat. */
+pruefe(
+  'kein Hersteller hat mehr Siege als Rennen',
+  motoren.every((m) => m.siege <= m.rennen && m.podien <= m.rennen),
+)
+
+/*
+ * Der Grund, warum es diese Seiten gibt: Ferrari kommt als Motor auf einen
+ * Sieg mehr als als Rennstall, weil ein Kundenteam gewann. Faellt diese
+ * Pruefung, ist die Trennung von Motor und Team verlorengegangen.
+ */
+const ferrariMotor = motorProfil(db, 'ferrari')
+const ferrariTeam = teamRekorde(db, 'siege', 20).find((t) => t.id === 'ferrari')
+pruefe(
+  'Ferrari hat als Motor mehr Siege als als Team',
+  ferrariMotor.siege > ferrariTeam.wert,
+  `${ferrariMotor.siege} vs ${ferrariTeam.wert}`,
+)
+console.log(`   ✓ Ferrari: ${ferrariMotor.siege} Siege als Motor, ${ferrariTeam.wert} als Team`)
+
+/* Der Ford-Cosworth belieferte ein halbes Feld - das ist die Geschichte. */
+const fordTeams = motorTeams(db, 'ford', 200)
+pruefe('Ford belieferte mehr als fuenfzig Teams', fordTeams.length > 50, `${fordTeams.length}`)
+pruefe('Ford-Titel ueber mehrere Konstrukteure', new Set(motorTitel(db, 'ford').map((t) => t.team)).size >= 5)
+console.log(`   ✓ Ford: ${fordTeams.length} Teams, ${motorTitel(db, 'ford').length} Fahrertitel`)
+
+// -------------------------------------------------- 7. Neue Rekordlisten
+
+console.log('\n7. Zielabstaende und Grand Slams')
+
+const knappste = zielabstand(db, 'knapp', 5)
+const weiteste = zielabstand(db, 'weit', 5)
+
+pruefe('knappster Zielabstand ist Monza 1971', knappste[0]?.rennen === 'Italy 1971', knappste[0]?.rennen)
+nahe('… und betraegt 0,010 s', knappste[0]?.wert, 0.01, 0.0005)
+pruefe('knappste aufsteigend sortiert', knappste.every((x, i, a) => i === 0 || a[i - 1].wert <= x.wert))
+pruefe('weiteste absteigend sortiert', weiteste.every((x, i, a) => i === 0 || a[i - 1].wert >= x.wert))
+pruefe('kein Zielabstand ueber eine Runde in der Liste', weiteste.every((x) => x.wert < 3600))
+console.log(`   ✓ knappster ${knappste[0]?.wert.toFixed(3)} s (${knappste[0]?.rennen}), weitester ${weiteste[0]?.wert.toFixed(1)} s`)
+
+const slamListe = grandSlams(db, 5)
+pruefe('Jim Clark fuehrt die Grand Slams an', slamListe[0]?.name === 'Jim Clark', slamListe[0]?.name)
+gleich('… mit acht', slamListe[0]?.wert, 8)
+console.log(`   ✓ Grand Slams: ${slamListe.map((s) => `${s.name} ${s.wert}`).join(', ')}`)
+
+// -------------------------------------------------- 8. Teamkollegen-Wertung
+
+console.log('\n8. Teamkollegen-Wertung')
+
+const netz = zusammenhang(db, 'rennen')
+pruefe('die Kette haengt weitgehend zusammen', netz.groessteGruppe / netz.fahrer > 0.9,
+  `${netz.groessteGruppe} von ${netz.fahrer}`)
+
+const wertungRennen = rangliste(db, { art: 'rennen', minDuelle: 30, anzahl: 40 })
+const wertungQuali = rangliste(db, { art: 'qualifying', minDuelle: 30, anzahl: 40 })
+
+pruefe('Rangliste absteigend sortiert',
+  wertungRennen.every((x, i, a) => i === 0 || a[i - 1].wertung >= x.wertung))
+pruefe('Mindestzahl an Duellen eingehalten', wertungRennen.every((x) => x.duelle >= 30))
+pruefe('Siege nie mehr als Duelle', wertungRennen.every((x) => x.siege <= x.duelle))
+
+/*
+ * Indianapolis muss draussen bleiben. Mike Nazaruk bestritt ausschliesslich
+ * Indy-Rennen und stand ohne diesen Schnitt auf Platz zehn der ewigen Wertung
+ * - weil Kurtis Kraft 1955 dreiundzwanzig der fuenfunddreissig Autos stellte
+ * und deren Fahrer als Teamkollegen galten. Faellt diese Pruefung, ist der
+ * Schnitt verlorengegangen.
+ */
+gleich('Indy-Fahrer ohne Wertung (Nazaruk)', fahrerWertung(db, 'mike-nazaruk'), null)
+
+/*
+ * Der Kern der Sache: Die Wertung soll ungefaehr die Fahrer nach vorn bringen,
+ * die als gross gelten. Das ist keine mathematische Notwendigkeit, sondern die
+ * Probe darauf, ob das Verfahren ueberhaupt etwas misst.
+ */
+const obenRennen = new Set(wertungRennen.slice(0, 12).map((x) => x.id))
+for (const id of ['juan-manuel-fangio', 'jim-clark', 'ayrton-senna', 'max-verstappen']) {
+  pruefe(`${id} unter den ersten zwoelf der Rennwertung`, obenRennen.has(id))
+}
+console.log(`   ✓ Rennwertung: ${wertungRennen.slice(0, 5).map((x) => x.name).join(', ')}`)
+
+/* Rennen und Qualifying sind nicht dieselbe Frage und ergeben nicht dieselbe Reihenfolge. */
+pruefe('Rennen- und Qualifyingwertung unterscheiden sich',
+  wertungRennen[0].id !== wertungQuali[0].id,
+  `beide ${wertungRennen[0].name}`)
+console.log(`   ✓ Qualifying:  ${wertungQuali.slice(0, 5).map((x) => x.name).join(', ')}`)
+
+// -------------------------------------------------- 9. Nur Formel 1
+
+console.log('\n9. Was Formel 1 ist und was nicht')
+
+/*
+ * Das Indianapolis 500 zaehlte von 1950 bis 1960 zur Fahrerweltmeisterschaft,
+ * war aber eine andere Rennserie: anderes Reglement, andere Autos, anderes
+ * Feld. Von 107 Fahrern dort sassen vier je in einem Formel-1-Wagen.
+ *
+ * Die Punkte zaehlten, also bleibt das Rennen in jeder Wertung. Bestenlisten,
+ * die Fahren in der Formel 1 vergleichen, darf es nicht fuellen - bei 33
+ * Startern fuellte es acht der zehn Plaetze bei den gutgemachten Positionen.
+ */
+gleich(
+  'elf Rennen sind als nicht-Formel-1 markiert',
+  db.prepare('SELECT COUNT(*) AS n FROM race WHERE formula_one = 0').get().n,
+  11,
+)
+
+const nurIndy = db
+  .prepare(
+    `SELECT COUNT(*) AS n FROM (
+       SELECT rr.driver_id FROM race_result rr JOIN race r ON r.id = rr.race_id
+        GROUP BY rr.driver_id
+       HAVING MAX(r.formula_one) = 0)`,
+  )
+  .get().n
+gleich('103 Fahrer bestritten nie ein Formel-1-Rennen', nurIndy, 103)
+
+/* Die beiden Listen, die das Startfeld verzerrte, sind jetzt reine F1-Listen. */
+const indyRennen = new Set(
+  db
+    .prepare("SELECT id FROM race WHERE formula_one = 0")
+    .all()
+    .map((r) => r.id),
+)
+for (const [name, liste] of [
+  ['Aufholjagden', groessteAufholjagden(db, 10)],
+  ['gutgemachte Plaetze', meistePlaetzeGutgemacht(db, 10)],
+]) {
+  pruefe(
+    `${name}: kein Indianapolis in der Liste`,
+    liste.every((e) => !indyRennen.has(e.raceId)),
+    liste.filter((e) => indyRennen.has(e.raceId)).map((e) => e.rennen).join(', '),
+  )
+}
+
+const vonHinten = groessteAufholjagden(db, 3)
+pruefe('Sieg von P22 fuehrt die Aufholjagden an', vonHinten[0]?.wert === 22, `P${vonHinten[0]?.wert}`)
+console.log(`   ✓ ${vonHinten[0]?.name} von P${vonHinten[0]?.wert} (${vonHinten[0]?.rennen})`)
+console.log(`   ✓ ${nurIndy} Fahrer markiert, die nie ein Formel-1-Rennen bestritten`)
+
+// -------------------------------------------------- 10. Streckenkarte
+
+console.log('\n10. Streckenkarte')
+
+const orte = db
+  .prepare(
+    `SELECT z.id, z.name, z.latitude AS la, z.longitude AS lo
+       FROM circuit z
+      WHERE EXISTS (SELECT 1 FROM race r WHERE r.circuit_id = z.id)`,
+  )
+  .all()
+
+pruefe(
+  'jede gefahrene Strecke hat Koordinaten',
+  orte.every((o) => o.la !== null && o.lo !== null),
+  orte.filter((o) => o.la === null).map((o) => o.name).join(', '),
+)
+pruefe(
+  'Koordinaten im gueltigen Bereich',
+  orte.every((o) => o.la >= -90 && o.la <= 90 && o.lo >= -180 && o.lo <= 180),
+)
+
+/*
+ * Der Ausschnitt der Karte reicht von 62 Grad Nord bis 46 Grad Sued. Faende
+ * ein kuenftiges Rennen ausserhalb statt - Las Vegas liegt schon bei 36 Grad,
+ * ein Rennen in Skandinavien waere denkbar -, fiele sein Punkt heraus, ohne
+ * dass es jemandem auffiele.
+ */
+const ausserhalb = orte.filter((o) => o.la > 62 || o.la < -46 || o.lo < -128 || o.lo > 152)
+pruefe(
+  'alle Strecken liegen im Kartenausschnitt',
+  ausserhalb.length === 0,
+  ausserhalb.map((o) => `${o.name} (${o.la.toFixed(1)}/${o.lo.toFixed(1)})`).join(', '),
+)
+
+const noerdlichste = orte.reduce((a, b) => (b.la > a.la ? b : a))
+const suedlichste = orte.reduce((a, b) => (b.la < a.la ? b : a))
+console.log(
+  `   ✓ ${orte.length} Strecken verortet, ${noerdlichste.name} (${noerdlichste.la.toFixed(1)}°N) ` +
+    `bis ${suedlichste.name} (${Math.abs(suedlichste.la).toFixed(1)}°S)`,
+)
 
 db.close()
 
