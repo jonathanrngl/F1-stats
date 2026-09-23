@@ -144,6 +144,7 @@ export function streckenListe() {
   return alle(`
     SELECT z.id, z.name, z.full_name AS vollerName, z.place_name AS ort,
            c.ioc AS land, c.name AS landName, z.length_km AS laenge, z.turns AS kurven,
+           z.latitude AS breite, z.longitude AS laenge_grad,
            COUNT(r.id) AS rennen, MIN(r.year) AS von, MAX(r.year) AS bis
       FROM circuit z
       LEFT JOIN race r ON r.circuit_id = z.id

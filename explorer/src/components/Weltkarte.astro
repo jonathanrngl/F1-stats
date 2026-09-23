@@ -1,0 +1,252 @@
+---
+/**
+ * Die Strecken auf der Karte.
+ *
+ * Eine Tabelle sagt, wie oft wo gefahren wurde. Sie sagt nicht, dass die
+ * Formel 1 dreissig Jahre lang fast nur in Europa fuhr und heute auf fünf
+ * Kontinenten Station macht. Das sieht man nur auf einer Karte.
+ *
+ * Gezeichnet beim Bauen, ohne Kartendienst: Die Umrisse liegen als SVG-Pfade
+ * im Projekt, die Punkte kommen aus den Streckenkoordinaten. Die Seite lädt
+ * dafür nichts nach, und die Inhaltsrichtlinie muss keine fremde Quelle
+ * erlauben.
+ *
+ * Zwei Karten, nicht eine: 40 der 78 Strecken liegen in Europa, vierzehn Paare
+ * davon enger als anderthalb Grad. Auf der Weltkarte sind sie ein roter
+ * Klumpen. Der zweite Ausschnitt zeigt dieselben Pfade durch ein engeres
+ * `viewBox` – dieselbe Geometrie, nur näher heran.
+ */
+import { KARTE, LAND, ortX, ortY } from '../lib/weltkarte.js'
+
+interface Strecke {
+  id: string
+  name: string
+  ort: string | null
+  breite: number | null
+  laenge_grad: number | null
+  rennen: number
+  von: number
+  bis: number
+}
+
+interface Props {
+  strecken: Strecke[]
+  /** Ab welchem Jahr eine Strecke als heute benutzt gilt. */
+  aktuellAb: number
+  pfadZu: (id: string) => string
+}
+
+const { strecken, aktuellAb, pfadZu } = Astro.props
+
+/* Ohne Koordinaten kein Punkt – und keine erfundene Lage in der Nordsee. */
+const verortet = strecken.filter((s) => s.breite !== null && s.laenge_grad !== null)
+const ohneOrt = strecken.length - verortet.length
+
+/*
+ * Der Radius wächst mit der Wurzel aus der Zahl der Rennen, nicht linear:
+ * Wahrgenommen wird die Fläche eines Kreises, nicht sein Radius. Monza mit 76
+ * Rennen bekäme sonst einen Punkt, der zwanzigmal so gross aussieht wie einer
+ * mit vier.
+ */
+const maxRennen = Math.max(...verortet.map((s) => s.rennen), 1)
+const radius = (n: number, mass = 1) => (2.2 + 5.5 * Math.sqrt(n / maxRennen)) * mass
+
+/*
+ * Grosse Punkte zuerst, kleine darüber: In Europa liegen die Strecken so
+ * dicht, dass ein grosser Punkt einen kleinen sonst verdeckt.
+ */
+const gezeichnet = [...verortet].sort((a, b) => b.rennen - a.rennen)
+const heute = gezeichnet.filter((s) => s.bis >= aktuellAb).length
+
+/** Der europäische Ausschnitt, in Grad. */
+const EUROPA = { lonMin: -11, lonMax: 33, latMin: 35, latMax: 59 }
+
+const kasten = {
+  x: ortX(EUROPA.lonMin),
+  y: ortY(EUROPA.latMax),
+  breite: ortX(EUROPA.lonMax) - ortX(EUROPA.lonMin),
+  hoehe: ortY(EUROPA.latMin) - ortY(EUROPA.latMax),
+}
+
+/*
+ * Im Ausschnitt ist alles um diesen Faktor vergrössert. Die Punkte sollen es
+ * nicht in gleichem Mass sein – sonst überdeckten sie einander erst recht –,
+ * also wird ihr Radius gegengerechnet. Nicht ganz: Die zweite Karte steht in
+ * der schmaleren Spalte und wird kleiner dargestellt, deshalb der Zuschlag.
+ */
+const zoom = KARTE.breite / kasten.breite
+const inEuropa = gezeichnet.filter(
+  (s) =>
+    s.laenge_grad >= EUROPA.lonMin &&
+    s.laenge_grad <= EUROPA.lonMax &&
+    s.breite >= EUROPA.latMin &&
+    s.breite <= EUROPA.latMax,
+)
+
+/* „Monza, Monza" – Ort nur nennen, wenn er nicht schon der Name ist. */
+const beschriftet = (s: Strecke) =>
+  `${s.name}${s.ort && s.ort !== s.name ? `, ${s.ort}` : ''} – ${s.rennen} ${
+    s.rennen === 1 ? 'race' : 'races'
+  }, ${s.von === s.bis ? s.von : `${s.von}–${s.bis}`}`
+
+/*
+ * Wie dicht liegen die europäischen Strecken wirklich? Gezählt statt
+ * behauptet: Ein Grad Länge ist auf dieser Breite deutlich kürzer als ein Grad
+ * Breite, deshalb der Faktor. Die Zahl steht in der Bildunterschrift und wäre
+ * als feste Ziffer im Text beim nächsten Datenstand still falsch.
+ */
+const engePaare = inEuropa.reduce((n, a, i) => {
+  for (const b of inEuropa.slice(i + 1)) {
+    const d = Math.hypot(a.breite - b.breite, (a.laenge_grad - b.laenge_grad) * 0.7)
+    if (d < 1.5) n++
+  }
+  return n
+}, 0)
+---
+
+<div class="karten">
+  <figure class="weltkarte">
+    <svg
+      viewBox={`0 0 ${KARTE.breite} ${KARTE.hoehe}`}
+      role="img"
+      aria-label={`World map with ${verortet.length} Formula 1 circuits. The full list follows below.`}
+    >
+      {LAND.map((d) => <path class="land" d={d} />)}
+
+      {/* Der Rahmen zeigt, welchen Teil die zweite Karte vergrössert. */}
+      <rect
+        class="ausschnitt"
+        x={kasten.x}
+        y={kasten.y}
+        width={kasten.breite}
+        height={kasten.hoehe}
+      />
+
+      {
+        gezeichnet.map((s) => (
+          <a href={pfadZu(s.id)}>
+            <title>{beschriftet(s)}</title>
+            <circle
+              class={s.bis >= aktuellAb ? 'strecke aktuell' : 'strecke'}
+              cx={ortX(s.laenge_grad)}
+              cy={ortY(s.breite)}
+              r={radius(s.rennen)}
+            />
+          </a>
+        ))
+      }
+    </svg>
+    <figcaption>
+      <span class="schluessel"><i class="aktuell"></i>On the current calendar</span>
+      <span class="schluessel"><i></i>No longer used</span>
+      <span class="notiz">
+        Circle area is the number of races held. {heute} of {verortet.length} circuits have been
+        used since {aktuellAb}.
+        {ohneOrt > 0 && ` ${ohneOrt} without recorded coordinates are not shown.`}
+      </span>
+    </figcaption>
+  </figure>
+
+  <figure class="weltkarte europa">
+    <svg
+      viewBox={`${kasten.x} ${kasten.y} ${kasten.breite} ${kasten.hoehe}`}
+      role="img"
+      aria-label={`Europe in detail, with ${inEuropa.length} Formula 1 circuits.`}
+    >
+      {LAND.map((d) => <path class="land" d={d} />)}
+      {
+        inEuropa.map((s) => (
+          <a href={pfadZu(s.id)}>
+            <title>{beschriftet(s)}</title>
+            <circle
+              class={s.bis >= aktuellAb ? 'strecke aktuell' : 'strecke'}
+              cx={ortX(s.laenge_grad)}
+              cy={ortY(s.breite)}
+              r={radius(s.rennen, 1.6 / zoom)}
+              stroke-width={1.2 / zoom}
+            />
+          </a>
+        ))
+      }
+    </svg>
+    <figcaption>
+      <span class="notiz voll">
+        Europe in detail: {inEuropa.length} of the {verortet.length} circuits lie inside the
+        dashed box, {engePaare} pairs of them close enough to overlap on the world map.
+      </span>
+    </figcaption>
+  </figure>
+</div>
+
+<style>
+  .karten {
+    display: grid;
+    grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+    gap: 0.9rem;
+    margin: 1.5rem 0 0;
+  }
+
+  .weltkarte {
+    margin: 0;
+    padding: 0.75rem 0.85rem 0.7rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0.6rem;
+    display: flex;
+    flex-direction: column;
+  }
+
+  svg { display: block; width: 100%; height: auto; }
+
+  /* Das Land ist Hintergrund, nicht Gegenstand: dunkel, ohne Kontur. */
+  .land { fill: var(--surface-3); }
+
+  .ausschnitt {
+    fill: none;
+    stroke: var(--muted);
+    stroke-width: 1;
+    stroke-dasharray: 4 3;
+    opacity: 0.5;
+  }
+
+  .strecke {
+    fill: var(--s-rest);
+    fill-opacity: 0.65;
+    stroke: var(--surface);
+    stroke-width: 0.8;
+  }
+
+  .strecke.aktuell { fill: var(--accent); fill-opacity: 0.85; }
+  a:hover .strecke { fill-opacity: 1; stroke: var(--ink); }
+
+  figcaption {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.3rem 1rem;
+    margin-top: auto;
+    padding-top: 0.7rem;
+    font-size: 0.76rem;
+    color: var(--muted);
+  }
+
+  .weltkarte figcaption { border-top: 1px solid var(--border); }
+
+  .schluessel { display: flex; align-items: center; gap: 0.35rem; }
+  .schluessel i {
+    width: 0.6rem;
+    height: 0.6rem;
+    border-radius: 50%;
+    background: var(--s-rest);
+    opacity: 0.65;
+    flex: none;
+  }
+  .schluessel i.aktuell { background: var(--accent); opacity: 0.85; }
+  .notiz { margin-left: auto; text-wrap: pretty; }
+  .notiz.voll { margin-left: 0; }
+
+  @media (max-width: 56rem) {
+    .karten { grid-template-columns: minmax(0, 1fr); }
+    .notiz { margin-left: 0; }
+  }
+</style>

@@ -546,6 +546,48 @@ pruefe('Sieg von P22 fuehrt die Aufholjagden an', vonHinten[0]?.wert === 22, `P$
 console.log(`   ✓ ${vonHinten[0]?.name} von P${vonHinten[0]?.wert} (${vonHinten[0]?.rennen})`)
 console.log(`   ✓ ${nurIndy} Fahrer markiert, die nie ein Formel-1-Rennen bestritten`)
 
+// -------------------------------------------------- 10. Streckenkarte
+
+console.log('\n10. Streckenkarte')
+
+const orte = db
+  .prepare(
+    `SELECT z.id, z.name, z.latitude AS la, z.longitude AS lo
+       FROM circuit z
+      WHERE EXISTS (SELECT 1 FROM race r WHERE r.circuit_id = z.id)`,
+  )
+  .all()
+
+pruefe(
+  'jede gefahrene Strecke hat Koordinaten',
+  orte.every((o) => o.la !== null && o.lo !== null),
+  orte.filter((o) => o.la === null).map((o) => o.name).join(', '),
+)
+pruefe(
+  'Koordinaten im gueltigen Bereich',
+  orte.every((o) => o.la >= -90 && o.la <= 90 && o.lo >= -180 && o.lo <= 180),
+)
+
+/*
+ * Der Ausschnitt der Karte reicht von 62 Grad Nord bis 46 Grad Sued. Faende
+ * ein kuenftiges Rennen ausserhalb statt - Las Vegas liegt schon bei 36 Grad,
+ * ein Rennen in Skandinavien waere denkbar -, fiele sein Punkt heraus, ohne
+ * dass es jemandem auffiele.
+ */
+const ausserhalb = orte.filter((o) => o.la > 62 || o.la < -46 || o.lo < -128 || o.lo > 152)
+pruefe(
+  'alle Strecken liegen im Kartenausschnitt',
+  ausserhalb.length === 0,
+  ausserhalb.map((o) => `${o.name} (${o.la.toFixed(1)}/${o.lo.toFixed(1)})`).join(', '),
+)
+
+const noerdlichste = orte.reduce((a, b) => (b.la > a.la ? b : a))
+const suedlichste = orte.reduce((a, b) => (b.la < a.la ? b : a))
+console.log(
+  `   ✓ ${orte.length} Strecken verortet, ${noerdlichste.name} (${noerdlichste.la.toFixed(1)}°N) ` +
+    `bis ${suedlichste.name} (${Math.abs(suedlichste.la).toFixed(1)}°S)`,
+)
+
 db.close()
 
 // -------------------------------------------------- Ergebnis
