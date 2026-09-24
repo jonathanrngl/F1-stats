@@ -23,16 +23,17 @@ Architektur und Begründungen: [`../docs/ARCHITEKTUR.md`](../docs/ARCHITEKTUR.md
 | 12 · Stints und Wetter (OpenF1, ab 2023) | offen |
 | 13 · Änderungen: Bewegung in den Rekordlisten | **fertig** |
 | 13 · Rennvorschau auf das nächste Rennen | **fertig** |
+| 14 · Quiz in drei Schwierigkeitsstufen | **fertig** |
 
 ## Entwickeln
 
 ```bash
 npm run import   # Datenbank bauen (einmalig, 8 s)
 npm run dev      # http://localhost:4321/F1-stats/
-npm run build    # 2384 statische Seiten in ~31 s nach dist/
+npm run build    # 2465 statische Seiten in ~45 s nach dist/
 ```
 
-Der Build erzeugt fertiges HTML: 2384 Seiten, fünf JavaScript-Dateien in der
+Der Build erzeugt fertiges HTML: 2465 Seiten, sieben JavaScript-Dateien in der
 gesamten Ausgabe. Eine Fahrerseite wiegt 18 KB und braucht kein JavaScript, um
 ihre Zahlen zu zeigen.
 
@@ -44,7 +45,7 @@ verlässlichere Weg.
 ## Tests
 
 ```bash
-npm test        # 89 Prüfungen gegen die importierte Datenbank
+npm test        # 141 Prüfungen gegen die importierte Datenbank
 ```
 
 Der Massenabgleich rechnet Nennungen, Starts, Siege, Podien, Pole-Positions,
@@ -101,6 +102,37 @@ Fortschreibung nimmt die Trefferquote der letzten drei Saisons; wer darin zu
 wenige Starts oder keinen Erfolg dieser Art hat, bekommt keine Zahl statt einer
 unendlichen. Hält ein noch aktiver Fahrer die Marke selbst, wächst sie weiter,
 während der Verfolger aufholt – auch das steht an der Zeile.
+
+## Das Quiz
+
+`/quiz/` stellt Fragen aus sieben Bereichen – Fahrer, Teams, Saisons, Rennen,
+Strecken, Rekorde, Motoren und Reifen – in drei Stufen oder gemischt, von leicht
+nach schwer. **Keine Frage ist von Hand geschrieben.** `src/engine/quiz.js`
+erzeugt sie beim Bauen aus der Datenbank, rund 1.800 Stück, von denen je
+Fragenart und Stufe höchstens zwanzig in `/data/quiz.json` landen (1.282 Fragen,
+368 KB, 52 KB gepackt). Fällt ein Rekord, ändert sich die Frage mit dem
+nächsten Neubau.
+
+**Die falschen Antworten sollen verführen.** Beim Weltmeister stehen die
+Nächstplatzierten derselben Saison zur Wahl, beim Teamkollegen Fahrer anderer
+Teams desselben Jahres, beim Austragungsort die anderen Strecken desselben
+Grand Prix – der Schweizer Grand Prix 1982 fand in Dijon statt. Bei „Wer gewann
+2008 die meisten Rennen?" steht Hamilton als falsche Antwort neben Massa.
+
+**Die Stufe hängt an Zeit und Bekanntheit.** Die zwölf jüngsten Saisons und die
+bekanntesten Namen sind leicht, ab 1985 mittel, davor schwer; Pole-Positions,
+Startplätze und Reifenhersteller sind grundsätzlich schwerer als Sieger.
+
+**Was nicht eindeutig ist, fällt weg**, statt mit einer schwachen Antwort
+aufgefüllt zu werden: Fangio fuhr 1954 für zwei Teams, in den 1950ern teilten
+sich Fahrer den Sieg, und wer „Für welches Team fuhr Jack Brabham 1966?" fragt,
+verrät die Antwort. Das Indianapolis 500 bleibt ganz draußen.
+
+**Der Zufall ist gesät.** Zwei Läufe über dieselbe Datenbank ergeben dieselbe
+Datei; gemischt wird erst im Browser, und zwar erst beim Klick auf „Start" –
+nicht im ersten Render, sonst unterschieden sich Server und Browser beim
+Hydrieren. Bereits gesehene Fragen merkt sich der Browser (die letzten 400) und
+stellt sie ans Ende.
 
 ## Import
 

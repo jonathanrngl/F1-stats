@@ -1,0 +1,446 @@
+---
+import Seite from '../../layouts/Seite.astro'
+import Quiz from '../../components/Quiz.jsx'
+import { db, eine } from '../../lib/db.js'
+import { zahl } from '../../lib/format.js'
+import { quizFragen, quizUebersicht, STUFEN } from '../../engine/quiz.js'
+
+/*
+ * Die Fragen selbst lädt die Insel als Datei nach (/data/quiz.json). Hier
+ * kommen nur die Zahlen je Bereich und Stufe mit – so steht die Auswahl mit
+ * ihren Zahlen sofort da, und die Seite trägt nicht 350 KB Fragen im HTML.
+ */
+const fragen = quizFragen(db())
+const bereiche = quizUebersicht(fragen)
+
+const stand = eine(`
+  SELECT r.year AS jahr, g.full_name AS gp
+    FROM race r JOIN grand_prix g ON g.id = r.grand_prix_id
+   WHERE EXISTS (SELECT 1 FROM race_result rr WHERE rr.race_id = r.id)
+   ORDER BY r.date DESC LIMIT 1`)
+---
+
+<Seite
+  titel="Formula 1 quiz – from easy to expert"
+  beschreibung={`${zahl(fragen.length)} questions on drivers, teams, seasons, races, circuits, records, engines and tyres – worked out from every result since 1950.`}
+>
+  <header class="seitenkopf">
+    <div>
+      <p class="oberzeile">Analysis</p>
+      <h1>Quiz</h1>
+      <p class="lead">
+        {zahl(fragen.length)} questions across the whole of Formula 1, in three levels of difficulty.
+        Every answer is worked out from the results, so it is right up to{' '}
+        {stand ? `the ${stand.jahr} ${stand.gp}` : 'the latest race'}.
+      </p>
+    </div>
+  </header>
+
+  <Quiz bereiche={bereiche} stufen={STUFEN} client:load />
+
+  <details class="erklaerung abschnitt">
+    <summary>Where the questions come from</summary>
+    <div>
+      <p>
+        <b>No question is written by hand.</b> Each one is generated from the same results that
+        fill the rest of this site, every time the site is rebuilt. When a record falls, the
+        question about it changes with it – there is no list that someone might forget to update.
+      </p>
+      <p>
+        <b>The wrong answers are chosen to be tempting.</b> Asked who won a title, you choose
+        between the champion and the drivers who finished right behind. Asked for a team-mate, the
+        alternatives raced for other teams that same year. Asked where a Grand Prix was held, the
+        alternatives are other circuits that have hosted it.
+      </p>
+      <p>
+        <b>Difficulty follows time and fame.</b> The last dozen seasons and the best-known names are
+        easy; from 1985 on is medium; the early decades, pole-sitters and the fine print are hard.
+      </p>
+      <p>
+        <b>Every answer has a way to check it.</b> After each question, a link leads to the page
+        the answer comes from.
+      </p>
+    </div>
+  </details>
+</Seite>
+
+<style is:global>
+  .quiz { margin-top: 0.5rem; }
+
+  /* ------------------------------------------------------------ Auswahl */
+
+  .quiz-wahl { display: grid; gap: 1rem; max-width: 56rem; }
+
+  .quiz-wahl fieldset {
+    margin: 0;
+    padding: 0.9rem 1.1rem 1.1rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-s);
+  }
+
+  .quiz-wahl legend {
+    padding: 0 0.35rem;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* Radios, die wie Karten aussehen. Das Element bleibt ein echtes Radio:
+     Pfeiltasten, Formularverhalten und Bildschirmleser gibt es damit umsonst. */
+  .stufenwahl {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(11rem, 100%), 1fr));
+    gap: 0.6rem;
+  }
+
+  .stufenwahl label {
+    position: relative;
+    display: grid;
+    gap: 0.1rem;
+    padding: 0.75rem 0.85rem;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-s);
+    cursor: pointer;
+  }
+
+  .stufenwahl label:hover { border-color: var(--accent); }
+  .stufenwahl label.an { background: var(--accent-wash); border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  .stufenwahl b { color: var(--ink); font-weight: 700; }
+  .stufenwahl span { font-size: 0.8rem; color: var(--ink-2); text-wrap: pretty; }
+  .stufenwahl i { margin-top: 0.3rem; font-style: normal; font-size: 0.74rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  .stufenwahl input,
+  .laengenwahl input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .stufenwahl label:has(input:focus-visible),
+  .laengenwahl label:has(input:focus-visible) {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .themenwahl,
+  .laengenwahl { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+
+  .themenwahl button,
+  .laengenwahl label {
+    position: relative;
+    padding: 0.4rem 0.85rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--ink-2);
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: 999px;
+    cursor: pointer;
+  }
+
+  .themenwahl button:hover,
+  .laengenwahl label:hover { border-color: var(--accent); color: var(--ink); }
+
+  .themenwahl button[aria-pressed='true'],
+  .laengenwahl label.an { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
+
+  .themenwahl button.alle {
+    color: var(--muted);
+    background: none;
+    border-color: transparent;
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+
+  .themenwahl button.alle:hover { color: var(--accent); border-color: transparent; }
+
+  .laengenwahl label { min-width: 3.2rem; text-align: center; font-variant-numeric: tabular-nums; }
+
+  .quiz-start {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem 1.1rem;
+    margin-top: 0.25rem;
+  }
+
+  .quiz-start p { margin: 0; font-size: 0.86rem; color: var(--muted); text-wrap: pretty; }
+
+  .quiz-knopf {
+    padding: 0.7rem 1.35rem;
+    font-weight: 700;
+    color: var(--accent-ink);
+    background: var(--accent);
+    border: 1px solid var(--accent);
+    border-radius: var(--radius-s);
+    cursor: pointer;
+  }
+
+  .quiz-knopf:hover { background: var(--accent-strong); border-color: var(--accent-strong); }
+  .quiz-knopf:disabled { opacity: 0.55; cursor: progress; }
+  .quiz-knopf.leise { color: var(--ink); background: var(--surface); border-color: var(--border-strong); }
+  .quiz-knopf.leise:hover { border-color: var(--accent); color: var(--accent); }
+
+  .quiz-fehler {
+    padding: 0.8rem 1rem;
+    font-size: 0.88rem;
+    color: var(--danger-fg);
+    background: var(--danger-bg);
+    border: 1px solid var(--danger-border);
+    border-radius: var(--radius-s);
+  }
+
+  /* -------------------------------------------------------------- Frage */
+
+  .quiz-frage {
+    max-width: 48rem;
+    padding: 1.2rem 1.35rem 1.35rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: 4px solid var(--accent);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+  }
+
+  .quiz-kopf {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem 0.2rem;
+    font-size: 0.82rem;
+    color: var(--muted);
+  }
+
+  .quiz-kopf .zaehler { margin-right: 0.5rem; }
+  .quiz-kopf b { color: var(--ink); font-variant-numeric: tabular-nums; }
+  .quiz-kopf .stand { margin-left: auto; }
+  .quiz-kopf .etikett { margin-left: 0.25rem; }
+  .etikett.stufe-1 { color: var(--good); background: var(--good-wash); }
+  .etikett.stufe-2 { color: var(--warn); background: var(--warn-wash); }
+  .etikett.stufe-3 { color: var(--accent); background: var(--accent-wash); }
+
+  /* Fortschritt als Reihe von Segmenten: grün richtig, rot falsch. Man sieht
+     den Verlauf der Runde, ohne zu zählen. */
+  .quiz-leiste {
+    display: flex;
+    gap: 0.25rem;
+    margin: 0.8rem 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .quiz-leiste li { flex: 1; height: 0.3rem; background: var(--surface-3); border-radius: 999px; }
+  .quiz-leiste li.jetzt { background: var(--axis); }
+  .quiz-leiste li.gut { background: var(--good); }
+  .quiz-leiste li.schlecht { background: var(--accent); }
+
+  .quiz-frage h2 {
+    margin: 1.1rem 0 1rem;
+    font-size: clamp(1.2rem, 2.6vw, 1.5rem);
+    line-height: 1.3;
+    outline: none;
+  }
+
+  .antworten {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(18rem, 100%), 1fr));
+    gap: 0.55rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .antworten button {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    width: 100%;
+    height: 100%;
+    padding: 0.75rem 0.85rem;
+    font-size: 0.97rem;
+    font-weight: 600;
+    text-align: left;
+    color: var(--ink);
+    background: var(--surface-2);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-s);
+    cursor: pointer;
+    transition: border-color 0.12s ease, background 0.12s ease;
+  }
+
+  .antworten button:not(:disabled):hover { border-color: var(--accent); background: var(--accent-wash); }
+  .antworten button:disabled { cursor: default; }
+
+  .antworten kbd {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 1.7rem;
+    height: 1.7rem;
+    font: inherit;
+    font-size: 0.75rem;
+    font-weight: 750;
+    color: var(--muted);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0.35rem;
+  }
+
+  .antworten span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .antworten i { flex: none; font-style: normal; font-weight: 800; }
+
+  .antworten button.gut { color: var(--ink); background: var(--good-wash); border-color: var(--good); box-shadow: inset 0 0 0 1px var(--good); }
+  .antworten button.gut kbd,
+  .antworten button.gut i { color: var(--good); border-color: var(--good); }
+  .antworten button.schlecht { background: var(--danger-bg); border-color: var(--danger-border); color: var(--danger-fg); }
+  .antworten button.schlecht kbd,
+  .antworten button.schlecht i { color: var(--danger-fg); border-color: var(--danger-border); }
+  .antworten button.still { opacity: 0.5; }
+
+  .aufloesung {
+    margin-top: 1rem;
+    padding: 0.9rem 1rem;
+    font-size: 0.92rem;
+    border-radius: var(--radius-s);
+    border-left: 4px solid var(--good);
+    background: var(--good-wash);
+  }
+
+  .aufloesung.schlecht { border-left-color: var(--accent); background: var(--accent-wash); }
+  .aufloesung p { margin: 0; color: var(--ink-2); text-wrap: pretty; }
+  .aufloesung p b { color: var(--ink); }
+
+  .aufloesung-fuss {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem 1rem;
+    margin-top: 0.85rem;
+  }
+
+  .quiz-verweis { font-size: 0.86rem; font-weight: 650; text-decoration: none; white-space: nowrap; }
+  .quiz-verweis:hover { text-decoration: underline; }
+  .aufloesung-fuss .quiz-knopf { margin-left: auto; }
+
+  .tastenhinweis { display: none; margin: 0.9rem 0 0; font-size: 0.76rem; color: var(--muted); }
+
+  /* Den Hinweis auf die Tasten braucht nur, wer eine Tastatur hat. */
+  @media (hover: hover) and (pointer: fine) {
+    .tastenhinweis { display: block; }
+  }
+
+  .quiz-abbruch {
+    margin-top: 0.85rem;
+    padding: 0;
+    font-size: 0.82rem;
+    color: var(--muted);
+    background: none;
+    border: none;
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+    cursor: pointer;
+  }
+
+  .quiz-abbruch:hover { color: var(--accent); }
+
+  /* ----------------------------------------------------------- Ergebnis */
+
+  .quiz-ende {
+    max-width: 48rem;
+    padding: 1.4rem 1.35rem;
+    color: var(--kopf-muted);
+    background: var(--kopf-bg);
+    border-left: 4px solid var(--accent);
+    border-radius: var(--radius);
+  }
+
+  .quiz-ende h2 { display: grid; gap: 0.2rem; outline: none; }
+
+  .quiz-ende h2 span {
+    font-size: 0.72rem;
+    font-weight: 750;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  .quiz-ende h2 b {
+    font-size: clamp(2.6rem, 7vw, 3.6rem);
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.04em;
+    color: var(--kopf-ink);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .quiz-ende h2 small { font-size: 0.45em; font-weight: 700; color: var(--kopf-muted); letter-spacing: 0; }
+  .quiz-ende .urteil { margin: 0.4rem 0 0; font-size: 1.05rem; font-weight: 650; color: var(--kopf-ink); }
+
+  .nach-stufe {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1.2rem;
+    margin: 0.8rem 0 0;
+    padding: 0;
+    list-style: none;
+    font-size: 0.86rem;
+  }
+
+  .nach-stufe b { color: var(--kopf-ink); font-variant-numeric: tabular-nums; }
+
+  .quiz-knoepfe { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 1.2rem; }
+  .quiz-ende .quiz-knopf.leise { color: var(--kopf-ink); background: transparent; border-color: var(--kopf-linie); }
+  .quiz-ende .quiz-knopf.leise:hover { border-color: var(--accent); }
+
+  .rueckblick-kopf { margin: 2.25rem 0 0.75rem; font-size: 1.1rem; }
+
+  .rueckblick {
+    display: grid;
+    gap: 0.6rem;
+    max-width: 48rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .rueckblick li {
+    display: flex;
+    gap: 0.8rem;
+    padding: 0.85rem 1rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-s);
+  }
+
+  .rueckblick .marke {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 1.6rem;
+    height: 1.6rem;
+    font-weight: 800;
+    border-radius: 50%;
+  }
+
+  .rueckblick li.gut .marke { color: var(--good); background: var(--good-wash); }
+  .rueckblick li.schlecht .marke { color: var(--accent); background: var(--accent-wash); }
+  .rueckblick li > div { min-width: 0; }
+  .rueckblick p { margin: 0; text-wrap: pretty; }
+  .rueckblick .frage-text { font-weight: 650; color: var(--ink); }
+  .rueckblick .antwort-text { margin-top: 0.2rem; font-size: 0.9rem; }
+  .rueckblick .antwort-text s { color: var(--muted); }
+  .rueckblick .antwort-text b { color: var(--good); }
+  .rueckblick .erklaer-text { margin-top: 0.3rem; font-size: 0.82rem; color: var(--muted); }
+
+  @media (max-width: 34rem) {
+    .quiz-frage { padding: 1rem; }
+    .quiz-kopf .stand { margin-left: 0; width: 100%; }
+    .aufloesung-fuss .quiz-knopf { width: 100%; }
+  }
+</style>
