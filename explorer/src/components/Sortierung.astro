@@ -1,0 +1,79 @@
+---
+/**
+ * Sortieren einer Tabelle im Browser, per Klick auf den Spaltenkopf.
+ *
+ * Stand vorher wortgleich auf der Fahrer- und der Motorenliste. Die
+ * Reihenfolge kommt weiterhin fertig vom Server – wer nichts anklickt,
+ * bekommt sie auch ohne JavaScript.
+ *
+ * Die Knöpfe stehen in der Tabelle selbst (`<th><button data-spalte data-art>`);
+ * diese Komponente bringt nur das Skript. `vorsortiert` ist die Spalte, nach
+ * der der Server geliefert hat, `gleichstand` die, die bei gleichem Wert
+ * entscheidet – damit die Reihenfolge nicht zufällig wirkt.
+ */
+interface Props {
+  vorsortiert: number
+  gleichstand: number
+}
+
+const { vorsortiert, gleichstand } = Astro.props
+---
+
+<div hidden data-sortierung data-vorsortiert={vorsortiert} data-gleichstand={gleichstand}></div>
+
+<script>
+  /*
+   * Gelesen wird aus den Zellen, nicht aus zusätzlichen Attributen. Zwei
+   * Dinge muss das berücksichtigen: Die Seite zeigt keine Null, sondern eine
+   * leere Zelle, und der Zeitraum steht als „2007–2026" – sortiert wird nach
+   * dem letzten Jahr, also den letzten vier Ziffern. Namen sortieren nach
+   * `data-name` an der Zeile, wo es ihn gibt: nach Nachname, nicht Vorname.
+   */
+  const marke = document.querySelector('[data-sortierung]')
+  const koerper = document.querySelector('main tbody')
+  if (marke && koerper) {
+    const zeilen = [...koerper.querySelectorAll('tr')]
+    const knoepfe = [...document.querySelectorAll('main thead button[data-spalte]')]
+    const GLEICH = Number(marke.dataset.gleichstand)
+
+    /* Zahlen absteigend, Namen aufsteigend – das ist jeweils die nützliche Richtung. */
+    let sortiert = { spalte: Number(marke.dataset.vorsortiert), ab: true }
+
+    const zellen = new Map(zeilen.map((tr) => [tr, [...tr.cells]]))
+    const zahlAus = (tr, i) =>
+      Number(zellen.get(tr)[i].textContent.trim().replace(/[,\s]|km/g, '')) || 0
+
+    function wert(tr, spalte, art) {
+      if (art === 'name') return tr.dataset.name ?? zellen.get(tr)[spalte].textContent.trim()
+      if (art === 'jahr') return Number(zellen.get(tr)[spalte].textContent.trim().slice(-4)) || 0
+      return zahlAus(tr, spalte)
+    }
+
+    function sortiere(spalte, art) {
+      const ab = sortiert.spalte === spalte ? !sortiert.ab : art !== 'name'
+      sortiert = { spalte, ab }
+
+      zeilen.sort((a, b) => {
+        const x = wert(a, spalte, art)
+        const y = wert(b, spalte, art)
+        const v = art === 'name' ? String(x).localeCompare(String(y), 'en') : x - y
+        return (ab ? -v : v) || zahlAus(b, GLEICH) - zahlAus(a, GLEICH)
+      })
+
+      const stueck = document.createDocumentFragment()
+      for (const tr of zeilen) stueck.append(tr)
+      koerper.append(stueck)
+
+      for (const k of knoepfe) {
+        const an = Number(k.dataset.spalte) === spalte
+        k.dataset.aktiv = an ? '1' : ''
+        k.closest('th').setAttribute('aria-sort', an ? (ab ? 'descending' : 'ascending') : 'none')
+        k.dataset.richtung = an && !ab ? 'auf' : ''
+      }
+    }
+
+    for (const k of knoepfe) {
+      k.addEventListener('click', () => sortiere(Number(k.dataset.spalte), k.dataset.art))
+    }
+  }
+</script>

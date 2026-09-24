@@ -8,7 +8,7 @@
  * eine Behauptung.
  */
 import Seite from '../../layouts/Seite.astro'
-import { zahl } from '../../lib/format.js'
+import { plakette, zahl } from '../../lib/format.js'
 import { db, pfad } from '../../lib/db.js'
 import { rangliste, zusammenhang } from '../../engine/duell.js'
 
@@ -24,48 +24,64 @@ const quote = (v) => `${Math.round(v * 100)}%`
   titel="Team-mate ratings – drivers measured against the same car"
   beschreibung="A rating built only from duels between team-mates, who shared the same car. A model, not a measurement – with its assumptions stated."
 >
-  <h1>Team-mates</h1>
-  <p class="lead">
-    The hardest question in this sport is how good a driver was, independent of the car. It
-    cannot be measured. But there is one comparison that needs no assumption about machinery:
-    two team-mates drove the same car, so whoever finished ahead says something about the
-    drivers.
-  </p>
+  <header class="seitenkopf">
+    <div>
+      <p class="oberzeile">Analysis</p>
+      <h1>Team-mates</h1>
+      <p class="lead">
+        How good was a driver, independent of the car? It cannot be measured – but two
+        team-mates drove the same car, so whoever finished ahead says something about the
+        drivers. This page turns those duels into a rating.
+      </p>
+    </div>
+  </header>
 
-  <div class="warnung">
-    <b>This is a model, not a count.</b>
-    <p>
-      Everything else on this site is counted from the results. This page is not: it runs a
-      chess-style rating over {zahl(netz.fahrer)} drivers and their team-mate duels. The
-      ranking depends on three assumptions, and all three are only roughly true.
-    </p>
-    <ol>
-      <li>
-        <b>Team-mates get equal machinery.</b> Often, but not always – there were first and
-        second drivers, and teams that favoured a title contender.
-      </li>
-      <li>
-        <b>Strength carries over.</b> If A beat B and B beat C, the rating treats A as stronger
-        than C. Hamilton raced Alonso, Alonso raced Fisichella, Fisichella raced Button – that
-        is how eras connect here. Over long chains the error accumulates.
-      </li>
-      <li>
-        <b>A duel is a fair test.</b> A retirement is not, so only races where both finished
-        count. A pit-stop error or a first-lap collision still distorts one.
-      </li>
-    </ol>
-    <p class="schluss">
-      {zahl(netz.groessteGruppe)} of the {zahl(netz.fahrer)} drivers are connected into a single
-      chain, so most of these numbers are comparable with each other. Drivers with fewer than
-      {' '}{MIN} duels are left out: after three duels a rating still sits close to where it
-      started, and listing such a driver next to Hamilton would mislead.
-    </p>
+  {/*
+    * Der Warnhinweis bleibt sichtbar und oben: Es ist die einzige Seite, die ein
+    * Modell zeigt statt einer Zählung. Die drei Annahmen dahinter stehen
+    * zugeklappt darunter – wer der Zahl misstraut, findet sie mit einem Klick.
+    */}
+  <div class="hinweis warn">
+    <b>This is a model, not a count.</b>{' '}
+    Everything else on this site is counted from the results. This page runs a chess-style
+    rating over {zahl(netz.fahrer)} drivers and their team-mate duels; {zahl(netz.groessteGruppe)}
+    {' '}of them are connected into a single chain, so most ratings are comparable. Drivers with
+    fewer than {MIN} duels are left out.
   </div>
 
+  <details class="erklaerung">
+    <summary>The three assumptions behind the ranking</summary>
+    <div>
+      <ol>
+        <li>
+          <b>Team-mates get equal machinery.</b> Often, but not always – there were first and
+          second drivers, and teams that favoured a title contender.
+        </li>
+        <li>
+          <b>Strength carries over.</b> If A beat B and B beat C, the rating treats A as stronger
+          than C. Hamilton raced Alonso, Alonso raced Fisichella, Fisichella raced Button – that
+          is how eras connect here. Over long chains the error accumulates.
+        </li>
+        <li>
+          <b>A duel is a fair test.</b> A retirement is not, so only races where both finished
+          count. A pit-stop error or a first-lap collision still distorts one.
+        </li>
+      </ol>
+      <p>
+        After three duels a rating still sits close to where it started; listing such a driver
+        next to Hamilton would mislead. That is why the minimum is {MIN}.
+      </p>
+    </div>
+  </details>
+
   <div class="raster">
-    <section>
-      <h2>Race duels</h2>
-      <p class="hinweis">Who finished ahead, in races where both team-mates were classified.</p>
+    <section class="abschnitt">
+      <div class="abschnitt-kopf">
+        <div>
+          <h2>Race duels</h2>
+          <p>Who finished ahead, in races where both team-mates were classified.</p>
+        </div>
+      </div>
       <div class="tabelle">
         <table>
           <thead>
@@ -77,12 +93,12 @@ const quote = (v) => `${Math.round(v * 100)}%`
           <tbody>
             {rennen.map((r, i) => (
               <tr>
-                <td class="num rang">{i + 1}</td>
+                <td class="num"><span class={plakette(i + 1)}>{i + 1}</span></td>
                 <td>
                   <a class="zeile" href={pfad.fahrer(r.id)}>{r.name}</a>
                   <span class="neben">{r.von}–{r.bis} · {r.gegner} team-mates</span>
                 </td>
-                <td class="num stark">{r.wertung}</td>
+                <td class="num meister">{r.wertung}</td>
                 <td class="num">{r.duelle}</td>
                 <td class="num">{quote(r.quote)}</td>
               </tr>
@@ -92,12 +108,13 @@ const quote = (v) => `${Math.round(v * 100)}%`
       </div>
     </section>
 
-    <section>
-      <h2>Qualifying duels</h2>
-      <p class="hinweis">
-        Who was quicker over one lap. Strategy and traffic play no part, which makes this the
-        cleaner comparison of the two – and it is not the same ranking.
-      </p>
+    <section class="abschnitt">
+      <div class="abschnitt-kopf">
+        <div>
+          <h2>Qualifying duels</h2>
+          <p>Who was quicker over one lap – the cleaner comparison of the two, and not the same ranking.</p>
+        </div>
+      </div>
       <div class="tabelle">
         <table>
           <thead>
@@ -109,12 +126,12 @@ const quote = (v) => `${Math.round(v * 100)}%`
           <tbody>
             {quali.map((r, i) => (
               <tr>
-                <td class="num rang">{i + 1}</td>
+                <td class="num"><span class={plakette(i + 1)}>{i + 1}</span></td>
                 <td>
                   <a class="zeile" href={pfad.fahrer(r.id)}>{r.name}</a>
                   <span class="neben">{r.von}–{r.bis} · {r.gegner} team-mates</span>
                 </td>
-                <td class="num stark">{r.wertung}</td>
+                <td class="num meister">{r.wertung}</td>
                 <td class="num">{r.duelle}</td>
                 <td class="num">{quote(r.quote)}</td>
               </tr>
@@ -125,9 +142,9 @@ const quote = (v) => `${Math.round(v * 100)}%`
     </section>
   </div>
 
-  <section>
-    <h2>How it is worked out</h2>
-    <div class="methode">
+  <details class="erklaerung abschnitt">
+    <summary>How it is worked out</summary>
+    <div>
       <p>
         Every driver starts at 1500. After each duel the winner takes points from the loser, and
         how many depends on what was expected: beating a much stronger team-mate moves the
@@ -147,66 +164,18 @@ const quote = (v) => `${Math.round(v * 100)}%`
         the rating is worth. A driver with 30 duels against two team-mates is placed on thinner
         evidence than one with 300 against fourteen.
       </p>
-      <p class="weiter">
+      <p>
         Every driver's own team-mate record, race by race, is on their page under
         {' '}<a href={pfad.seite('/drivers/')}>Drivers</a>.
       </p>
     </div>
-  </section>
+  </details>
 </Seite>
 
 <style>
-  .warnung {
-    max-width: 52rem;
-    margin: 1.75rem 0 0;
-    padding: 1rem 1.15rem;
-    background: var(--surface-2);
-    border: 1px solid var(--border);
-    border-left: 3px solid var(--warn);
-    border-radius: 0.6rem;
-  }
-
-  .warnung > b { color: var(--ink); font-size: 0.95rem; }
-  .warnung p { margin: 0.5rem 0 0; font-size: 0.87rem; color: var(--ink-2); text-wrap: pretty; }
-  .warnung ol { margin: 0.75rem 0 0; padding-left: 1.2rem; display: grid; gap: 0.4rem; }
-  .warnung li { font-size: 0.87rem; color: var(--ink-2); text-wrap: pretty; }
-  .warnung li b { color: var(--ink); }
-  .warnung .schluss { padding-top: 0.75rem; margin-top: 0.75rem; border-top: 1px solid var(--border); color: var(--muted); }
-
   .raster {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(24rem, 100%), 1fr));
-    gap: 2rem;
-    margin-top: 2.5rem;
+    grid-template-columns: repeat(auto-fit, minmax(min(28rem, 100%), 1fr));
+    gap: 0 1.5rem;
   }
-
-  h2 { font-size: 1.15rem; margin: 0 0 0.4rem; }
-
-  .hinweis {
-    max-width: 30rem;
-    margin: 0 0 0.5rem;
-    font-size: 0.83rem;
-    color: var(--muted);
-    text-wrap: pretty;
-  }
-
-  td.rang { color: var(--muted); font-variant-numeric: tabular-nums; width: 2rem; }
-  td.stark { color: var(--accent); font-weight: 650; }
-  td .neben { display: block; font-size: 0.74rem; color: var(--muted); }
-
-  section { margin-top: 2.5rem; }
-
-  .methode {
-    max-width: 52rem;
-    margin-top: 1rem;
-    padding: 1rem 1.15rem;
-    background: var(--surface-2);
-    border: 1px solid var(--border);
-    border-radius: 0.6rem;
-  }
-
-  .methode p { margin: 0 0 0.75rem; font-size: 0.86rem; color: var(--ink-2); text-wrap: pretty; }
-  .methode p:last-child { margin-bottom: 0; }
-  .methode b { color: var(--ink); }
-  .weiter { padding-top: 0.75rem; border-top: 1px solid var(--border); color: var(--muted) !important; }
 </style>

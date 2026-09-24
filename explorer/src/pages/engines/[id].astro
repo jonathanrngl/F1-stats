@@ -8,6 +8,7 @@
  */
 import Seite from '../../layouts/Seite.astro'
 import Karriere from '../../components/Karriere.astro'
+import Sprung from '../../components/Sprung.astro'
 import { ein, prozent, zahl } from '../../lib/format.js'
 import { db, pfad } from '../../lib/db.js'
 import { land } from '../../lib/laender.js'
@@ -54,25 +55,41 @@ const bild = saisons.map((s) => ({
 const beschreibung =
   `${motor.name} in Formula 1: ${zahl(motor.rennen)} races, ${motor.siege} wins, ` +
   `${motor.podien} podiums (${zeitraum}).`
+
+const ziele = [
+  bild.length > 1 && { id: 'verlauf', label: 'Season by season' },
+  titel.length > 0 && { id: 'titel', label: 'Titles' },
+  { id: 'teams', label: 'Teams' },
+  sieger.length > 0 && { id: 'sieger', label: 'Winners' },
+].filter(Boolean)
 ---
 
 <Seite titel={`${motor.name} – Formula 1 engine statistics`} beschreibung={beschreibung}>
-  <header class="profil">
-    <span class="kuerzel gross" title={heimat.name}>{heimat.code}</span>
+  <header class="seitenkopf">
+    <span class="wappen" title={heimat.name}>{heimat.code}</span>
     <div>
+      <p class="oberzeile">
+        <a href={pfad.seite('/engines/')}>Engines</a>
+        <span class="trenner">/</span>
+        <span class="still">{heimat.name}</span>
+      </p>
       <h1>{motor.name}</h1>
-      <p class="lead">Engine manufacturer · {heimat.name} · {zeitraum}</p>
+      <ul class="eckdaten">
+        <li>Engine manufacturer</li>
+        <li>{zeitraum}</li>
+        <li>{alleTeams.length} {alleTeams.length === 1 ? 'team' : 'teams'}</li>
+      </ul>
     </div>
   </header>
 
   <ul class="kacheln">
-    <li><b>{zahl(motor.rennen)}</b><span>Races</span></li>
-    <li><b>{motor.siege}</b><span>Wins</span>
+    <li><span>Races</span><b>{zahl(motor.rennen)}</b></li>
+    <li class={motor.siege > 0 ? 'stark' : undefined}><span>Wins</span><b>{motor.siege}</b>
       {motor.rennen > 0 && <i>{prozent(motor.siege / motor.rennen)} of races</i>}</li>
-    <li><b>{motor.podien}</b><span>Podiums</span></li>
-    <li><b>{motor.poles}</b><span>Pole positions</span></li>
-    <li><b>{motor.schnellsteRunden}</b><span>Fastest laps</span></li>
-    <li><b>{motor.titel ?? 0}</b><span>Constructors' titles</span></li>
+    <li><span>Podiums</span><b>{motor.podien}</b></li>
+    <li><span>Pole positions</span><b>{motor.poles}</b></li>
+    <li><span>Fastest laps</span><b>{motor.schnellsteRunden}</b></li>
+    <li><span>Constructors' titles</span><b>{motor.titel ?? 0}</b></li>
   </ul>
 
   <p class="fussnote">
@@ -80,20 +97,23 @@ const beschreibung =
     race. A win means that a car with this engine won – it was not necessarily a works team.
   </p>
 
+  <Sprung ziele={ziele} />
+
   {bild.length > 1 && (
-    <section>
-      <h2>Season by season</h2>
+    <section class="abschnitt" id="verlauf">
+      <div class="abschnitt-kopf"><div><h2>Season by season</h2></div></div>
       <Karriere saisons={bild} name={motor.name} />
     </section>
   )}
 
   {titel.length > 0 && (
-    <section>
-      <h2>Drivers' titles won with this engine</h2>
-      <p class="lead">
-        The engine does not win the championship – the driver does. These are the seasons in
-        which the champion raced with it.
-      </p>
+    <section class="abschnitt" id="titel">
+      <div class="abschnitt-kopf">
+        <div>
+          <h2>Drivers' titles won with this engine</h2>
+          <p>The engine does not win the championship – the driver does. These are the seasons in which the champion raced with it.</p>
+        </div>
+      </div>
       <ul class="titelliste">
         {titel.map((t) => (
           <li>
@@ -106,14 +126,18 @@ const beschreibung =
     </section>
   )}
 
-  <section>
-    <h2>Teams that used it</h2>
-    <p class="lead">
-      {alleTeams.length === 1
-        ? 'One team, which built the engine itself or had it exclusively.'
-        : `${alleTeams.length} teams. A customer engine makes its supplier part of several teams' histories at once.`}
-      {alleTeams.length > teams.length && ` The ${teams.length} most successful are listed.`}
-    </p>
+  <section class="abschnitt" id="teams">
+    <div class="abschnitt-kopf">
+      <div>
+        <h2>Teams that used it</h2>
+        <p>
+          {alleTeams.length === 1
+            ? 'One team, which built the engine itself or had it exclusively.'
+            : `${alleTeams.length} teams. A customer engine makes its supplier part of several teams' histories at once.`}
+          {alleTeams.length > teams.length && ` The ${teams.length} most successful are listed.`}
+        </p>
+      </div>
+    </div>
     <div class="tabelle">
       <table>
         <thead>
@@ -123,7 +147,7 @@ const beschreibung =
           {teams.map((t) => (
             <tr>
               <td><a class="zeile" href={pfad.team(t.id)}>{t.name}</a></td>
-              <td style="color:var(--muted)">{t.von === t.bis ? t.von : `${t.von}–${t.bis}`}</td>
+              <td class="leise">{t.von === t.bis ? t.von : `${t.von}–${t.bis}`}</td>
               <td class="num">{t.rennen}</td>
               <td class="num">{t.siege || ''}</td>
             </tr>
@@ -134,59 +158,48 @@ const beschreibung =
   </section>
 
   {sieger.length > 0 && (
-    <section>
-      <h2>Drivers who won with it</h2>
-      <ol class="rangliste">
-        {sieger.map((f) => (
-          <li>
-            <a href={pfad.fahrer(f.id)}>{f.name}</a>
-            <b>{f.siege}</b>
-          </li>
-        ))}
-      </ol>
+    <section class="abschnitt" id="sieger">
+      <div class="abschnitt-kopf"><div><h2>Drivers who won with it</h2></div></div>
+      <div class="rangkarte sieger">
+        <ol class="rangliste">
+          {sieger.map((f) => (
+            <li>
+              <a href={pfad.fahrer(f.id)}>{f.name}</a>
+              <b>{f.siege}</b>
+            </li>
+          ))}
+        </ol>
+      </div>
     </section>
   )}
 </Seite>
 
 <style>
-  .profil { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
-  .kuerzel.gross {
-    flex: none; min-width: 3.6rem; padding: 0.5rem 0.35rem; margin: 0;
-    font-size: 0.86rem; color: var(--accent); background: var(--accent-wash);
-  }
-  .kacheln {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(min(9rem, 100%), 1fr));
-    gap: 0.75rem; margin: 0 0 1rem; padding: 0; list-style: none;
-  }
-  .kacheln li {
-    display: flex; flex-direction: column; gap: 0.1rem; padding: 0.9rem 1rem;
-    background: var(--surface-2); border: 1px solid var(--border); border-radius: 0.6rem;
-  }
-  .kacheln b {
-    font-size: 1.6rem; font-weight: 680; line-height: 1.1; color: var(--ink);
-    font-variant-numeric: tabular-nums; letter-spacing: -0.02em;
-  }
-  .kacheln span { font-size: 0.78rem; color: var(--muted); }
-  .kacheln i { font-style: normal; font-size: 0.72rem; color: var(--muted); opacity: 0.8; }
-
-  .fussnote { margin: 0; font-size: 0.79rem; color: var(--muted); max-width: 46rem; text-wrap: pretty; }
-  section { margin-top: 2.5rem; }
-  h2 { font-size: 1.15rem; margin: 0 0 0.5rem; }
-
   .titelliste {
-    display: grid; grid-template-columns: repeat(auto-fill, minmax(min(15rem, 100%), 1fr));
-    gap: 0.4rem 1.25rem; margin: 1rem 0 0; padding: 0; list-style: none;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(16rem, 100%), 1fr));
+    gap: 0.6rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
   }
-  .titelliste li { display: flex; align-items: baseline; gap: 0.5rem; font-size: 0.88rem; }
-  .titelliste b { color: var(--accent); font-variant-numeric: tabular-nums; }
-  .titelliste span { color: var(--muted); font-size: 0.8rem; margin-left: auto; }
 
-  .rangliste { margin: 1rem 0 0; padding: 0; list-style: none; }
-  .rangliste li {
-    display: flex; justify-content: space-between; gap: 1rem;
-    padding: 0.4rem 0; border-bottom: 1px solid var(--border); font-size: 0.9rem;
+  .titelliste li {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: baseline;
+    gap: 0 0.7rem;
+    padding: 0.7rem 0.95rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-s);
+    box-shadow: var(--shadow-s);
   }
-  .rangliste a { color: var(--ink); text-decoration: none; }
-  .rangliste a:hover { color: var(--accent); }
-  .rangliste b { color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  .titelliste b { grid-row: span 2; font-size: 1.15rem; font-weight: 800; color: var(--accent); font-variant-numeric: tabular-nums; }
+  .titelliste span { font-size: 0.8rem; color: var(--muted); }
+
+  /* Die Siegerliste kann lang sein: zweispaltig, damit sie nicht die halbe Seite füllt. */
+  .sieger .rangliste { columns: 2 16rem; column-gap: 2rem; }
+  .sieger .rangliste li { break-inside: avoid; }
 </style>

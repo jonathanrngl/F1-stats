@@ -12,6 +12,7 @@
  */
 import { datum, ein, zahl } from '../../lib/format.js'
 import Seite from '../../layouts/Seite.astro'
+import Sprung from '../../components/Sprung.astro'
 import { db, pfad } from '../../lib/db.js'
 import {
   datenstand, inReichweite, juengsteAenderungen, laufendeSerien, rekordVerlaeufe,
@@ -66,41 +67,57 @@ function satz(e) {
     alt ? ` – ${alt} no longer shares it` : ''
   }.`
 }
+
+const ziele = [
+  gefallen.length > 0 && { id: 'gefallen', label: 'Recently fallen' },
+  laufendeAusbauten.length > 0 && { id: 'ausbau', label: 'Being extended' },
+  stand && marken.length > 0 && { id: 'saison', label: 'This season' },
+  aussichten.length > 0 && { id: 'naechste', label: 'Closest challengers' },
+  serien.length > 0 && { id: 'serien', label: 'Active streaks' },
+].filter(Boolean)
 ---
 
 <Seite
   titel="Changes – what is moving in the record lists"
   beschreibung="Which Formula 1 record fell most recently, what is still within reach this season, and who is closest to the all-time marks."
 >
-  <h1>Changes</h1>
-  <p class="lead">
-    Record lists look settled, and they are not. This page works out from the results themselves
-    when each record last moved – and who is closest to it right now.
-  </p>
-
-  {
-    stand && (
-      <p class="stand">
-        As at <a href={pfad.rennen(stand.id)}>{stand.grandPrix} {stand.jahr}</a>,
-        {' '}{datum(stand.datum)} · round {stand.runde} of {stand.rennenImJahr}
-        {stand.offen > 0 && ` · ${stand.offen} races remaining`}
+  <header class="seitenkopf">
+    <div>
+      <p class="oberzeile">Analysis</p>
+      <h1>Changes</h1>
+      <p class="lead">
+        Record lists look settled, and they are not. When did each record last move – and who is
+        closest to it right now?
       </p>
-    )
-  }
+      {stand && (
+        <ul class="eckdaten">
+          <li>As at <a href={pfad.rennen(stand.id)}>{stand.grandPrix} {stand.jahr}</a></li>
+          <li>{datum(stand.datum)}</li>
+          <li>Round {stand.runde} of {stand.rennenImJahr}</li>
+          {stand.offen > 0 && <li class="stark">{stand.offen} races remaining</li>}
+        </ul>
+      )}
+    </div>
+  </header>
 
   {!stand && <p class="hinweis">There are no results to calculate from.</p>}
+
+  <Sprung ziele={ziele} />
 
   {/* ------------------------------------------------------ zuletzt gefallen */}
 
   {
     gefallen.length > 0 && (
-      <section>
-        <h2>Recently fallen</h2>
-        <p class="unter">
-          Every record grows one step at a time. To break one you must first equal it – so each broken
-          record carries the date it was equalled, often weeks earlier. An entry without that line
-          is a record currently being shared.
-        </p>
+      <section class="abschnitt" id="gefallen">
+        <div class="abschnitt-kopf">
+          <div>
+            <h2>Recently fallen</h2>
+            <p>
+              To break a record you must first equal it – so each broken record carries the date
+              it was equalled, often weeks earlier.
+            </p>
+          </div>
+        </div>
         <ol class="ereignisse">
           {gefallen.map((e) => (
             <li>
@@ -109,7 +126,7 @@ function satz(e) {
                 <a href={pfad.rennen(e.rennen)}>{e.grandPrix} {e.jahr}</a>
               </div>
               <div class="was">
-                <span class={`etikett ${WORT[e.art].farbe}`}>{WORT[e.art].kurz}</span>
+                <span class={`etikett ${WORT[e.art].farbe === 'neu' ? 'akzent' : ''}`}>{WORT[e.art].kurz}</span>
                 <b>{e.kategorie.titel}</b>
                 <p>{satz(e)}</p>
                 {e.zuvorEingestellt && (
@@ -146,19 +163,20 @@ function satz(e) {
 
   {
     laufendeAusbauten.length > 0 && (
-      <section>
-        <h2>Currently being extended</h2>
-        <p class="unter">
-          A driver who holds a record and is still racing adds to it in every successful race.
-          It is gathered here as a single gain rather than one entry per race.
-        </p>
+      <section class="abschnitt" id="ausbau">
+        <div class="abschnitt-kopf">
+          <div>
+            <h2>Currently being extended</h2>
+            <p>A record holder who is still racing adds to it in every successful race – gathered here as one gain rather than one entry per race.</p>
+          </div>
+        </div>
         <div class="tabelle">
           <table>
             <thead>
               <tr>
                 <th>Record</th>
                 <th>Holder</th>
-                <th class="zahl">Gain</th>
+                <th class="num">Gain</th>
                 <th>Extending since</th>
                 <th>Most recently</th>
               </tr>
@@ -166,7 +184,7 @@ function satz(e) {
             <tbody>
               {laufendeAusbauten.map((a) => (
                 <tr>
-                  <td>{a.kategorie.titel}</td>
+                  <td class="fett">{a.kategorie.titel}</td>
                   <td>
                     {a.halter.map((h, i) => (
                       <>
@@ -175,15 +193,15 @@ function satz(e) {
                       </>
                     ))}
                   </td>
-                  <td class="zahl">
+                  <td class="num">
                     {zahl(a.von)} → <b>{zahl(a.bis)}</b>
                     <span class="neben">in {a.schritte} steps</span>
                   </td>
-                  <td>
-                    <a href={pfad.rennen(a.seit.rennen)}>{a.seit.grandPrix} {a.seit.jahr}</a>
+                  <td class="leise">
+                    <a class="leise" href={pfad.rennen(a.seit.rennen)}>{a.seit.grandPrix} {a.seit.jahr}</a>
                   </td>
-                  <td>
-                    <a href={pfad.rennen(a.zuletzt.rennen)}>{a.zuletzt.grandPrix} {a.zuletzt.jahr}</a>
+                  <td class="leise">
+                    <a class="leise" href={pfad.rennen(a.zuletzt.rennen)}>{a.zuletzt.grandPrix} {a.zuletzt.jahr}</a>
                   </td>
                 </tr>
               ))}
@@ -198,15 +216,16 @@ function satz(e) {
 
   {
     stand && marken.length > 0 && (
-      <section>
-        <h2>Still within reach this season</h2>
-        <p class="unter">
-          Not a projection but a calculation: this many successes are needed, this many races
-          remain. Anything the arithmetic has already ruled out never appears here.
-        </p>
-        <ul class="karten">
+      <section class="abschnitt" id="saison">
+        <div class="abschnitt-kopf">
+          <div>
+            <h2>Still within reach this season</h2>
+            <p>Not a projection but arithmetic: this many successes are needed, this many races remain. Anything already ruled out never appears here.</p>
+          </div>
+        </div>
+        <ul class="marken">
           {marken.map((m) => (
-            <li class="karte marke-karte">
+            <li class="karte">
               <span class="titel">{m.art.titel}</span>
               <p class="gross">
                 <a href={pfad.fahrer(m.fuehrender.id)}>{m.fuehrender.name}</a>
@@ -234,27 +253,30 @@ function satz(e) {
 
   {
     aussichten.length > 0 && (
-      <section>
-        <h2>Closest to the all-time records</h2>
-        <p class="unter">
-          The nearest challenger to each record. The gap is a fact; the projection beside it is
-          not – it merely carries forward the strike rate of the past three seasons and assumes
-          the driver keeps racing.
-        </p>
+      <section class="abschnitt" id="naechste">
+        <div class="abschnitt-kopf">
+          <div>
+            <h2>Closest to the all-time records</h2>
+            <p>
+              The nearest challenger to each record. The gap is a fact; the projection beside it is
+              not – it carries forward the strike rate of the past three seasons.
+            </p>
+          </div>
+        </div>
         <div class="tabelle">
           <table>
             <thead>
               <tr>
                 <th>Driver</th>
                 <th>Record</th>
-                <th class="zahl">Tally</th>
-                <th class="zahl">Needed</th>
+                <th class="num">Tally</th>
+                <th class="num">Needed</th>
                 <th>At this rate</th>
               </tr>
             </thead>
             <tbody>
               {aussichten.map((a) => (
-                <tr class={a.naechstesRennen ? 'dringend' : undefined}>
+                <tr class={a.naechstesRennen ? 'meister' : undefined}>
                   <td>
                     <a class="zeile" href={pfad.fahrer(a.fahrer.id)}>{a.fahrer.name}</a>
                     {a.alter !== null && <span class="neben">{Math.floor(a.alter)} years old</span>}
@@ -272,8 +294,8 @@ function satz(e) {
                       {a.halterAktiv && ' – still racing, so the record keeps growing'}
                     </span>
                   </td>
-                  <td class="zahl">{zahl(a.eigene)}</td>
-                  <td class="zahl">
+                  <td class="num">{zahl(a.eigene)}</td>
+                  <td class="num">
                     <b>{zahl(a.fehlt)}</b>
                     {a.naechstesRennen && <span class="neben">next race</span>}
                   </td>
@@ -296,6 +318,7 @@ function satz(e) {
             </tbody>
           </table>
         </div>
+        <p class="fussnote">Highlighted: the record could fall at the next race.</p>
       </section>
     )
   }
@@ -304,19 +327,20 @@ function satz(e) {
 
   {
     serien.length > 0 && (
-      <section>
-        <h2>Active streaks</h2>
-        <p class="unter">
-          Streaks that were still running at the driver's last start. Missing a race does not break
-          one – a driver who was not there had nothing to lose.
-        </p>
+      <section class="abschnitt" id="serien">
+        <div class="abschnitt-kopf">
+          <div>
+            <h2>Active streaks</h2>
+            <p>Streaks still running at the driver's last start. Missing a race does not break one.</p>
+          </div>
+        </div>
         <div class="tabelle">
           <table>
             <thead>
               <tr>
                 <th>Driver</th>
                 <th>Streak</th>
-                <th class="zahl">Length</th>
+                <th class="num">Length</th>
                 <th>Record</th>
               </tr>
             </thead>
@@ -325,7 +349,7 @@ function satz(e) {
                 <tr>
                   <td><a class="zeile" href={pfad.fahrer(s.id)}>{s.name}</a></td>
                   <td>{s.art.titel}</td>
-                  <td class="zahl"><b>{s.laenge}</b></td>
+                  <td class="num fett">{s.laenge}</td>
                   <td>
                     {s.rekord}
                     <span class="neben">
@@ -350,9 +374,9 @@ function satz(e) {
 
   {/* ------------------------------------------------------------------ Methode */}
 
-  <section>
-    <h2>How this is worked out</h2>
-    <div class="methode">
+  <details class="erklaerung abschnitt">
+    <summary>How this is worked out</summary>
+    <div>
       <p>
         The history of every record is derived from the results themselves: all
         {' '}{zahl(rennenGesamt)} races held since 1950 are walked through in chronological
@@ -377,308 +401,108 @@ function satz(e) {
         The all-time points table is deliberately absent. The scoring systems have changed more
         than a dozen times – a record of that kind mostly measures the system.
       </p>
-      <p class="weiter">
+      <p>
         The full lists are under <a href={pfad.seite('/records/')}>Records</a>, and the next race
-        under <a href={pfad.seite('/preview/')}>Preview</a>.
+        under <a href={pfad.seite('/preview/')}>Next race</a>.
       </p>
     </div>
-  </section>
+  </details>
 </Seite>
 
 <style>
-  h2 {
-    margin: 2.75rem 0 0;
-    font-size: 1.15rem;
-    letter-spacing: -0.01em;
-  }
-
-  .stand {
-    margin: 1rem 0 0;
-    font-size: 0.88rem;
-    color: var(--muted);
-  }
-
-  .unter {
-    max-width: 46rem;
-    margin: 0.4rem 0 0;
-    font-size: 0.88rem;
-    color: var(--muted);
-    text-wrap: pretty;
-  }
-
-  .hinweis {
-    margin-top: 1.5rem;
-    padding: 0.9rem 1rem;
-    background: var(--surface-2);
-    border: 1px solid var(--border);
-    border-radius: 0.6rem;
-  }
-
   /* ---------------------------------------------------------- Ereignisliste */
 
   .ereignisse {
-    margin: 1.25rem 0 0;
+    margin: 0;
     padding: 0;
     list-style: none;
     display: grid;
-    gap: 0.6rem;
+    gap: 0.7rem;
   }
 
   .ereignisse li {
     display: grid;
-    grid-template-columns: minmax(0, 9.5rem) minmax(0, 1fr);
-    gap: 0.25rem 1rem;
-    padding: 0.85rem 1rem;
+    grid-template-columns: minmax(0, 10rem) minmax(0, 1fr);
+    gap: 0.25rem 1.25rem;
+    padding: 1rem 1.15rem;
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 0.6rem;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-s);
   }
 
   .wann {
     display: grid;
     gap: 0.15rem;
     align-content: start;
-    font-size: 0.82rem;
+    font-size: 0.84rem;
   }
 
-  .wann b {
-    color: var(--ink);
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-  }
+  .wann b { color: var(--ink); font-weight: 700; font-variant-numeric: tabular-nums; }
+  .wann a { color: var(--muted); text-decoration: none; }
+  .wann a:hover { color: var(--accent); }
 
-  .wann a {
-    color: var(--muted);
-    text-decoration: none;
-  }
-
-  .wann a:hover {
-    color: var(--accent);
-  }
+  .was .etikett { margin-left: 0; }
 
   .was > b {
     display: block;
-    margin-top: 0.15rem;
+    margin-top: 0.3rem;
+    font-size: 1.02rem;
     color: var(--ink);
-    font-weight: 650;
-  }
-
-  .was p {
-    margin: 0.3rem 0 0;
-    font-size: 0.9rem;
-    color: var(--ink-2);
-    text-wrap: pretty;
-  }
-
-  .was .davor {
-    font-size: 0.83rem;
-    color: var(--muted);
-  }
-
-  .was .davor a {
-    color: var(--ink-2);
-    text-decoration: none;
-  }
-
-  .was .davor a:hover {
-    color: var(--accent);
-  }
-
-  /*
-   * Nicht `.marke`: So heißt in theme.css der Schriftzug der Kopfleiste, und
-   * der ist global. Ein `display: flex` von dort machte aus dieser Plakette
-   * eine Zeile.
-   */
-  .etikett {
-    display: inline-block;
-    padding: 0.1rem 0.45rem;
-    font-size: 0.66rem;
     font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    border-radius: 999px;
   }
 
-  .etikett.neu {
-    color: var(--accent);
-    background: var(--accent-wash);
-  }
+  .was p { margin: 0.3rem 0 0; font-size: 0.9rem; color: var(--ink-2); text-wrap: pretty; }
+  .was .davor { font-size: 0.83rem; color: var(--muted); }
+  .was .davor a { color: var(--ink-2); text-decoration: none; }
+  .was .davor a:hover { color: var(--accent); }
 
-  .etikett.gleich {
-    color: var(--muted);
-    background: var(--surface-3);
-  }
-
-  /*
-   * Zwei Selektoren statt `!important`: `.was p` und `.karte span` aus
-   * theme.css sind spezifischer als ein einzelner Klassenname, und Astros
-   * Bereichsstile heben die Spezifität nicht an.
-   */
-  .was .spur,
-  .karte .spur {
-    font-size: 0.82rem;
-    color: var(--muted);
-    font-variant-numeric: tabular-nums;
-  }
-
-  .spur a {
-    color: var(--ink-2);
-    text-decoration: none;
-  }
-
-  .spur a:hover {
-    color: var(--accent);
-  }
+  .spur,
+  .was .spur { font-size: 0.82rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .spur a { color: var(--ink-2); text-decoration: none; }
+  .spur a:hover { color: var(--accent); }
 
   /* --------------------------------------------------------- Saisonmarken */
 
-  .marke-karte .titel {
-    display: block;
-    font-size: 0.82rem;
+  .marken {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(18rem, 100%), 1fr));
+    gap: 0.85rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .marken .titel {
+    font-size: 0.72rem;
+    font-weight: 750;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
     color: var(--muted);
-    font-weight: 600;
   }
 
-  .gross {
-    margin: 0.35rem 0 0;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: 0.4rem;
-  }
-
-  .gross a {
-    color: var(--ink);
-    font-weight: 650;
-    text-decoration: none;
-  }
-
-  .gross a:hover {
-    color: var(--accent);
-  }
-
-  .gross .wert {
-    font-size: 0.85rem;
-    color: var(--accent);
-    font-weight: 600;
-  }
-
-  .marke-karte .spur {
-    margin: 0.3rem 0 0;
-  }
-
-  .spur .fett {
-    color: var(--ink-2);
-    font-weight: 650;
-  }
+  .gross { margin: 0.35rem 0 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.45rem; }
+  .gross a { font-size: 1.1rem; color: var(--ink); font-weight: 750; text-decoration: none; }
+  .gross a:hover { color: var(--accent); }
+  .gross .wert { font-size: 0.88rem; color: var(--accent); font-weight: 700; }
+  .marken .spur { margin: 0.3rem 0 0; }
+  .spur .fett { color: var(--ink-2); font-weight: 700; }
 
   .urteil {
-    margin: 0.55rem 0 0;
-    padding-top: 0.5rem;
+    margin: 0.65rem 0 0;
+    padding-top: 0.55rem;
     border-top: 1px solid var(--border);
-    font-size: 0.82rem;
+    font-size: 0.84rem;
     text-wrap: pretty;
   }
 
-  .urteil.moeglich {
-    color: var(--good);
-  }
+  .urteil.moeglich { color: var(--good); font-weight: 600; }
+  .urteil.knapp { color: var(--muted); }
 
-  .urteil.knapp {
-    color: var(--muted);
-  }
-
-  /* ------------------------------------------------------------- Tabellen */
-
-  .zahl {
-    text-align: right;
-    font-variant-numeric: tabular-nums;
-  }
-
-  /*
-   * Rennverweise in Tabellenzellen ruhig halten. In der Standardfarbe stünden
-   * in „Ausbau seit" und „Zuletzt" zwei Spalten voller roter, unterstrichener
-   * Links nebeneinander – der Blick fände dann keinen Anfang mehr.
-   */
-  .tabelle td a:not(.zeile) {
-    color: var(--ink-2);
-    text-decoration: none;
-  }
-
-  .tabelle td a:not(.zeile):hover {
-    color: var(--accent);
-  }
-
-  td .neben {
-    display: block;
-    font-size: 0.76rem;
-    color: var(--muted);
-    text-wrap: pretty;
-  }
-
-  td .neben a {
-    color: var(--muted);
-    text-decoration: none;
-  }
-
-  td .neben a:hover {
-    color: var(--accent);
-  }
-
-  tr.dringend td {
-    background: var(--accent-wash);
-  }
-
-  .luecke {
-    font-size: 0.82rem;
-    color: var(--warn);
-    text-wrap: pretty;
-  }
-
-  /* -------------------------------------------------------------- Methode */
-
-  .methode {
-    max-width: 46rem;
-    margin-top: 1.25rem;
-    padding: 1rem 1.15rem;
-    background: var(--surface-2);
-    border: 1px solid var(--border);
-    border-radius: 0.6rem;
-  }
-
-  .methode p {
-    margin: 0 0 0.75rem;
-    font-size: 0.86rem;
-    color: var(--ink-2);
-    text-wrap: pretty;
-  }
-
-  .methode p:last-child {
-    margin-bottom: 0;
-  }
-
-  .methode b {
-    color: var(--ink);
-  }
-
-  .weiter {
-    padding-top: 0.75rem;
-    border-top: 1px solid var(--border);
-    color: var(--muted) !important;
-  }
-
-  /* ---------------------------------------------------------- schmale Sicht */
+  .luecke { font-size: 0.82rem; color: var(--warn); text-wrap: pretty; }
 
   @media (max-width: 34rem) {
-    .ereignisse li {
-      grid-template-columns: minmax(0, 1fr);
-      gap: 0.35rem;
-    }
-
-    .wann {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.15rem 0.5rem;
-    }
+    .ereignisse li { grid-template-columns: minmax(0, 1fr); gap: 0.35rem; }
+    .wann { display: flex; flex-wrap: wrap; gap: 0.15rem 0.5rem; }
   }
 </style>

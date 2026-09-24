@@ -1,6 +1,8 @@
 ---
-import { ein, zahl } from '../../lib/format.js'
+import { ein } from '../../lib/format.js'
 import Seite from '../../layouts/Seite.astro'
+import Filter from '../../components/Filter.astro'
+import Sortierung from '../../components/Sortierung.astro'
 import { eine, streckenListe, pfad } from '../../lib/db.js'
 import Weltkarte from '../../components/Weltkarte.astro'
 
@@ -20,37 +22,58 @@ const aktuellAb = neuestesJahr - 4
   titel="All Formula 1 circuits"
   beschreibung={`${strecken.length} circuits that have hosted World Championship rounds since 1950.`}
 >
-  <h1>Circuits</h1>
-  <p class="lead">
-    {strecken.length} circuits that have hosted World Championship rounds since 1950. Sorted
-    by the number of races.
-  </p>
+  <header class="seitenkopf">
+    <div>
+      <p class="oberzeile">Circuits</p>
+      <h1>Every circuit since 1950</h1>
+      <p class="lead">
+        {strecken.length} circuits have hosted a World Championship round. Click a circle on
+        the map, or find one in the list below.
+      </p>
+    </div>
+  </header>
 
   <Weltkarte strecken={strecken} aktuellAb={aktuellAb} pfadZu={pfad.strecke} />
 
-  <div class="tabelle">
-    <table>
-      <thead>
-        <tr>
-          <th>Circuit</th><th>Location</th><th>Period</th>
-          <th class="num">Races</th><th class="num">Length</th><th class="num">Corners</th>
-        </tr>
-      </thead>
-      <tbody>
-        {strecken.map((z) => (
+  <section class="abschnitt">
+    <div class="abschnitt-kopf"><div><h2>All circuits</h2></div></div>
+
+    <Filter
+      platzhalter="Filter by circuit, place or country"
+      einheit={['circuit', 'circuits']}
+      pillen={[{ label: 'On the current calendar', spalte: 2, art: 'bis', wert: aktuellAb }]}
+    />
+
+    <div class="tabelle lang">
+      <table>
+        <thead>
           <tr>
-            <td>
-              <span class="kuerzel" title={z.landName ?? ''}>{z.land ?? '—'}</span>
-              <a class="zeile" href={pfad.strecke(z.id)}>{z.name}</a>
-            </td>
-            <td style="color:var(--muted)">{z.ort}</td>
-            <td style="color:var(--muted)">{z.von === z.bis ? z.von : `${z.von}–${z.bis}`}</td>
-            <td class="num">{z.rennen}</td>
-            <td class="num">{z.laenge ? `${ein(z.laenge)} km` : '–'}</td>
-            <td class="num">{z.kurven ?? '–'}</td>
+            <th><button type="button" data-spalte="0" data-art="name">Circuit</button></th>
+            <th>Location</th>
+            <th><button type="button" data-spalte="2" data-art="jahr">Period</button></th>
+            <th class="num"><button type="button" data-spalte="3" data-art="zahl" data-aktiv="1">Races</button></th>
+            <th class="num"><button type="button" data-spalte="4" data-art="zahl">Length</button></th>
+            <th class="num"><button type="button" data-spalte="5" data-art="zahl">Corners</button></th>
           </tr>
-        ))}
-      </tbody>
-    </table>
-  </div>
+        </thead>
+        <tbody>
+          {strecken.map((z) => (
+            <tr data-name={z.name}>
+              <td>
+                <span class="kuerzel" title={z.landName ?? ''}>{z.land ?? '—'}</span>
+                <a class="zeile" href={pfad.strecke(z.id)}>{z.name}</a>
+              </td>
+              <td class="leise">{z.ort}</td>
+              <td class="leise">{z.von === z.bis ? z.von : `${z.von}–${z.bis}`}</td>
+              <td class="num">{z.rennen}</td>
+              <td class="num">{z.laenge ? `${ein(z.laenge)} km` : '–'}</td>
+              <td class="num">{z.kurven ?? '–'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <Sortierung vorsortiert={3} gleichstand={3} />
 </Seite>

@@ -1,6 +1,15 @@
 // @ts-check
+import { createHash } from 'node:crypto'
 import { defineConfig } from 'astro/config'
 import react from '@astrojs/react'
+import { MODUS_SKRIPT } from './src/lib/modus.js'
+
+/*
+ * Das Inline-Skript im Kopf (hell/dunkel) hasht Astro nicht selbst. Der Hash
+ * wird deshalb hier aus demselben Text gerechnet, den das Layout ausgibt –
+ * ändert sich das Skript, zieht die Richtlinie von allein nach.
+ */
+const MODUS_HASH = `sha256-${createHash('sha256').update(MODUS_SKRIPT).digest('base64')}`
 
 /*
  * Statische Ausgabe: Alle Seiten entstehen beim Bauen aus der importierten
@@ -70,6 +79,7 @@ export default defineConfig({
    */
   security: {
     csp: {
+      scriptDirective: { hashes: [MODUS_HASH] },
       directives: [
         "default-src 'self'",
         "img-src 'self' data:",

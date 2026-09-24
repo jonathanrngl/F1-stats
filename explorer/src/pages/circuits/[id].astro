@@ -1,6 +1,7 @@
 ---
-import { ein, prozent as proz, zahl } from '../../lib/format.js'
+import { ein, plakette, prozent as proz, zahl } from '../../lib/format.js'
 import Seite from '../../layouts/Seite.astro'
+import Sprung from '../../components/Sprung.astro'
 import { eine, streckenListe, pfad, db } from '../../lib/db.js'
 import { land } from '../../lib/laender.js'
 import {
@@ -28,89 +29,102 @@ const spezialisten = circuitSpecialists(db(), id)
 const layouts = circuitLayouts(db(), id)
 
 const zeitraum = rennen.length ? `${rennen.at(-1).year}–${rennen[0].year}` : '–'
+
+const ziele = [
+  { id: 'bestenliste', label: 'Most successful' },
+  spezialisten.length > 0 && { id: 'spezialisten', label: 'Specialists' },
+  layouts.length > 1 && { id: 'layouts', label: 'Layouts' },
+  { id: 'rennen', label: 'All races' },
+].filter(Boolean)
 ---
 
 <Seite
   titel={`${strecke.name} – Formula 1 circuit statistics`}
   beschreibung={`${rennen.length} Formula 1 races in ${strecke.place_name} (${zeitraum}).`}
 >
-  <header class="profil">
-    <span class="kuerzel gross" title={heimat.name}>{heimat.code}</span>
+  <header class="seitenkopf">
+    <span class="wappen" title={heimat.name}>{heimat.code}</span>
     <div>
-      <h1>{strecke.name}</h1>
-      <p class="lead">
-        {[strecke.place_name, heimat.name, zeitraum,
-          strecke.length_km ? `${ein(strecke.length_km)} km` : null,
-          strecke.turns ? `${strecke.turns} corners` : null]
-          .filter(Boolean).join(' · ')}
+      <p class="oberzeile">
+        <a href={pfad.seite('/circuits/')}>Circuits</a>
+        <span class="trenner">/</span>
+        <span class="still">{heimat.name}</span>
       </p>
+      <h1>{strecke.name}</h1>
+      <ul class="eckdaten">
+        {strecke.place_name && strecke.place_name !== strecke.name && <li>{strecke.place_name}</li>}
+        <li>{zeitraum}</li>
+        {strecke.length_km > 0 && <li>{ein(strecke.length_km)} km</li>}
+        {strecke.turns > 0 && <li>{strecke.turns} corners</li>}
+      </ul>
     </div>
   </header>
 
   <ul class="kacheln">
-    <li><b>{rennen.length}</b><span>Races</span></li>
-    <li><b>{proz(zahlen.ausfallquote)}</b><span>Starts not classified</span></li>
-    <li><b>{proz(zahlen.poleZuSieg)}</b><span>Pole-to-win conversion</span></li>
-    <li><b>{ein(zahlen.mittlererSiegerStart.value)}</b><span>Avg grid position of the winner</span></li>
+    <li><span>Races</span><b>{rennen.length}</b></li>
+    <li><span>Not classified</span><b>{proz(zahlen.ausfallquote)}</b><i>of all starts</i></li>
+    <li><span>Pole to win</span><b>{proz(zahlen.poleZuSieg)}</b><i>pole-sitter won</i></li>
+    <li><span>Winner's grid slot</span><b>{ein(zahlen.mittlererSiegerStart.value)}</b><i>on average</i></li>
   </ul>
 
   {zahlen.groessteAufholjagd && (
-    <p class="hinweis">
-      Furthest charge to victory here:{' '}
-      <a href={pfad.fahrer(zahlen.groessteAufholjagd.id)}>{zahlen.groessteAufholjagd.name}</a>
-      {' '}won in {zahlen.groessteAufholjagd.year} from P{zahlen.groessteAufholjagd.start} on the grid.
+    <p class="hinweis akzent">
+      <span>
+        Furthest charge to victory here:{' '}
+        <a href={pfad.fahrer(zahlen.groessteAufholjagd.id)}>{zahlen.groessteAufholjagd.name}</a>
+        {' '}won in {zahlen.groessteAufholjagd.year} from P{zahlen.groessteAufholjagd.start} on the grid.
+      </span>
     </p>
   )}
 
-  <div class="spalten">
-    <section>
-      <h2>Most wins</h2>
-      <ol class="rangliste">
-        {sieger.map((s) => (
-          <li>
-            <a href={pfad.fahrer(s.id)}>{s.name}</a>
-            <b>{s.anzahl}</b>
-          </li>
-        ))}
-      </ol>
-    </section>
+  <Sprung ziele={ziele} />
 
-    {polesetter.length > 0 && (
-      <section>
-        <h2>Most pole positions</h2>
+  <section class="abschnitt" id="bestenliste">
+    <div class="abschnitt-kopf"><div><h2>Most successful here</h2></div></div>
+    <div class="spalten">
+      <div class="rangkarte">
+        <h3>Most wins</h3>
         <ol class="rangliste">
-          {polesetter.map((s) => (
-            <li>
-              <a href={pfad.fahrer(s.id)}>{s.name}</a>
-              <b>{s.anzahl}</b>
-            </li>
+          {sieger.map((s) => (
+            <li><a href={pfad.fahrer(s.id)}>{s.name}</a><b>{s.anzahl}</b></li>
           ))}
         </ol>
-      </section>
-    )}
+      </div>
 
-    <section>
-      <h2>Most successful teams</h2>
-      <ol class="rangliste">
-        {teams.map((t) => (
-          <li>
-            <a href={pfad.team(t.id)}>{t.name}</a>
-            <b>{t.anzahl}</b>
-          </li>
-        ))}
-      </ol>
-    </section>
-  </div>
+      {polesetter.length > 0 && (
+        <div class="rangkarte">
+          <h3>Most pole positions</h3>
+          <ol class="rangliste">
+            {polesetter.map((s) => (
+              <li><a href={pfad.fahrer(s.id)}>{s.name}</a><b>{s.anzahl}</b></li>
+            ))}
+          </ol>
+        </div>
+      )}
+
+      <div class="rangkarte">
+        <h3>Most successful teams</h3>
+        <ol class="rangliste">
+          {teams.map((t) => (
+            <li><a href={pfad.team(t.id)}>{t.name}</a><b>{t.anzahl}</b></li>
+          ))}
+        </ol>
+      </div>
+    </div>
+  </section>
 
   {spezialisten.length > 0 && (
-    <section>
-      <h2>Circuit specialists</h2>
-      <p class="lead">
-        The comparison is between a driver's average finishing position here and the same
-        driver's average everywhere else. Anyone markedly better here has the measure of the
-        circuit – regardless of how good their car was. At least three starts here and three
-        elsewhere.
-      </p>
+    <section class="abschnitt" id="spezialisten">
+      <div class="abschnitt-kopf">
+        <div>
+          <h2>Circuit specialists</h2>
+          <p>
+            A driver's average finish here, set against the same driver's average everywhere
+            else – so a driver who wins everywhere is no specialist here. At least three starts
+            here and three elsewhere.
+          </p>
+        </div>
+      </div>
       <div class="tabelle">
         <table>
           <thead>
@@ -126,8 +140,8 @@ const zeitraum = rennen.length ? `${rennen.at(-1).year}–${rennen[0].year}` : '
                 <td class="num">{s.startsHier}</td>
                 <td class="num">{s.siegeHier || ''}</td>
                 <td class="num">{ein(s.hier)}</td>
-                <td class="num">{ein(s.sonst)}</td>
-                <td class="num vorteil">+{ein(s.vorteil)}</td>
+                <td class="num leise">{ein(s.sonst)}</td>
+                <td class="num gut">+{ein(s.vorteil)}</td>
               </tr>
             ))}
           </tbody>
@@ -137,13 +151,14 @@ const zeitraum = rennen.length ? `${rennen.at(-1).year}–${rennen[0].year}` : '
   )}
 
   {layouts.length > 1 && (
-    <section>
-      <h2>Layouts</h2>
-      <p class="lead">
-        The circuit has been rebuilt. Comparing lap times across a change of layout
-        is not valid.
-      </p>
-      <div class="tabelle">
+    <section class="abschnitt" id="layouts">
+      <div class="abschnitt-kopf">
+        <div>
+          <h2>Layouts</h2>
+          <p>The circuit has been rebuilt. Comparing lap times across a change of layout is not valid.</p>
+        </div>
+      </div>
+      <div class="tabelle schmal">
         <table>
           <thead><tr><th>Period</th><th class="num">Length</th><th class="num">Corners</th><th class="num">Races</th></tr></thead>
           <tbody>
@@ -151,7 +166,7 @@ const zeitraum = rennen.length ? `${rennen.at(-1).year}–${rennen[0].year}` : '
               <tr>
                 <td>
                   {l.von ? (l.von === l.bis ? l.von : `${l.von}–${l.bis}`) : 'never raced'}
-                  {l.aktuell === 1 && <span class="jetzt">today</span>}
+                  {l.aktuell === 1 && <span class="etikett akzent">today</span>}
                 </td>
                 <td class="num">{l.laenge ? `${ein(l.laenge)} km` : '–'}</td>
                 <td class="num">{l.kurven ?? '–'}</td>
@@ -164,19 +179,19 @@ const zeitraum = rennen.length ? `${rennen.at(-1).year}–${rennen[0].year}` : '
     </section>
   )}
 
-  <section>
-    <h2>All races</h2>
-    <div class="tabelle">
+  <section class="abschnitt" id="rennen">
+    <div class="abschnitt-kopf"><div><h2>All races</h2></div></div>
+    <div class={`tabelle${rennen.length > 25 ? ' lang' : ''}`}>
       <table>
         <thead><tr><th>Year</th><th>Race</th><th>Winner</th><th>Team</th><th class="num">From grid</th></tr></thead>
         <tbody>
           {rennen.map((r) => (
             <tr>
               <td><a class="zeile" href={pfad.rennen(r.id)}>{r.year}</a></td>
-              <td style="color:var(--muted)">{r.grandPrix}</td>
-              <td>{r.siegerId ? <a class="zeile" href={pfad.fahrer(r.siegerId)}>{r.sieger}</a> : '–'}</td>
-              <td style="color:var(--muted)">{r.siegerTeam ?? ''}</td>
-              <td class="num">{r.siegerStart ?? '–'}</td>
+              <td class="leise">{r.grandPrix}</td>
+              <td>{r.siegerId ? <a class="zeile" href={pfad.fahrer(r.siegerId)}>{r.sieger}</a> : <span class="leise">–</span>}</td>
+              <td class="leise">{r.siegerTeam ?? ''}</td>
+              <td class="num">{r.siegerStart ? <span class={plakette(r.siegerStart)}>{r.siegerStart}</span> : '–'}</td>
             </tr>
           ))}
         </tbody>
@@ -186,51 +201,5 @@ const zeitraum = rennen.length ? `${rennen.at(-1).year}–${rennen[0].year}` : '
 </Seite>
 
 <style>
-  .profil { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
-  .kuerzel.gross {
-    flex: none; min-width: 3.6rem; padding: 0.5rem 0.35rem; margin: 0;
-    font-size: 0.86rem; color: var(--accent); background: var(--accent-wash);
-  }
-  .kacheln {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(min(9rem, 100%), 1fr));
-    gap: 0.75rem; margin: 0 0 1.5rem; padding: 0; list-style: none;
-  }
-  .kacheln li {
-    display: flex; flex-direction: column; gap: 0.1rem; padding: 0.9rem 1rem;
-    background: var(--surface-2); border: 1px solid var(--border); border-radius: 0.6rem;
-  }
-  .kacheln b {
-    font-size: 1.6rem; font-weight: 680; line-height: 1.1; color: var(--ink);
-    font-variant-numeric: tabular-nums; letter-spacing: -0.02em;
-  }
-  .kacheln span { font-size: 0.78rem; color: var(--muted); }
-  .hinweis {
-    margin: 0 0 1.5rem; padding: 0.8rem 1rem; font-size: 0.87rem;
-    background: var(--accent-wash); border: 1px solid var(--border);
-    border-left: 3px solid var(--accent); border-radius: 0.5rem; max-width: 46rem;
-  }
-  .spalten {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(min(15rem, 100%), 1fr));
-    gap: 1.5rem; margin-top: 2rem;
-  }
-  .spalten section { margin-top: 0; }
-  section { margin-top: 2.5rem; }
-  h2 { font-size: 1.15rem; margin: 0 0 0.75rem; }
-  .rangliste { margin: 0; padding: 0; list-style: none; counter-reset: rang; }
-  .rangliste li {
-    display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem;
-    padding: 0.4rem 0; border-bottom: 1px solid var(--border); font-size: 0.89rem;
-  }
-  .rangliste li::before {
-    counter-increment: rang; content: counter(rang);
-    min-width: 1.2rem; color: var(--muted); font-variant-numeric: tabular-nums; font-size: 0.78rem;
-  }
-  .rangliste a { flex: 1; color: var(--ink); text-decoration: none; font-weight: 550; }
-  .rangliste a:hover { color: var(--accent); }
-  .rangliste b { font-variant-numeric: tabular-nums; color: var(--ink); }
-  td.vorteil { color: var(--good); font-weight: 650; }
-  .jetzt {
-    margin-left: 0.4rem; padding: 0.05rem 0.35rem; font-size: 0.64rem; font-weight: 700;
-    color: var(--accent); background: var(--accent-wash); border-radius: 0.25rem;
-  }
+  .schmal { max-width: 40rem; }
 </style>

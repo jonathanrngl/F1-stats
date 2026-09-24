@@ -1,41 +1,97 @@
 ---
 import Seite from '../../layouts/Seite.astro'
+import Sprung from '../../components/Sprung.astro'
 import { saisonListe, pfad } from '../../lib/db.js'
 
 const saisons = saisonListe()
 const mitStreich = saisons.filter((s) => s.streichresultate).length
+
+/*
+ * Nach Jahrzehnten gegliedert. 77 Zeilen einer Tabelle lesen sich als eine
+ * Wand; in Jahrzehnte geteilt findet man ein Jahr, ohne zu zählen, und sieht
+ * nebenbei die Epochen – die Fünfziger mit Fangio, die Nuller mit Schumacher.
+ */
+const proJahrzehnt = new Map()
+for (const s of saisons) {
+  const j = Math.floor(s.jahr / 10) * 10
+  if (!proJahrzehnt.has(j)) proJahrzehnt.set(j, [])
+  proJahrzehnt.get(j).push(s)
+}
+const jahrzehnte = [...proJahrzehnt.entries()]
 ---
 
 <Seite titel="All Formula 1 seasons" beschreibung={`${saisons.length} seasons from 1950 to the present.`}>
-  <h1>Seasons</h1>
-  <p class="lead">
-    {saisons.length} years of the World Championship. In {mitStreich} of them not every result
-    counted towards the standings – in those seasons the championship standings sit below the
-    sum of the points scored in races.
-  </p>
+  <header class="seitenkopf">
+    <div>
+      <p class="oberzeile">Seasons</p>
+      <h1>Every season since 1950</h1>
+      <p class="lead">
+        {saisons.length} years of the World Championship, with standings, calendar and the
+        points progression of each.
+      </p>
+    </div>
+  </header>
 
-  <div class="tabelle">
-    <table>
-      <thead>
-        <tr>
-          <th>Season</th>
-          <th class="num">Races</th>
-          <th>World Champion</th>
-          <th>Constructors' title</th>
-          <th>Note</th>
-        </tr>
-      </thead>
-      <tbody>
-        {saisons.map((s) => (
-          <tr>
-            <td><a class="zeile" href={pfad.saison(s.jahr)}>{s.jahr}</a></td>
-            <td class="num">{s.rennen}</td>
-            <td>{s.meister ?? <span style="color:var(--muted)">in progress</span>}</td>
-            <td style="color:var(--muted)">{s.teamMeister ?? (s.mitTeamWM ? '' : 'not yet awarded')}</td>
-            <td style="color:var(--muted)">{s.streichresultate ? 'Dropped scores' : ''}</td>
-          </tr>
+  <Sprung ziele={jahrzehnte.map(([j]) => ({ id: `j${j}`, label: `${j}s` }))} />
+
+  {jahrzehnte.map(([j, liste]) => (
+    <section class="abschnitt" id={`j${j}`}>
+      <div class="abschnitt-kopf"><div><h2>The {j}s</h2></div></div>
+      <ul class="saisons">
+        {liste.map((s) => (
+          <li>
+            <a class="karte" href={pfad.saison(s.jahr)}>
+              <span class="kopfzeile">
+                <b class="jahr">{s.jahr}</b>
+                <span class="rennen">{s.rennen} races</span>
+              </span>
+              {s.meister ? (
+                <span class="wer">{s.meister}</span>
+              ) : (
+                <span class="laeuft">Season in progress</span>
+              )}
+              <span class="team">
+                {s.teamMeister ?? (s.mitTeamWM ? '' : 'No constructors’ title yet')}
+              </span>
+              {s.streichresultate === 1 && <span class="etikett">Dropped scores</span>}
+            </a>
+          </li>
         ))}
-      </tbody>
-    </table>
-  </div>
+      </ul>
+    </section>
+  ))}
+
+  <p class="fussnote">
+    <b>Dropped scores:</b> in {mitStreich} seasons not every result counted towards the
+    standings – only a driver's best races did. There the championship standings sit below the
+    sum of the points scored in races. The constructors' championship began in 1958.
+  </p>
 </Seite>
+
+<style>
+  .saisons {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(13rem, 100%), 1fr));
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .saisons .karte {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.1rem;
+    height: 100%;
+    padding: 0.9rem 1.05rem;
+  }
+
+  .kopfzeile { display: flex; align-items: baseline; justify-content: space-between; width: 100%; }
+  .jahr { font-size: 1.45rem; font-weight: 800; letter-spacing: -0.03em; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .rennen { font-size: 0.76rem; color: var(--muted); }
+  .wer { font-size: 0.92rem; font-weight: 650; color: var(--ink-2); }
+  .team { font-size: 0.8rem; color: var(--muted); }
+  .laeuft { font-size: 0.88rem; font-weight: 650; color: var(--accent); }
+  .etikett { margin: 0.35rem 0 0; }
+</style>

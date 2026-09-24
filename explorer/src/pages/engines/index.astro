@@ -7,6 +7,8 @@
  * Kundenmotoren, und die ist ein gutes Stück der Geschichte dieses Sports.
  */
 import Seite from '../../layouts/Seite.astro'
+import Filter from '../../components/Filter.astro'
+import Sortierung from '../../components/Sortierung.astro'
 import { zahl } from '../../lib/format.js'
 import { db, pfad } from '../../lib/db.js'
 import { motorenListe } from '../../engine/motor.js'
@@ -19,14 +21,27 @@ const mitSieg = motoren.filter((m) => m.siege > 0).length
   titel="Formula 1 engine manufacturers"
   beschreibung={`${motoren.length} engine manufacturers since 1950, with races, wins and titles.`}
 >
-  <h1>Engines</h1>
-  <p class="lead">
-    {motoren.length} engine manufacturers have entered a World Championship race since 1950;
-    {' '}{mitSieg} of them have won one. Counted per race, not per car: an engine that powered
-    four cars in a race was in one race, not four.
-  </p>
+  <header class="seitenkopf">
+    <div>
+      <p class="oberzeile">Engines</p>
+      <h1>Engine manufacturers</h1>
+      <p class="lead">
+        {motoren.length} manufacturers have entered a World Championship race since 1950;
+        {' '}{mitSieg} of them have won one.
+      </p>
+    </div>
+  </header>
 
-  <div class="tabelle">
+  <Filter
+    platzhalter="Filter by manufacturer or country"
+    einheit={['manufacturer', 'manufacturers']}
+    pillen={[
+      { label: 'Race winners', spalte: 3, art: 'gefuellt' },
+      { label: 'Title winners', spalte: 5, art: 'gefuellt' },
+    ]}
+  />
+
+  <div class="tabelle lang">
     <table>
       <thead>
         <tr>
@@ -45,60 +60,21 @@ const mitSieg = motoren.filter((m) => m.siege > 0).length
               <span class="kuerzel" title={m.landName ?? ''}>{m.land ?? '—'}</span>
               <a class="zeile" href={pfad.seite(`/engines/${m.id}/`)}>{m.name}</a>
             </td>
-            <td style="color:var(--muted)">{m.von === m.bis ? m.von : `${m.von}–${m.bis}`}</td>
+            <td class="leise">{m.von === m.bis ? m.von : `${m.von}–${m.bis}`}</td>
             <td class="num">{zahl(m.rennen)}</td>
             <td class="num">{m.siege || ''}</td>
             <td class="num">{m.podien || ''}</td>
-            <td class="num">{m.titel || ''}</td>
+            <td class="num meister">{m.titel || ''}</td>
           </tr>
         ))}
       </tbody>
     </table>
   </div>
+
+  <p class="fussnote">
+    Counted per race, not per car: an engine that powered four cars in a race was in one race,
+    not four.
+  </p>
+
+  <Sortierung vorsortiert={3} gleichstand={2} />
 </Seite>
-
-<script>
-  /* Dieselbe Sortierung wie auf der Fahrerliste – siehe dort für die Gründe. */
-  const koerper = document.querySelector('main tbody')
-  const zeilen = [...koerper.querySelectorAll('tr')]
-  const knoepfe = [...document.querySelectorAll('main thead button')]
-  const RENNEN = 2
-
-  let sortiert = { spalte: 3, ab: true }
-  const zellen = new Map(zeilen.map((tr) => [tr, [...tr.cells]]))
-  const zahlAus = (tr, i) =>
-    Number(zellen.get(tr)[i].textContent.trim().replace(/,/g, '')) || 0
-
-  function wert(tr, spalte, art) {
-    if (art === 'name') return tr.dataset.name ?? ''
-    if (art === 'jahr') return Number(zellen.get(tr)[spalte].textContent.trim().slice(-4)) || 0
-    return zahlAus(tr, spalte)
-  }
-
-  function sortiere(spalte, art) {
-    const ab = sortiert.spalte === spalte ? !sortiert.ab : art !== 'name'
-    sortiert = { spalte, ab }
-
-    zeilen.sort((a, b) => {
-      const x = wert(a, spalte, art)
-      const y = wert(b, spalte, art)
-      const v = art === 'name' ? String(x).localeCompare(String(y), 'en') : x - y
-      return (ab ? -v : v) || zahlAus(b, RENNEN) - zahlAus(a, RENNEN)
-    })
-
-    const stueck = document.createDocumentFragment()
-    for (const tr of zeilen) stueck.append(tr)
-    koerper.append(stueck)
-
-    for (const k of knoepfe) {
-      const an = Number(k.dataset.spalte) === spalte
-      k.dataset.aktiv = an ? '1' : ''
-      k.closest('th').setAttribute('aria-sort', an ? (ab ? 'descending' : 'ascending') : 'none')
-      k.dataset.richtung = an && !ab ? 'auf' : ''
-    }
-  }
-
-  for (const k of knoepfe) {
-    k.addEventListener('click', () => sortiere(Number(k.dataset.spalte), k.dataset.art))
-  }
-</script>

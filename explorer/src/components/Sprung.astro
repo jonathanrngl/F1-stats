@@ -1,0 +1,53 @@
+---
+/**
+ * Sprungleiste für lange Seiten.
+ *
+ * Ein Fahrerprofil hat sechs Abschnitte, eine Saison sieben, die Rekordseite
+ * über dreißig Listen. Ohne Leiste erfuhr man erst beim Scrollen, was es
+ * überhaupt gibt. Die Leiste klebt unter der Kopfleiste und zeigt, in welchem
+ * Abschnitt man gerade steht.
+ *
+ * Nur Einträge, deren Ziel es gibt: Abschnitte fallen weg, wenn die Daten
+ * fehlen (ein Fahrer ohne Teamkollegen), und ein Sprung ins Leere wäre
+ * schlechter als keiner. Die Seite übergibt deshalb nur, was sie auch zeigt.
+ */
+interface Props {
+  ziele: { id: string; label: string }[]
+}
+
+const { ziele } = Astro.props
+---
+
+{ziele.length > 1 && (
+  <nav class="sprung" aria-label="On this page">
+    {ziele.map((z) => <a href={`#${z.id}`}>{z.label}</a>)}
+  </nav>
+)}
+
+<script>
+  /*
+   * Markiert den Abschnitt, der gerade oben im Bild steht. Beobachtet wird ein
+   * schmaler Streifen unter der Kopfleiste, nicht der ganze Bildschirm – sonst
+   * wären bei kurzen Abschnitten zwei zugleich „aktiv".
+   */
+  const leiste = document.querySelector('.sprung')
+  if (leiste) {
+    const verweise = [...leiste.querySelectorAll('a')]
+    const ziele = verweise
+      .map((a) => document.getElementById(decodeURIComponent(a.hash.slice(1))))
+      .filter(Boolean)
+
+    const markiere = (id) => {
+      for (const a of verweise) a.classList.toggle('an', a.hash === `#${id}`)
+    }
+
+    const beobachter = new IntersectionObserver(
+      (eintraege) => {
+        const sichtbar = eintraege.filter((e) => e.isIntersecting)
+        if (sichtbar.length) markiere(sichtbar[0].target.id)
+      },
+      { rootMargin: '-20% 0px -70% 0px' },
+    )
+    for (const z of ziele) beobachter.observe(z)
+  }
+</script>

@@ -1,6 +1,7 @@
 ---
-import { ein, prozent as proz, zahl } from '../../lib/format.js'
+import { ein, plakette, prozent as proz, zahl } from '../../lib/format.js'
 import Seite from '../../layouts/Seite.astro'
+import Sprung from '../../components/Sprung.astro'
 import { eine, teamListe, pfad, db } from '../../lib/db.js'
 import { land } from '../../lib/laender.js'
 import {
@@ -33,56 +34,53 @@ const zeitraum =
     : rennen[0].year === rennen.at(-1).year
       ? String(rennen[0].year)
       : `${rennen[0].year}–${rennen.at(-1).year}`
+
+const titelZahl = titel.titles.value ?? 0
+const ziele = [
+  { id: 'zahlen', label: 'Numbers' },
+  abstammung.length > 1 && { id: 'linie', label: 'Name changes' },
+  titel.seasons.length > 0 && { id: 'saisons', label: 'Seasons' },
+  { id: 'fahrer', label: 'Drivers' },
+].filter(Boolean)
 ---
 
 <Seite
   titel={`${team.name} – statistics and history`}
   beschreibung={`${team.name}: ${zahl(calculateTeamStarts(rennen).value)} races, ${zahl(calculateTeamWins(rennen).value)} wins, ${titel.titles.value} constructors' titles (${zeitraum}).`}
 >
-  <header class="profil">
-    <span class="kuerzel gross" title={heimat.name}>{heimat.code}</span>
+  <header class="seitenkopf">
+    <span class="wappen" title={heimat.name}>{heimat.code}</span>
     <div>
-      <h1>{team.name}</h1>
-      <p class="lead">
-        {[team.full_name !== team.name ? team.full_name : null, heimat.name, zeitraum]
-          .filter(Boolean)
-          .join(' · ')}
+      <p class="oberzeile">
+        <a href={pfad.seite('/teams/')}>Teams</a>
+        <span class="trenner">/</span>
+        <span class="still">{heimat.name}</span>
       </p>
+      <h1>{team.name}</h1>
+      <ul class="eckdaten">
+        {titelZahl > 0 && <li class="stark">{titelZahl}× Constructors' Champion</li>}
+        <li>{zeitraum}</li>
+        {team.full_name !== team.name && <li>{team.full_name}</li>}
+      </ul>
     </div>
   </header>
 
   <ul class="kacheln">
-    <li><b>{wert(calculateTeamStarts(rennen))}</b><span>Races</span></li>
-    <li><b>{wert(calculateTeamWins(rennen))}</b><span>Wins</span></li>
-    <li><b>{wert(calculateOneTwos(rennen))}</b><span>One-twos</span><i>both cars at the front</i></li>
-    <li><b>{wert(calculateTeamPodiums(rennen))}</b><span>Races with a podium</span></li>
-    <li><b>{wert(calculateTeamPoles(rennen))}</b><span>Pole positions</span></li>
-    <li>
-      <b>{wert(titel.titles)}</b><span>Constructors' titles</span>
-      <i>best championship finish {titel.best.value ? 'P' + titel.best.value : '–'}</i>
+    <li><span>Races</span><b>{wert(calculateTeamStarts(rennen))}</b></li>
+    <li class={calculateTeamWins(rennen).value > 0 ? 'stark' : undefined}><span>Wins</span><b>{wert(calculateTeamWins(rennen))}</b></li>
+    <li><span>One-twos</span><b>{wert(calculateOneTwos(rennen))}</b><i>both cars at the front</i></li>
+    <li><span>Podium races</span><b>{wert(calculateTeamPodiums(rennen))}</b></li>
+    <li><span>Pole positions</span><b>{wert(calculateTeamPoles(rennen))}</b></li>
+    <li class={titelZahl > 0 ? 'stark' : undefined}>
+      <span>Titles</span><b>{wert(titel.titles)}</b>
+      <i>best finish {titel.best.value ? 'P' + titel.best.value : '–'}</i>
     </li>
   </ul>
 
-  {abstammung.length > 1 && (
-    <section>
-      <h2>The team through its name changes</h2>
-      <p class="lead">
-        The same team under a succession of names. F1DB tracks this lineage – without it, every
-        team's history would end at every sale.
-      </p>
-      <ol class="kette">
-        {abstammung.map((a) => (
-          <li class={a.id === id ? 'hier' : ''}>
-            <a href={pfad.team(a.id)}>{a.name}</a>
-            <span>{a.von}{a.bis ? `–${a.bis}` : '–present'}</span>
-          </li>
-        ))}
-      </ol>
-    </section>
-  )}
+  <Sprung ziele={ziele} />
 
-  <section>
-    <h2>Numbers</h2>
+  <section class="abschnitt" id="zahlen">
+    <div class="abschnitt-kopf"><div><h2>Numbers</h2></div></div>
     <ul class="daten">
       <li><span>Avg grid position</span><b>{ein(calculateTeamAverageStart(rennen).value)}</b></li>
       <li><span>Avg finish</span><b>{ein(calculateTeamAverageFinish(rennen).value)}</b></li>
@@ -98,14 +96,33 @@ const zeitraum =
     </p>
   </section>
 
+  {abstammung.length > 1 && (
+    <section class="abschnitt" id="linie">
+      <div class="abschnitt-kopf">
+        <div>
+          <h2>The team through its name changes</h2>
+          <p>The same team under a succession of names – without this lineage, every team's history would end at every sale.</p>
+        </div>
+      </div>
+      <ol class="kette">
+        {abstammung.map((a) => (
+          <li class={a.id === id ? 'hier' : ''}>
+            <a href={pfad.team(a.id)}>{a.name}</a>
+            <span>{a.von}{a.bis ? `–${a.bis}` : '–present'}</span>
+          </li>
+        ))}
+      </ol>
+    </section>
+  )}
+
   {titel.seasons.length > 0 && (
-    <section>
-      <h2>Season by season</h2>
+    <section class="abschnitt" id="saisons">
+      <div class="abschnitt-kopf"><div><h2>Season by season</h2></div></div>
       <div class="tabelle">
         <table>
           <thead>
             <tr>
-              <th>Season</th><th class="num">Championship position</th><th class="num">Points</th>
+              <th>Season</th><th class="num">Championship</th><th class="num">Points</th>
               <th class="num">Wins</th><th>Drivers</th>
             </tr>
           </thead>
@@ -114,12 +131,12 @@ const zeitraum =
               const jahr = rennen.filter((r) => r.year === s.year)
               const namen = [...new Set(jahr.flatMap((r) => r.autos.map((a) => a.driverId)))]
               return (
-                <tr>
+                <tr class={s.won ? 'meister' : undefined}>
                   <td><a class="zeile" href={pfad.saison(s.year)}>{s.year}</a></td>
-                  <td class={`num${s.won ? ' meister' : ''}`}>{s.position ? 'P' + s.position : '–'}</td>
+                  <td class="num">{s.position ? <span class={plakette(s.position)}>P{s.position}</span> : '–'}</td>
                   <td class="num">{ein(s.points)}</td>
                   <td class="num">{jahr.filter((r) => r.autos.some((a) => a.position === 1)).length || ''}</td>
-                  <td style="color:var(--muted)">
+                  <td class="leise">
                     {namen.map((n) => fahrer.find((f) => f.driverId === n)?.name).filter(Boolean).join(', ')}
                   </td>
                 </tr>
@@ -131,9 +148,9 @@ const zeitraum =
     </section>
   )}
 
-  <section>
-    <h2>Drivers</h2>
-    <div class="tabelle">
+  <section class="abschnitt" id="fahrer">
+    <div class="abschnitt-kopf"><div><h2>Drivers</h2></div></div>
+    <div class={`tabelle${fahrer.length > 25 ? ' lang' : ''}`}>
       <table>
         <thead>
           <tr>
@@ -145,7 +162,7 @@ const zeitraum =
           {fahrer.map((f) => (
             <tr>
               <td><a class="zeile" href={pfad.fahrer(f.driverId)}>{f.name}</a></td>
-              <td style="color:var(--muted)">{f.von === f.bis ? f.von : `${f.von}–${f.bis}`}</td>
+              <td class="leise">{f.von === f.bis ? f.von : `${f.von}–${f.bis}`}</td>
               <td class="num">{f.starts}</td>
               <td class="num">{f.siege || ''}</td>
               <td class="num">{ein(f.punkte)}</td>
@@ -158,46 +175,15 @@ const zeitraum =
 </Seite>
 
 <style>
-  .profil { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
-  .kuerzel.gross {
-    flex: none; min-width: 3.6rem; padding: 0.5rem 0.35rem; margin: 0;
-    font-size: 0.86rem; color: var(--accent); background: var(--accent-wash);
-  }
-  .kacheln {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(min(9rem, 100%), 1fr));
-    gap: 0.75rem; margin: 0 0 2.5rem; padding: 0; list-style: none;
-  }
-  .kacheln li {
-    display: flex; flex-direction: column; gap: 0.1rem; padding: 0.9rem 1rem;
-    background: var(--surface-2); border: 1px solid var(--border); border-radius: 0.6rem;
-  }
-  .kacheln b {
-    font-size: 1.6rem; font-weight: 680; line-height: 1.1; color: var(--ink);
-    font-variant-numeric: tabular-nums; letter-spacing: -0.02em;
-  }
-  .kacheln span { font-size: 0.78rem; color: var(--muted); }
-  .kacheln i { font-style: normal; font-size: 0.72rem; color: var(--muted); opacity: 0.8; }
-  section { margin-top: 2.5rem; }
-  h2 { font-size: 1.15rem; margin: 0 0 0.75rem; }
-  .daten {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(min(17rem, 100%), 1fr));
-    gap: 0 1.5rem; margin: 0; padding: 0; list-style: none;
-  }
-  .daten li {
-    display: flex; align-items: baseline; justify-content: space-between; gap: 1rem;
-    padding: 0.45rem 0; border-bottom: 1px solid var(--border); font-size: 0.88rem;
-  }
-  .daten span { color: var(--muted); }
-  .daten b { color: var(--ink); font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
-  .fussnote { margin: 0.85rem 0 0; font-size: 0.79rem; color: var(--muted); max-width: 44rem; text-wrap: pretty; }
-  td.meister { color: var(--accent); font-weight: 700; }
-  .kette { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.75rem 0 0; padding: 0; list-style: none; }
+  .kette { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin: 0; padding: 0; list-style: none; }
   .kette li {
-    display: grid; padding: 0.5rem 0.8rem; background: var(--surface-2);
-    border: 1px solid var(--border); border-radius: 0.5rem;
+    display: grid; padding: 0.6rem 0.9rem; background: var(--surface);
+    border: 1px solid var(--border); border-radius: var(--radius-s); box-shadow: var(--shadow-s);
   }
+  .kette li + li::before { content: none; }
   .kette li.hier { border-color: var(--accent); background: var(--accent-wash); }
-  .kette a { color: var(--ink); font-weight: 600; text-decoration: none; font-size: 0.9rem; }
+  .kette a { color: var(--ink); font-weight: 650; text-decoration: none; font-size: 0.92rem; }
+  .kette a:hover { color: var(--accent); }
   .kette li.hier a { color: var(--accent); }
-  .kette span { font-size: 0.75rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .kette span { font-size: 0.76rem; color: var(--muted); font-variant-numeric: tabular-nums; }
 </style>

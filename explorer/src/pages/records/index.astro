@@ -1,6 +1,7 @@
 ---
 import { zahl } from '../../lib/format.js'
 import Seite from '../../layouts/Seite.astro'
+import Sprung from '../../components/Sprung.astro'
 import { pfad, db } from '../../lib/db.js'
 import {
   altersrekord, altersrekordMeister, groessteAufholjagden, laengsteKarrieren,
@@ -94,332 +95,272 @@ const pausen = laengstePauseZwischenSiegen(d, N)
 
 const teamSiege = teamRekorde(d, 'siege', N)
 const teamTitel = teamRekorde(d, 'titel', N)
+
+const ziele = [
+  { id: 'fahrer', label: 'Career totals' },
+  { id: 'serien', label: 'Streaks' },
+  { id: 'abstaende', label: 'Winning margins' },
+  { id: 'alter', label: 'Age' },
+  { id: 'aufholjagden', label: 'Charges & careers' },
+  { id: 'teams', label: 'Teams' },
+]
 ---
 
 <Seite
   titel="Formula 1 records – the records set since 1950"
   beschreibung="Most wins, podiums and pole positions, longest streaks, youngest and oldest record holders – every entry linked to the race."
 >
-  <h1>Records</h1>
-  <p class="lead">
-    Records since 1950, computed from the race results rather than copied out of a curated
-    list. Every entry links to the driver and, where there is one, to the race.
-  </p>
+  <header class="seitenkopf">
+    <div>
+      <p class="oberzeile">Analysis</p>
+      <h1>Records</h1>
+      <p class="lead">
+        Every all-time mark since 1950, computed from the race results rather than copied out of
+        a curated list. Each entry links to the driver and, where there is one, to the race.
+      </p>
+    </div>
+  </header>
 
-  <div class="raster">
-    {bloecke.map((b) => (
-      <section>
-        <h2>{b.titel}</h2>
-        {b.hinweis && <p class="hinweis">{b.hinweis}</p>}
+  <Sprung ziele={ziele} />
+
+  <section class="abschnitt" id="fahrer">
+    <div class="abschnitt-kopf"><div><h2>Career totals</h2></div></div>
+    <div class="raster">
+      {bloecke.map((b) => (
+        <div class="rangkarte">
+          <h3>{b.titel}</h3>
+          {b.hinweis && <p class="unter">{b.hinweis}</p>}
+          <ol class="rangliste">
+            {b.liste.map((e) => (
+              <li>
+                <a href={pfad.fahrer(e.driverId)}>{e.name}</a>
+                <b>{b.format(e.wert)}</b>
+              </li>
+            ))}
+          </ol>
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <section class="abschnitt" id="serien">
+    <div class="abschnitt-kopf">
+      <div>
+        <h2>Streaks</h2>
+        <p>Unbroken runs across a driver's starts. A race missed does not break a streak – a driver who was not there had nothing to lose.</p>
+      </div>
+    </div>
+    <div class="raster">
+      {serien.map((s) => (
+        <div class="rangkarte">
+          <h3>{s.titel}</h3>
+          <ol class="rangliste">
+            {s.liste.map((e) => (
+              <li>
+                <span class="wer">
+                  <a href={pfad.fahrer(e.driverId)}>{e.name}</a>
+                  <i>{e.rennen}</i>
+                </span>
+                <b>{e.wert}</b>
+              </li>
+            ))}
+          </ol>
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <section class="abschnitt" id="abstaende">
+    <div class="abschnitt-kopf">
+      <div>
+        <h2>Winning margins</h2>
+        <p>The gap to the second-placed car. Races that ended a lap or more apart have no gap in seconds and are left out.</p>
+      </div>
+    </div>
+    <div class="raster">
+      <div class="rangkarte">
+        <h3>Closest finishes</h3>
         <ol class="rangliste">
-          {b.liste.map((e) => (
+          {knapp.map((e) => (
             <li>
-              <a href={pfad.fahrer(e.driverId)}>{e.name}</a>
-              <b>{b.format(e.wert)}</b>
+              <span class="wer">
+                <a href={pfad.fahrer(e.driverId)}>{e.name}</a>
+                <i><a href={pfad.rennen(e.raceId)}>{e.rennen}</a></i>
+              </span>
+              <b>{sekunden(e.wert)}</b>
             </li>
           ))}
         </ol>
-      </section>
-    ))}
-  </div>
+      </div>
 
-  <h2 class="gruppe">Streaks</h2>
-  <p class="lead">
-    Unbroken runs across a driver's starts. A race missed does not break a streak – a driver who
-    was not there had nothing to lose.
-  </p>
-  <div class="raster">
-    {serien.map((s) => (
-      <section>
-        <h2>{s.titel}</h2>
-        <ol class="rangliste breit">
-          {s.liste.map((e) => (
+      <div class="rangkarte">
+        <h3>Biggest winning margins</h3>
+        <ol class="rangliste">
+          {weit.map((e) => (
             <li>
-              <span>
+              <span class="wer">
                 <a href={pfad.fahrer(e.driverId)}>{e.name}</a>
-                <i>{e.rennen}</i>
+                <i><a href={pfad.rennen(e.raceId)}>{e.rennen}</a></i>
+              </span>
+              <b>{sekunden(e.wert)}</b>
+            </li>
+          ))}
+        </ol>
+      </div>
+
+      <div class="rangkarte">
+        <h3>Grand Slams</h3>
+        <p class="unter">Pole position, win, fastest lap and every lap led – all in one race.</p>
+        <ol class="rangliste">
+          {slams.map((e) => (
+            <li>
+              <span class="wer">
+                <a href={pfad.fahrer(e.driverId)}>{e.name}</a>
+                <i><a href={pfad.rennen(e.raceId)}>most recently</a></i>
               </span>
               <b>{e.wert}</b>
             </li>
           ))}
         </ol>
-      </section>
-    ))}
-  </div>
+      </div>
+    </div>
+    <p class="fussnote">
+      The Grand Slam is the one figure on this page that is not recalculated here: “led every
+      lap” appears in no result row, and the lap data that would settle it is not loaded. It is
+      taken from F1DB as it stands.
+    </p>
+  </section>
 
-  <h2 class="gruppe">Winning margins</h2>
-  <p class="lead">
-    The gap is recorded against the second-placed car. Races that ended a lap or more apart
-    have no gap in seconds and are left out – a lap is not a number of seconds, and treating
-    it as an enormous one would say something different.
-  </p>
-  <div class="raster">
-    <section>
-      <h2>Closest finishes</h2>
-      <ol class="rangliste breit">
-        {knapp.map((e) => (
-          <li>
-            <span>
-              <a href={pfad.fahrer(e.driverId)}>{e.name}</a>
-              <i><a class="leise" href={pfad.rennen(e.raceId)}>{e.rennen}</a></i>
-            </span>
-            <b>{sekunden(e.wert)}</b>
-          </li>
-        ))}
-      </ol>
-    </section>
+  <section class="abschnitt" id="alter">
+    <div class="abschnitt-kopf">
+      <div>
+        <h2>Age</h2>
+        <p>Drivers whose date of birth is not recorded are missing from these lists – a missing date is not an age of zero.</p>
+      </div>
+    </div>
+    <div class="raster">
+      {alter.map((a) => (
+        <div class="rangkarte">
+          <h3>{a.titel}</h3>
+          <ol class="rangliste">
+            {a.liste.map((e) => (
+              <li>
+                <span class="wer">
+                  <a href={pfad.fahrer(e.driverId)}>{e.name}</a>
+                  <i>{e.raceId ? <a href={pfad.rennen(e.raceId)}>{e.rennen}</a> : e.rennen}</i>
+                </span>
+                <b>{jahreAlt(e.wert)}</b>
+              </li>
+            ))}
+          </ol>
+        </div>
+      ))}
+    </div>
+  </section>
 
-    <section>
-      <h2>Biggest winning margins</h2>
-      <ol class="rangliste breit">
-        {weit.map((e) => (
-          <li>
-            <span>
-              <a href={pfad.fahrer(e.driverId)}>{e.name}</a>
-              <i><a class="leise" href={pfad.rennen(e.raceId)}>{e.rennen}</a></i>
-            </span>
-            <b>{sekunden(e.wert)}</b>
-          </li>
-        ))}
-      </ol>
-    </section>
-
-    <section>
-      <h2>Grand Slams</h2>
-      <p class="hinweis">
-        Pole position, win, fastest lap and every lap led – all in one race.
-      </p>
-      <ol class="rangliste breit">
-        {slams.map((e) => (
-          <li>
-            <span>
-              <a href={pfad.fahrer(e.driverId)}>{e.name}</a>
-              <i><a class="leise" href={pfad.rennen(e.raceId)}>most recently</a></i>
-            </span>
-            <b>{e.wert}</b>
-          </li>
-        ))}
-      </ol>
-    </section>
-  </div>
-
-  <p class="quelle">
-    The Grand Slam is the one figure on this page that is not recalculated here: “led every
-    lap” appears in no result row, and the lap data that would settle it is not loaded. It is
-    taken from F1DB as it stands.
-  </p>
-
-  <h2 class="gruppe">Age</h2>
-  <p class="lead">
-    Drivers whose date of birth is not recorded are missing from these lists – a missing date is
-    not an age of zero.
-  </p>
-  <div class="raster">
-    {alter.map((a) => (
-      <section>
-        <h2>{a.titel}</h2>
-        <ol class="rangliste breit">
-          {a.liste.map((e) => (
+  <section class="abschnitt" id="aufholjagden">
+    <div class="abschnitt-kopf">
+      <div>
+        <h2>Charges through the field, and long careers</h2>
+        <p>
+          Formula 1 races only. The Indianapolis 500 started 33 cars, where thirty places made up
+          was routine – it would otherwise fill eight of the ten places for positions gained.
+        </p>
+      </div>
+    </div>
+    <div class="raster">
+      <div class="rangkarte">
+        <h3>Wins from the back of the grid</h3>
+        <p class="unter">The grid position the race was won from.</p>
+        <ol class="rangliste">
+          {aufholjagden.map((e) => (
             <li>
-              <span>
+              <span class="wer">
                 <a href={pfad.fahrer(e.driverId)}>{e.name}</a>
-                <i>{e.raceId ? <a class="leise" href={pfad.rennen(e.raceId)}>{e.rennen}</a> : e.rennen}</i>
+                <i><a href={pfad.rennen(e.raceId)}>{e.rennen}</a></i>
               </span>
-              <b>{jahreAlt(e.wert)}</b>
+              <b>P{e.wert}</b>
             </li>
           ))}
         </ol>
-      </section>
-    ))}
-  </div>
+      </div>
 
-  <h2 class="gruppe">Charges through the field, and long careers</h2>
-  <p class="lead">
-    These two lists count Formula 1 races only. The Indianapolis 500 counted towards the
-    drivers' championship from 1950 to 1960, but it started 33 cars: it filled eight of the ten
-    places for positions gained, where thirty places made up was routine and would be
-    unprecedented in a Grand Prix.
-  </p>
-  <div class="raster">
-    <section>
-      <h2>Wins from the back of the grid</h2>
-      <p class="hinweis">The grid position the race was won from.</p>
-      <ol class="rangliste breit">
-        {aufholjagden.map((e) => (
-          <li>
-            <span>
-              <a href={pfad.fahrer(e.driverId)}>{e.name}</a>
-              <i><a class="leise" href={pfad.rennen(e.raceId)}>{e.rennen}</a></i>
-            </span>
-            <b>P{e.wert}</b>
-          </li>
-        ))}
-      </ol>
-    </section>
+      <div class="rangkarte">
+        <h3>Most positions gained in a race</h3>
+        <p class="unter">Grid position minus finishing position, classified races only.</p>
+        <ol class="rangliste">
+          {plaetze.map((e) => (
+            <li>
+              <span class="wer">
+                <a href={pfad.fahrer(e.driverId)}>{e.name}</a>
+                <i><a href={pfad.rennen(e.raceId)}>{e.rennen}</a></i>
+              </span>
+              <b>+{e.wert}</b>
+            </li>
+          ))}
+        </ol>
+      </div>
 
-    <section>
-      <h2>Most positions gained in a race</h2>
-      <p class="hinweis">Grid position minus finishing position, classified races only.</p>
-      <ol class="rangliste breit">
-        {plaetze.map((e) => (
-          <li>
-            <span>
-              <a href={pfad.fahrer(e.driverId)}>{e.name}</a>
-              <i><a class="leise" href={pfad.rennen(e.raceId)}>{e.rennen}</a></i>
-            </span>
-            <b>+{e.wert}</b>
-          </li>
-        ))}
-      </ol>
-    </section>
+      <div class="rangkarte">
+        <h3>Longest careers</h3>
+        <p class="unter">From the first start to the last, breaks included.</p>
+        <ol class="rangliste">
+          {karrieren.map((e) => (
+            <li>
+              <span class="wer">
+                <a href={pfad.fahrer(e.driverId)}>{e.name}</a>
+                <i>{e.rennen}</i>
+              </span>
+              <b>{jahreSpanne(e.wert)}</b>
+            </li>
+          ))}
+        </ol>
+      </div>
 
-    <section>
-      <h2>Longest careers</h2>
-      <p class="hinweis">From the first start to the last, breaks included.</p>
-      <ol class="rangliste breit">
-        {karrieren.map((e) => (
-          <li>
-            <span>
-              <a href={pfad.fahrer(e.driverId)}>{e.name}</a>
-              <i>{e.rennen}</i>
-            </span>
-            <b>{jahreSpanne(e.wert)}</b>
-          </li>
-        ))}
-      </ol>
-    </section>
+      <div class="rangkarte">
+        <h3>Longest gap between wins</h3>
+        <ol class="rangliste">
+          {pausen.map((e) => (
+            <li>
+              <span class="wer">
+                <a href={pfad.fahrer(e.driverId)}>{e.name}</a>
+                <i><a href={pfad.rennen(e.raceId)}>{e.rennen}</a></i>
+              </span>
+              <b>{jahreSpanne(e.wert)}</b>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </div>
+  </section>
 
-    <section>
-      <h2>Longest gap between wins</h2>
-      <ol class="rangliste breit">
-        {pausen.map((e) => (
-          <li>
-            <span>
-              <a href={pfad.fahrer(e.driverId)}>{e.name}</a>
-              <i><a class="leise" href={pfad.rennen(e.raceId)}>{e.rennen}</a></i>
-            </span>
-            <b>{jahreSpanne(e.wert)}</b>
-          </li>
-        ))}
-      </ol>
-    </section>
-  </div>
-
-  <h2 class="gruppe">Teams</h2>
-  <div class="raster">
-    <section>
-      <h2>Most wins</h2>
-      <ol class="rangliste">
-        {teamSiege.map((t) => (
-          <li><a href={pfad.team(t.id)}>{t.name}</a><b>{t.wert}</b></li>
-        ))}
-      </ol>
-    </section>
-    <section>
-      <h2>Most constructors' titles</h2>
-      <ol class="rangliste">
-        {teamTitel.map((t) => (
-          <li><a href={pfad.team(t.id)}>{t.name}</a><b>{t.wert}</b></li>
-        ))}
-      </ol>
-    </section>
-  </div>
+  <section class="abschnitt" id="teams">
+    <div class="abschnitt-kopf"><div><h2>Teams</h2></div></div>
+    <div class="raster">
+      <div class="rangkarte">
+        <h3>Most wins</h3>
+        <ol class="rangliste">
+          {teamSiege.map((t) => (
+            <li><a href={pfad.team(t.id)}>{t.name}</a><b>{t.wert}</b></li>
+          ))}
+        </ol>
+      </div>
+      <div class="rangkarte">
+        <h3>Most constructors' titles</h3>
+        <ol class="rangliste">
+          {teamTitel.map((t) => (
+            <li><a href={pfad.team(t.id)}>{t.name}</a><b>{t.wert}</b></li>
+          ))}
+        </ol>
+      </div>
+    </div>
+  </section>
 </Seite>
 
 <style>
   .raster {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(19rem, 100%), 1fr));
-    gap: 1.25rem 2rem;
-    margin-top: 1.5rem;
+    grid-template-columns: repeat(auto-fill, minmax(min(21rem, 100%), 1fr));
+    gap: 1rem;
   }
-
-  section { min-width: 0; }
-
-  h2 {
-    font-size: 1.02rem;
-    margin: 0 0 0.5rem;
-  }
-
-  h2.gruppe {
-    margin: 3rem 0 0;
-    padding-top: 1.25rem;
-    border-top: 2px solid var(--border);
-    font-size: 1.3rem;
-  }
-
-  h2.gruppe + .lead { margin-top: 0.4rem; }
-
-  /* Eine Anmerkung zur Herkunft einer Zahl – leiser als ein Hinweis. */
-  .quelle {
-    max-width: 46rem;
-    margin: 1rem 0 0;
-    font-size: 0.79rem;
-    color: var(--muted);
-    text-wrap: pretty;
-  }
-
-  .hinweis {
-    margin: 0 0 0.5rem;
-    font-size: 0.76rem;
-    color: var(--muted);
-    text-wrap: pretty;
-  }
-
-  .rangliste { margin: 0; padding: 0; list-style: none; counter-reset: rang; }
-
-  .rangliste li {
-    display: flex;
-    align-items: baseline;
-    gap: 0.6rem;
-    padding: 0.38rem 0;
-    border-bottom: 1px solid var(--border);
-    font-size: 0.88rem;
-  }
-
-  .rangliste li::before {
-    counter-increment: rang;
-    content: counter(rang);
-    min-width: 1.15rem;
-    flex: none;
-    color: var(--muted);
-    font-variant-numeric: tabular-nums;
-    font-size: 0.76rem;
-  }
-
-  .rangliste span { flex: 1; min-width: 0; display: grid; }
-  .rangliste > li > a { flex: 1; min-width: 0; }
-
-  .rangliste a {
-    color: var(--ink);
-    text-decoration: none;
-    font-weight: 550;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .rangliste a:hover { color: var(--accent); }
-
-  .rangliste i {
-    font-style: normal;
-    font-size: 0.75rem;
-    color: var(--muted);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .rangliste i a.leise { color: var(--muted); font-weight: 400; }
-  .rangliste i a.leise:hover { color: var(--accent); }
-
-  .rangliste b {
-    flex: none;
-    color: var(--ink);
-    font-variant-numeric: tabular-nums;
-    font-weight: 650;
-  }
-
-  /* Die erste Zeile jeder Liste ist der Rekord – sie trägt die Akzentfarbe. */
-  .rangliste li:first-child b { color: var(--accent); }
 </style>

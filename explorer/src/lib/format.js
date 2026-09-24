@@ -58,6 +58,13 @@ export function prozent(x) {
 }
 
 /**
+ * Klassen für eine Platzziffer als Plakette (`.pos` in theme.css). Die ersten
+ * drei bekommen Gold, Silber und Bronze; alles ohne Ziffer – ein Ausfall –
+ * steht leiser als Umriss.
+ */
+export const plakette = (p) => (!p ? 'pos aus' : p <= 3 ? `pos p${p}` : 'pos')
+
+/**
  * Der Wert einer Kennzahl, oder ein Gedankenstrich.
  *
  * `metric()` liefert `{ value, sampleSize, coverage, caveat }`; hier geht es

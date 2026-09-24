@@ -1,6 +1,8 @@
 ---
 import { zahl } from '../../lib/format.js'
 import Seite from '../../layouts/Seite.astro'
+import Filter from '../../components/Filter.astro'
+import Sortierung from '../../components/Sortierung.astro'
 import { fahrerListe, pfad } from '../../lib/db.js'
 
 const fahrer = fahrerListe()
@@ -9,25 +11,35 @@ const nurIndy = fahrer.filter((f) => f.inFormel1 === 0).length
 const nachSiegen = [...fahrer].sort(
   (a, b) => (b.siege ?? 0) - (a.siege ?? 0) || (b.starts ?? 0) - (a.starts ?? 0),
 )
+const neuestesJahr = Math.max(...fahrer.map((f) => f.bis ?? 0))
 ---
 
 <Seite
   titel="Every Formula 1 driver since 1950"
   beschreibung={`${zahl(fahrer.length)} drivers with starts, wins, podiums and titles.`}
 >
-  <h1>Drivers</h1>
-  <p class="lead">
-    {zahl(fahrer.length)} drivers who were entered at least once since 1950. Click a column
-    heading to sort by it.
-  </p>
-  <p class="lead indy">
-    {nurIndy} of them never drove a Formula 1 race. The Indianapolis 500 counted towards the
-    drivers' championship from 1950 to 1960 but was run to different regulations with a
-    different field – their points counted, so they belong in the standings, and they are
-    marked here.
-  </p>
+  <header class="seitenkopf">
+    <div>
+      <p class="oberzeile">Drivers</p>
+      <h1>Every driver since 1950</h1>
+      <p class="lead">
+        {zahl(fahrer.length)} drivers who were entered at least once. Type a name, or pick a
+        quick filter; click a column heading to sort.
+      </p>
+    </div>
+  </header>
 
-  <div class="tabelle">
+  <Filter
+    platzhalter="Filter by name, country or period"
+    einheit={['driver', 'drivers']}
+    pillen={[
+      { label: 'Race winners', spalte: 3, art: 'gefuellt' },
+      { label: 'World Champions', spalte: 5, art: 'gefuellt' },
+      { label: `Active in ${neuestesJahr}`, spalte: 1, art: 'bis', wert: neuestesJahr },
+    ]}
+  />
+
+  <div class="tabelle lang">
     <table>
       <thead>
         <tr>
@@ -50,73 +62,25 @@ const nachSiegen = [...fahrer].sort(
             <td>
               <span class="kuerzel" title={f.landName ?? ''}>{f.land ?? '—'}</span>
               <a class="zeile" href={pfad.fahrer(f.id)}>{f.name}</a>
-              {f.inFormel1 === 0 && <span class="nichtF1" title="Indianapolis 500 only – never drove a Formula 1 race">Indy</span>}
+              {f.inFormel1 === 0 && <span class="etikett" title="Indianapolis 500 only – never drove a Formula 1 race">Indy</span>}
             </td>
-            <td style="color:var(--muted)">{f.von === f.bis ? f.von : `${f.von}–${f.bis}`}</td>
+            <td class="leise">{f.von === f.bis ? f.von : `${f.von}–${f.bis}`}</td>
             <td class="num">{f.starts ?? 0}</td>
             <td class="num">{f.siege || ''}</td>
             <td class="num">{f.podien || ''}</td>
-            <td class="num">{f.titel || ''}</td>
+            <td class="num meister">{f.titel || ''}</td>
           </tr>
         ))}
       </tbody>
     </table>
   </div>
+
+  <p class="fussnote">
+    <b>Indy:</b> {nurIndy} of these drivers never drove a Formula 1 race. The Indianapolis 500
+    counted towards the drivers' championship from 1950 to 1960 but was run to different
+    regulations with a different field – their points counted, so they belong in the
+    standings, and they are marked.
+  </p>
+
+  <Sortierung vorsortiert={3} gleichstand={2} />
 </Seite>
-
-<script>
-  /*
-   * Sortieren im Browser. Die Reihenfolge nach Siegen kommt weiterhin fertig
-   * vom Server – wer nichts anklickt, bekommt sie auch ohne JavaScript.
-   *
-   * Gelesen wird aus den Zellen, nicht aus zusätzlichen Attributen. Zwei
-   * Dinge muss das berücksichtigen: Die Seite zeigt keine Null, sondern eine
-   * leere Zelle, und der Zeitraum steht als „2007–2026" – sortiert wird nach
-   * dem letzten Jahr, also den letzten vier Ziffern.
-   */
-  const koerper = document.querySelector('main tbody')
-  const zeilen = [...koerper.querySelectorAll('tr')]
-  const knoepfe = [...document.querySelectorAll('main thead button')]
-
-  const STARTS = 2
-
-  /* Zahlen absteigend, Namen aufsteigend – das ist jeweils die nützliche Richtung. */
-  let sortiert = { spalte: 3, ab: true }
-
-  const zellen = new Map(zeilen.map((tr) => [tr, [...tr.cells]]))
-  const zahlAus = (tr, i) => Number(zellen.get(tr)[i].textContent.trim()) || 0
-
-  function wert(tr, spalte, art) {
-    if (art === 'name') return tr.dataset.name ?? ''
-    if (art === 'jahr') return Number(zellen.get(tr)[spalte].textContent.trim().slice(-4)) || 0
-    return zahlAus(tr, spalte)
-  }
-
-  function sortiere(spalte, art) {
-    const ab = sortiert.spalte === spalte ? !sortiert.ab : art !== 'name'
-    sortiert = { spalte, ab }
-
-    zeilen.sort((a, b) => {
-      const x = wert(a, spalte, art)
-      const y = wert(b, spalte, art)
-      const v = art === 'name' ? String(x).localeCompare(String(y), 'en') : x - y
-      /* Gleichstand nach Starts, damit die Reihenfolge nicht zufällig wirkt. */
-      return (ab ? -v : v) || zahlAus(b, STARTS) - zahlAus(a, STARTS)
-    })
-
-    const stueck = document.createDocumentFragment()
-    for (const tr of zeilen) stueck.append(tr)
-    koerper.append(stueck)
-
-    for (const k of knoepfe) {
-      const an = Number(k.dataset.spalte) === spalte
-      k.dataset.aktiv = an ? '1' : ''
-      k.closest('th').setAttribute('aria-sort', an ? (ab ? 'descending' : 'ascending') : 'none')
-      k.dataset.richtung = an && !ab ? 'auf' : ''
-    }
-  }
-
-  for (const k of knoepfe) {
-    k.addEventListener('click', () => sortiere(Number(k.dataset.spalte), k.dataset.art))
-  }
-</script>

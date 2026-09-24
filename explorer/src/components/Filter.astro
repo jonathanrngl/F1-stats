@@ -1,0 +1,120 @@
+---
+/**
+ * Filterleiste über einer langen Liste.
+ *
+ * Filtert im Browser über das fertige HTML: Es ist schon alles da, es muss nur
+ * das Übrige verschwinden. Kein Nachladen, und ohne JavaScript steht die volle
+ * Liste da wie vorher.
+ *
+ * Die Pillen sind Schnellfilter über eine Spalte – „nur Weltmeister" heißt
+ * „die Spalte Titel ist nicht leer". Gelesen wird aus der Zelle, nicht aus
+ * zusätzlichen Attributen: 860 Zeilen mal ein Attribut mehr kosten Kilobytes,
+ * die Zelle steht ohnehin da.
+ *
+ * Eine Seite, eine Leiste. Das Skript wirkt auf alle Tabellenzeilen im
+ * Inhalt; ein Abschnitt mit `data-gruppe` verschwindet, wenn in ihm nichts
+ * übrig bleibt, und ein Element mit `data-beim-filtern-weg` (die
+ * Sprungleiste der Rennliste) ebenso, solange gefiltert wird.
+ */
+interface Pille {
+  label: string
+  /** Spaltennummer, ab 0. */
+  spalte: number
+  /** 'gefuellt': Zelle nicht leer. 'bis': der Zeitraum reicht bis `wert`. */
+  art: 'gefuellt' | 'bis'
+  wert?: number
+}
+
+interface Props {
+  platzhalter: string
+  /** Einzahl und Mehrzahl für die Zählung: „12 of 860 drivers". */
+  einheit: [string, string]
+  pillen?: Pille[]
+}
+
+const { platzhalter, einheit, pillen = [] } = Astro.props
+---
+
+<div class="filterleiste" data-einheit={einheit.join('|')}>
+  <input type="search" placeholder={platzhalter} aria-label={platzhalter} autocomplete="off" />
+  {pillen.length > 0 && (
+    <div class="pillen" role="group" aria-label="Quick filters">
+      {pillen.map((p) => (
+        <button
+          type="button"
+          aria-pressed="false"
+          data-spalte={p.spalte}
+          data-art={p.art}
+          data-wert={p.wert ?? ''}
+        >
+          {p.label}
+        </button>
+      ))}
+    </div>
+  )}
+  <output aria-live="polite"></output>
+</div>
+
+<script>
+  const leiste = document.querySelector('.filterleiste')
+  if (leiste) {
+    const feld = leiste.querySelector('input')
+    const anzeige = leiste.querySelector('output')
+    const pillen = [...leiste.querySelectorAll('.pillen button')]
+    const [eins, viele] = leiste.dataset.einheit.split('|')
+    const gruppen = [...document.querySelectorAll('main [data-gruppe]')]
+    const weg = [...document.querySelectorAll('main [data-beim-filtern-weg]')]
+
+    const falte = (s) => s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase()
+
+    /*
+     * Der Suchtext wird einmal je Zeile vorbereitet, nicht bei jedem
+     * Tastendruck: `textContent` über 1.200 Zeilen ist die einzige Stelle, an
+     * der es bei dieser Menge spürbar würde.
+     */
+    const zeilen = [...document.querySelectorAll('main tbody tr')].map((tr) => ({
+      tr,
+      text: falte(tr.textContent.replace(/\s+/g, ' ')),
+      zellen: [...tr.cells].map((c) => c.textContent.trim()),
+    }))
+
+    const passtPille = (z, p) => {
+      const zelle = z.zellen[Number(p.dataset.spalte)] ?? ''
+      if (p.dataset.art === 'gefuellt') return zelle !== '' && zelle !== '0' && zelle !== '–'
+      if (p.dataset.art === 'bis') return Number(zelle.slice(-4)) >= Number(p.dataset.wert)
+      return true
+    }
+
+    function filtere() {
+      const q = falte(feld.value).trim()
+      const an = pillen.filter((p) => p.getAttribute('aria-pressed') === 'true')
+      let sichtbar = 0
+
+      for (const z of zeilen) {
+        const passt = (q === '' || z.text.includes(q)) && an.every((p) => passtPille(z, p))
+        z.tr.hidden = !passt
+        if (passt) sichtbar++
+      }
+
+      for (const g of gruppen) {
+        g.hidden = ![...g.querySelectorAll('tbody tr')].some((tr) => !tr.hidden)
+      }
+
+      const aktiv = q !== '' || an.length > 0
+      for (const e of weg) e.hidden = aktiv
+
+      anzeige.textContent = aktiv
+        ? `${sichtbar.toLocaleString('en-GB')} of ${zeilen.length.toLocaleString('en-GB')} ${viele}`
+        : `${zeilen.length.toLocaleString('en-GB')} ${zeilen.length === 1 ? eins : viele}`
+    }
+
+    feld.addEventListener('input', filtere)
+    for (const p of pillen) {
+      p.addEventListener('click', () => {
+        p.setAttribute('aria-pressed', p.getAttribute('aria-pressed') === 'true' ? 'false' : 'true')
+        filtere()
+      })
+    }
+    filtere()
+  }
+</script>

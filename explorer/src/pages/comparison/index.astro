@@ -18,11 +18,16 @@ const index = fahrerIndex()
   titel="Driver comparison – two careers side by side"
   beschreibung="Two Formula 1 drivers head to head: wins, podiums, rates and averages, across a full career or a period of your own choosing."
 >
-  <h1>Comparison</h1>
-  <p class="lead">
-    Two drivers side by side – across their full careers or a period of your choosing. If they
-    were ever team-mates, the direct head-to-head sits below: same car, same races.
-  </p>
+  <header class="seitenkopf">
+    <div>
+      <p class="oberzeile">Analysis</p>
+      <h1>Compare two drivers</h1>
+      <p class="lead">
+        Two careers side by side – in full or over a period you choose. If they were ever
+        team-mates, the direct head-to-head sits below: same car, same races.
+      </p>
+    </div>
+  </header>
 
   <Vergleich index={index} client:load />
 </Seite>
@@ -55,7 +60,7 @@ const index = fahrerIndex()
     color: var(--ink);
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 0.55rem;
+    border-radius: var(--radius-s);
     appearance: none;
   }
 
@@ -73,7 +78,7 @@ const index = fahrerIndex()
     list-style: none;
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 0.55rem;
+    border-radius: var(--radius-s);
     box-shadow: var(--shadow);
   }
 
@@ -119,7 +124,7 @@ const index = fahrerIndex()
     padding: 0.8rem 1rem;
     background: var(--surface-2);
     border: 1px solid var(--border);
-    border-radius: 0.6rem;
+    border-radius: var(--radius);
   }
 
   .zeitwahl > span {
@@ -153,7 +158,7 @@ const index = fahrerIndex()
     font-variant-numeric: tabular-nums;
   }
 
-  .kopf {
+  .vgl-kopf {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 0.75rem;
@@ -166,7 +171,7 @@ const index = fahrerIndex()
     padding: 0.85rem 1rem;
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 0.6rem;
+    border-radius: var(--radius);
   }
 
   .kopfkarte.s0 { border-top: 3px solid var(--accent); }
@@ -246,7 +251,7 @@ const index = fahrerIndex()
     font-size: 0.88rem;
     background: var(--surface-2);
     border: 1px solid var(--border);
-    border-radius: 0.55rem;
+    border-radius: var(--radius-s);
     text-wrap: pretty;
   }
 
@@ -281,7 +286,7 @@ const index = fahrerIndex()
     color: inherit;
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 0.6rem;
+    border-radius: var(--radius);
     cursor: pointer;
   }
 

@@ -6,8 +6,9 @@
  * Zeitpunkt des Bauens – deshalb steht das Datum des Datenstands sichtbar
  * darunter, statt den Eindruck von Echtzeit zu erwecken.
  */
-import { datum, ein, prozent as proz, zahl } from '../../lib/format.js'
+import { datum, ein, plakette, prozent as proz, zahl } from '../../lib/format.js'
 import Seite from '../../layouts/Seite.astro'
+import Sprung from '../../components/Sprung.astro'
 import { db, pfad } from '../../lib/db.js'
 import { land } from '../../lib/laender.js'
 import {
@@ -68,6 +69,15 @@ const rekordeNachFahrer = rekorde.reduce((karte, r) => {
 }, new Map())
 
 const titel = rennen ? `${rennen.grandPrix} ${rennen.jahr} – preview` : 'Race preview'
+
+const ziele = rennen
+  ? [
+      { id: 'strecke', label: 'The circuit' },
+      historie?.rennen > 0 && { id: 'stark', label: 'Strong here' },
+      stand && { id: 'wertung', label: 'Standings' },
+      { id: 'marken', label: 'Marks within reach' },
+    ].filter(Boolean)
+  : []
 ---
 
 <Seite
@@ -80,79 +90,105 @@ const titel = rennen ? `${rennen.grandPrix} ${rennen.jahr} – preview` : 'Race 
 >
   {!rennen && (
     <>
-      <h1>No preview</h1>
-      <p class="lead">
-        No race is still outstanding in the data. Either the season is over and next year’s
-        calendar has not been published yet, or the data, as at
-        {' '}{datum(heute)}, is older than the most recent race.
-      </p>
-      <p><a href={pfad.seite('/seasons/')}>To the seasons</a></p>
+      <header class="seitenkopf">
+        <div>
+          <p class="oberzeile">Next race</p>
+          <h1>No preview</h1>
+          <p class="lead">
+            No race is still outstanding in the data. Either the season is over and next year’s
+            calendar has not been published yet, or the data, as at
+            {' '}{datum(heute)}, is older than the most recent race.
+          </p>
+        </div>
+      </header>
+      <p><a href={pfad.seite('/seasons/')}>To the seasons →</a></p>
     </>
   )}
 
   {rennen && (
     <>
-      <header class="profil">
-        <span class="kuerzel gross" title={heimat?.name}>{heimat?.code}</span>
+      <header class="seitenkopf">
+        <span class="wappen" title={heimat?.name}>{heimat?.code}</span>
         <div>
-          <h1>{rennen.grandPrix} {rennen.jahr}</h1>
-          <p class="lead">
-            {[
-              `Round ${rennen.runde} of ${rennen.rennenImJahr}`,
-              rennen.strecke,
-              rennen.ort,
-              datum(rennen.datum),
-            ].filter(Boolean).join(' · ')}
+          <p class="oberzeile">
+            <span>Next race</span>
+            <span class="trenner">/</span>
+            <span class="still">Round {rennen.runde} of {rennen.rennenImJahr}</span>
           </p>
+          <h1>{rennen.grandPrix} {rennen.jahr}</h1>
+          <ul class="eckdaten">
+            <li><a href={pfad.strecke(rennen.streckeId)}>{rennen.strecke}</a></li>
+            {rennen.ort && rennen.ort !== rennen.strecke && <li>{rennen.ort}</li>}
+            <li>{datum(rennen.datum)}</li>
+            {rennen.mitSprint === 1 && <li class="stark">Sprint weekend</li>}
+          </ul>
         </div>
       </header>
 
-      <p class="hinweis">
-        {tageBis > 1
-          ? `${tageBis} days to go. `
-          : tageBis === 1
-            ? 'Tomorrow. '
-            : tageBis === 0
-              ? 'Today. '
-              : `That date is ${Math.abs(tageBis)} days in the past – no result for this race has arrived yet. `}
-        Every number on this page stands on the data as at {datum(heute)}
-        {stand && !stand.vorsaison && `, that is after round ${stand.bezug.runde} (${stand.bezug.grandPrix})`}.
-        {rennen.offiziell && <> Officially: <i>{rennen.offiziell}</i>.</>}
-      </p>
-
-      <section>
-        <h2>The circuit</h2>
-        <ul class="kacheln">
-          <li><b>{ein(rennen.streckenlaenge ?? rennen.laenge)} km</b><span>Lap length</span></li>
-          <li><b>{rennen.streckenkurven ?? rennen.kurven ?? '–'}</b><span>Corners</span></li>
-          <li><b>{rennen.runden ?? '–'}</b><span>Scheduled laps</span></li>
-          <li><b>{rennen.distanz ? `${ein(rennen.distanz)} km` : '–'}</b><span>Race distance</span></li>
-        </ul>
-        <p class="notiz">
-          {[
-            rennen.streckeVoll && rennen.streckeVoll !== rennen.strecke ? rennen.streckeVoll : null,
-            ART[rennen.art] ?? null,
-            RICHTUNG[rennen.richtung] ?? null,
-            historie?.rennen
-              ? `${historie.rennen} Formula 1 races here, ${historie.von}–${historie.bis}`
-              : 'First time on the Formula 1 calendar',
-            rennen.mitSprint ? 'Sprint weekend' : null,
-          ].filter(Boolean).join(' · ')}
+      {/* Der Countdown: groß, weil er die Frage ist, mit der man hierher kommt. */}
+      <div class="countdown">
+        <div class="tage">
+          {tageBis > 1 ? (
+            <><b>{tageBis}</b><span>days to go</span></>
+          ) : tageBis === 1 ? (
+            <><b>Tomorrow</b></>
+          ) : tageBis === 0 ? (
+            <><b>Today</b></>
+          ) : (
+            <><b>{Math.abs(tageBis)}</b><span>days ago – no result yet</span></>
+          )}
+        </div>
+        <p>
+          Every number on this page stands on the data as at {datum(heute)}
+          {stand && !stand.vorsaison && `, that is after round ${stand.bezug.runde} (${stand.bezug.grandPrix})`}.
+          {rennen.offiziell && <> Officially: <i>{rennen.offiziell}</i>.</>}
         </p>
+      </div>
 
-        {historie?.rennen > 0 && (
-          <ul class="kacheln">
-            <li><b>{proz(zahlenHier?.ausfallquote)}</b><span>Starts without a classification</span></li>
-            <li><b>{proz(zahlenHier?.poleZuSieg)}</b><span>Pole converted to a win</span></li>
-            <li>
-              <b>{ein(zahlenHier?.mittlererSiegerStart?.value)}</b>
-              <span>Ø winner’s grid position</span>
-            </li>
-          </ul>
-        )}
+      {titelMoeglich && (
+        <p class="hinweis akzent">
+          <b>The drivers’ title can be settled here.</b>{' '}
+          {fuehrender.name} leads by {ein(vorsprung)} points, and after this race only
+          {' '}{stand.maxDanach} remain to be won. Whether that actually settles it depends on
+          the result – the number says only that it is arithmetically possible.
+        </p>
+      )}
+
+      <Sprung ziele={ziele} />
+
+      <section class="abschnitt" id="strecke">
+        <div class="abschnitt-kopf">
+          <div>
+            <h2>The circuit</h2>
+            <p>
+              {[
+                rennen.streckeVoll && rennen.streckeVoll !== rennen.strecke ? rennen.streckeVoll : null,
+                ART[rennen.art] ?? null,
+                RICHTUNG[rennen.richtung] ?? null,
+                historie?.rennen
+                  ? `${historie.rennen} Formula 1 races here, ${historie.von}–${historie.bis}`
+                  : 'First time on the Formula 1 calendar',
+              ].filter(Boolean).join(' · ')}
+            </p>
+          </div>
+          <a class="mehr" href={pfad.strecke(rennen.streckeId)}>Circuit page →</a>
+        </div>
+        <ul class="kacheln">
+          <li><span>Lap length</span><b>{ein(rennen.streckenlaenge ?? rennen.laenge)} km</b></li>
+          <li><span>Corners</span><b>{rennen.streckenkurven ?? rennen.kurven ?? '–'}</b></li>
+          <li><span>Scheduled laps</span><b>{rennen.runden ?? '–'}</b></li>
+          <li><span>Race distance</span><b>{rennen.distanz ? `${ein(rennen.distanz)} km` : '–'}</b></li>
+          {historie?.rennen > 0 && (
+            <>
+              <li><span>Not classified</span><b>{proz(zahlenHier?.ausfallquote)}</b><i>of starts here</i></li>
+              <li><span>Pole to win</span><b>{proz(zahlenHier?.poleZuSieg)}</b><i>pole-sitter won</i></li>
+              <li><span>Winner's grid slot</span><b>{ein(zahlenHier?.mittlererSiegerStart?.value)}</b><i>on average</i></li>
+            </>
+          )}
+        </ul>
 
         {zahlenHier?.groessteAufholjagd && (
-          <p class="notiz">
+          <p class="fussnote">
             Furthest charge to victory here:
             {' '}<a href={pfad.fahrer(zahlenHier.groessteAufholjagd.id)}>
               {zahlenHier.groessteAufholjagd.name}
@@ -163,187 +199,181 @@ const titel = rennen ? `${rennen.grandPrix} ${rennen.jahr} – preview` : 'Race 
       </section>
 
       {historie?.rennen > 0 && (
-        <section>
-          <h2>Who has been strong here</h2>
+        <section class="abschnitt" id="stark">
+          <div class="abschnitt-kopf"><div><h2>Who has been strong here</h2></div></div>
           <div class="spalten">
-            <section>
+            <div class="rangkarte">
               <h3>Most wins</h3>
               <ol class="rangliste">
                 {sieger.map((s) => (
-                  <li>
-                    <a class="zeile" href={pfad.fahrer(s.id)}>{s.name}</a>
-                    <b>{s.anzahl}</b>
-                  </li>
+                  <li><a href={pfad.fahrer(s.id)}>{s.name}</a><b>{s.anzahl}</b></li>
                 ))}
               </ol>
-            </section>
-            <section>
+            </div>
+            <div class="rangkarte">
               <h3>Most pole positions</h3>
               <ol class="rangliste">
                 {polesetter.map((s) => (
-                  <li>
-                    <a class="zeile" href={pfad.fahrer(s.id)}>{s.name}</a>
-                    <b>{s.anzahl}</b>
-                  </li>
+                  <li><a href={pfad.fahrer(s.id)}>{s.name}</a><b>{s.anzahl}</b></li>
                 ))}
               </ol>
-            </section>
-            <section>
+            </div>
+            <div class="rangkarte">
               <h3>Most successful teams</h3>
               <ol class="rangliste">
                 {teamsHier.map((t) => (
-                  <li>
-                    <a class="zeile" href={pfad.team(t.id)}>{t.name}</a>
-                    <b>{t.anzahl}</b>
-                  </li>
+                  <li><a href={pfad.team(t.id)}>{t.name}</a><b>{t.anzahl}</b></li>
                 ))}
               </ol>
-            </section>
+            </div>
           </div>
 
-          {spezialisten.length > 0 && (
-            <>
-              <h3 class="weit">Circuit specialists</h3>
-              <p class="notiz">
-                Average finishing position here, set against the same driver’s average everywhere else.
-                A driver who wins everywhere is no specialist here.
-              </p>
+          <div class="spalten zwei unten">
+            <div>
+              <h3>Most recent races here</h3>
               <div class="tabelle">
                 <table>
                   <thead>
-                    <tr>
-                      <th>Driver</th>
-                      <th class="num">Here</th>
-                      <th class="num">Elsewhere</th>
-                      <th class="num">Difference</th>
-                    </tr>
+                    <tr><th class="num">Year</th><th>Winner</th><th>Team</th><th class="num">Grid</th></tr>
                   </thead>
                   <tbody>
-                    {spezialisten.slice(0, 6).map((s) => (
+                    {letzteHier.map((r) => (
                       <tr>
-                        <td><a class="zeile" href={pfad.fahrer(s.id)}>{s.name}</a></td>
-                        <td class="num">{ein(s.hier)}</td>
-                        <td class="num">{ein(s.sonst)}</td>
-                        <td class="num stark">{ein(s.vorteil)}</td>
+                        <td class="num"><a class="zeile" href={pfad.rennen(r.id)}>{r.year}</a></td>
+                        <td>{r.siegerId ? <a class="zeile" href={pfad.fahrer(r.siegerId)}>{r.sieger}</a> : '–'}</td>
+                        <td class="leise">{r.siegerTeam ?? '–'}</td>
+                        <td class="num">{r.siegerStart ? <span class={plakette(r.siegerStart)}>{r.siegerStart}</span> : '–'}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-            </>
-          )}
+            </div>
 
-          <h3 class="weit">Most recent races here</h3>
-          <div class="tabelle">
-            <table>
-              <thead>
-                <tr><th class="num">Year</th><th>Winner</th><th>Team</th><th class="num">From grid</th></tr>
-              </thead>
-              <tbody>
-                {letzteHier.map((r) => (
-                  <tr>
-                    <td class="num"><a class="zeile" href={pfad.rennen(r.id)}>{r.year}</a></td>
-                    <td>{r.siegerId ? <a class="zeile" href={pfad.fahrer(r.siegerId)}>{r.sieger}</a> : '–'}</td>
-                    <td style="color:var(--muted)">{r.siegerTeam ?? '–'}</td>
-                    <td class="num">{r.siegerStart ?? '–'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            {spezialisten.length > 0 && (
+              <div>
+                <h3>Circuit specialists</h3>
+                <div class="tabelle">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Driver</th>
+                        <th class="num">Here</th>
+                        <th class="num">Elsewhere</th>
+                        <th class="num">Edge</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {spezialisten.slice(0, 5).map((s) => (
+                        <tr>
+                          <td><a class="zeile" href={pfad.fahrer(s.id)}>{s.name}</a></td>
+                          <td class="num">{ein(s.hier)}</td>
+                          <td class="num leise">{ein(s.sonst)}</td>
+                          <td class="num gut">+{ein(s.vorteil)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <p class="fussnote">
+                  Average finish here against the same driver's average everywhere else.
+                </p>
+              </div>
+            )}
           </div>
         </section>
       )}
 
       {stand && (
-        <section>
-          <h2>Championship standings</h2>
-          <p class="notiz">
-            {stand.vorsaison
-              ? `The ${rennen.jahr} season has no result yet. Shown are the final ${stand.bezug.jahr} standings.`
-              : `After round ${stand.bezug.runde} (${stand.bezug.grandPrix}) on ${datum(stand.bezug.datum)}.`}
-            {' '}{stand.offen} races remain this season
-            {stand.sprints > 0 && ` (${stand.sprints} of them with a sprint)`},
-            so at most {stand.maxFuerEinenFahrer} points for any single driver.
-          </p>
+        <section class="abschnitt" id="wertung">
+          <div class="abschnitt-kopf">
+            <div>
+              <h2>Championship standings</h2>
+              <p>
+                {stand.vorsaison
+                  ? `The ${rennen.jahr} season has no result yet. Shown are the final ${stand.bezug.jahr} standings.`
+                  : `After round ${stand.bezug.runde} (${stand.bezug.grandPrix}) on ${datum(stand.bezug.datum)}.`}
+                {' '}{stand.offen} races remain
+                {stand.sprints > 0 && ` (${stand.sprints} with a sprint)`},
+                so at most {stand.maxFuerEinenFahrer} points for any single driver.
+              </p>
+            </div>
+          </div>
 
-          {titelMoeglich && (
-            <p class="hinweis stark">
-              The drivers’ title can be settled here: {fuehrender.name} leads by {ein(vorsprung)} points,
-              and after this race only {stand.maxDanach} remain to be won. Whether that actually
-              settles it depends on the result – the number says only that it is arithmetically possible.
-            </p>
-          )}
-
-          <div class="spalten">
-            <section>
+          <div class="wertungen">
+            <div>
               <h3>Drivers</h3>
               <div class="tabelle">
                 <table>
                   <thead>
-                    <tr><th class="num">#</th><th>Driver</th><th>Team</th><th class="num">Points</th></tr>
+                    <tr><th class="num">Pos</th><th>Driver</th><th>Team</th><th class="num">Points</th></tr>
                   </thead>
                   <tbody>
                     {stand.fahrer.map((f) => (
                       <tr>
-                        <td class="num">{f.position ?? '–'}</td>
+                        <td class="num"><span class={plakette(f.position)}>{f.position ?? '–'}</span></td>
                         <td><a class="zeile" href={pfad.fahrer(f.id)}>{f.name}</a></td>
-                        <td style="color:var(--muted)">{f.team ?? '–'}</td>
-                        <td class="num">{ein(f.punkte)}</td>
+                        <td class="leise">{f.team ?? '–'}</td>
+                        <td class="num fett">{ein(f.punkte)}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-            </section>
+            </div>
 
-            <section>
+            <div>
               <h3>Constructors</h3>
               <div class="tabelle">
                 <table>
-                  <thead><tr><th class="num">#</th><th>Team</th><th class="num">Points</th></tr></thead>
+                  <thead><tr><th class="num">Pos</th><th>Team</th><th class="num">Points</th></tr></thead>
                   <tbody>
                     {stand.teams.map((t) => (
                       <tr>
-                        <td class="num">{t.position ?? '–'}</td>
+                        <td class="num"><span class={plakette(t.position)}>{t.position ?? '–'}</span></td>
                         <td><a class="zeile" href={pfad.team(t.id)}>{t.name}</a></td>
-                        <td class="num">{ein(t.punkte)}</td>
+                        <td class="num fett">{ein(t.punkte)}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-            </section>
+            </div>
           </div>
         </section>
       )}
 
-      <section>
-        <h2>Marks within reach</h2>
+      <section class="abschnitt" id="marken">
+        <div class="abschnitt-kopf">
+          <div>
+            <h2>Marks within reach</h2>
+            {rekordeNachFahrer.size > 0 && (
+              <p>
+                Only what this one race can move: round numbers in a career, the record at this
+                circuit, and all-time lists where a single result is missing. For the
+                {' '}{dasFeld.length} drivers who were on the grid most recently.
+              </p>
+            )}
+          </div>
+        </div>
         {rekordeNachFahrer.size === 0 ? (
-          <p class="notiz">
+          <p class="hinweis">
             No round number and no record is in the balance at this race –
             at least none that a single weekend could move.
           </p>
         ) : (
-          <>
-            <p class="notiz">
-              Only what this one race can move: round numbers in a career, the record at this
-              circuit, and all-time lists where a single result is missing.
-              Calculated for the {dasFeld.length} drivers who were on the grid most recently.
-            </p>
-            <ul class="marken">
-              {[...rekordeNachFahrer.entries()].map(([id, eintrag]) => (
-                <li>
-                  <a class="zeile" href={pfad.fahrer(id)}>{eintrag.name}</a>
-                  <ul>
-                    {eintrag.punkte.map((p) => (
-                      <li class={p.art}>{p.text}</li>
-                    ))}
-                  </ul>
-                </li>
-              ))}
-            </ul>
-          </>
+          <ul class="marken">
+            {[...rekordeNachFahrer.entries()].map(([id, eintrag]) => (
+              <li class="karte">
+                <a class="zeile" href={pfad.fahrer(id)}>{eintrag.name}</a>
+                <ul>
+                  {eintrag.punkte.map((p) => (
+                    <li class={p.art}>{p.text}</li>
+                  ))}
+                </ul>
+              </li>
+            ))}
+          </ul>
         )}
       </section>
     </>
@@ -351,57 +381,49 @@ const titel = rennen ? `${rennen.grandPrix} ${rennen.jahr} – preview` : 'Race 
 </Seite>
 
 <style>
-  .profil { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
-  .kuerzel.gross {
-    flex: none; min-width: 3.6rem; padding: 0.5rem 0.35rem; margin: 0;
-    font-size: 0.86rem; color: var(--accent); background: var(--accent-wash);
+  .countdown {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1.75rem;
+    margin: 0 0 1.5rem;
+    padding: 1.1rem 1.35rem;
+    color: var(--kopf-muted);
+    background: var(--kopf-bg);
+    border-left: 4px solid var(--accent);
+    border-radius: var(--radius);
   }
-  .kacheln {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(min(9rem, 100%), 1fr));
-    gap: 0.75rem; margin: 0 0 1rem; padding: 0; list-style: none;
+
+  .countdown .tage { display: flex; align-items: baseline; gap: 0.5rem; flex: none; }
+  .countdown b { font-size: 2.6rem; font-weight: 800; line-height: 1; letter-spacing: -0.04em; color: var(--kopf-ink); }
+  .countdown span { font-size: 0.95rem; font-weight: 600; color: var(--kopf-ink); }
+  .countdown p { flex: 1 1 22rem; margin: 0; font-size: 0.86rem; text-wrap: pretty; }
+
+  .unten { margin-top: 1.25rem; }
+
+  .wertungen {
+    display: grid;
+    grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+    align-items: start;
+    gap: 1.25rem;
   }
-  .kacheln li {
-    display: flex; flex-direction: column; gap: 0.1rem; padding: 0.9rem 1rem;
-    background: var(--surface-2); border: 1px solid var(--border); border-radius: 0.6rem;
+
+  @media (max-width: 60rem) {
+    .wertungen { grid-template-columns: minmax(0, 1fr); }
   }
-  .kacheln b {
-    font-size: 1.6rem; font-weight: 680; line-height: 1.1; color: var(--ink);
-    font-variant-numeric: tabular-nums; letter-spacing: -0.02em;
+
+  .marken {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(20rem, 100%), 1fr));
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
   }
-  .kacheln span { font-size: 0.78rem; color: var(--muted); }
-  .hinweis {
-    margin: 0 0 1.5rem; padding: 0.8rem 1rem; font-size: 0.87rem;
-    background: var(--accent-wash); border: 1px solid var(--border);
-    border-left: 3px solid var(--accent); border-radius: 0.5rem; max-width: 46rem;
-  }
-  .hinweis.stark { font-weight: 560; }
-  .notiz { margin: 0 0 1rem; font-size: 0.87rem; color: var(--ink-2); max-width: 46rem; }
-  .spalten {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(min(15rem, 100%), 1fr));
-    gap: 1.5rem;
-  }
-  .spalten section { margin-top: 0; }
-  section { margin-top: 2.5rem; }
-  h2 { font-size: 1.15rem; margin: 0 0 0.75rem; }
-  h3 { font-size: 0.95rem; margin: 0 0 0.5rem; }
-  h3.weit { margin-top: 2rem; }
-  .rangliste { margin: 0; padding: 0; list-style: none; counter-reset: rang; }
-  .rangliste li {
-    display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem;
-    padding: 0.4rem 0; border-bottom: 1px solid var(--border); font-size: 0.89rem;
-  }
-  .rangliste li::before {
-    counter-increment: rang; content: counter(rang);
-    min-width: 1.2rem; color: var(--muted); font-variant-numeric: tabular-nums;
-  }
-  .rangliste b { font-variant-numeric: tabular-nums; }
-  .stark { color: var(--good); }
-  .marken { margin: 0; padding: 0; list-style: none; }
-  .marken > li {
-    padding: 0.75rem 0; border-bottom: 1px solid var(--border);
-  }
-  .marken > li > ul { margin: 0.3rem 0 0; padding-left: 1.1rem; }
-  .marken > li > ul > li { font-size: 0.89rem; color: var(--ink-2); padding: 0.1rem 0; }
+
+  .marken > li > ul { margin: 0.45rem 0 0; padding-left: 1.1rem; display: grid; gap: 0.2rem; }
+  .marken > li > ul > li { font-size: 0.88rem; color: var(--ink-2); text-wrap: pretty; }
   /* Eine Bestmarke wiegt schwerer als eine runde Zahl - das darf man sehen. */
-  .marken li.strecke, .marken li.bestenliste { color: var(--ink); }
+  .marken li.strecke, .marken li.bestenliste { color: var(--ink); font-weight: 600; }
+  .marken li.strecke::marker, .marken li.bestenliste::marker { color: var(--accent); }
 </style>

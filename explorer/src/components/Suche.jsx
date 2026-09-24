@@ -142,7 +142,7 @@ export default function Suche() {
         ref={feld}
         type="search"
         value={frage}
-        placeholder="Search"
+        placeholder="Search drivers, teams…"
         aria-label="Search drivers, teams and circuits"
         autoComplete="off"
         onChange={(e) => {
@@ -152,6 +152,7 @@ export default function Suche() {
         onFocus={() => setOffen(true)}
         onKeyDown={taste}
       />
+      {frage === '' && <kbd aria-hidden="true">/</kbd>}
       {zeigen && (
         <ul className="ergebnisse">
           {treffer.length === 0 && (

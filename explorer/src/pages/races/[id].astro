@@ -1,5 +1,5 @@
 ---
-import { datum, ein, zahl } from '../../lib/format.js'
+import { datum, ein, plakette, zahl } from '../../lib/format.js'
 import Seite from '../../layouts/Seite.astro'
 import { alle, eine, rennenListe, pfad } from '../../lib/db.js'
 
@@ -64,47 +64,80 @@ function zeit(ms) {
 const sieger = ergebnisse.find((e) => e.position === 1)
 const pole = ergebnisse.find((e) => e.qualifying_position === 1)
 const schnellste = ergebnisse.find((e) => e.fastest_lap)
+
+/*
+ * Das Podium steht über der Ergebnisliste: Wer die Seite eines Rennens
+ * aufschlägt, will zuerst wissen, wer gewonnen hat – und nicht erst eine
+ * Tabelle mit zwanzig Zeilen lesen.
+ */
+const podium = [1, 2, 3].map((p) => ergebnisse.find((e) => e.position === p)).filter(Boolean)
+const zeitVon = (e) =>
+  e.position === 1 && e.time_ms
+    ? zeit(e.time_ms)
+    : e.gap_ms
+      ? `+${zeit(e.gap_ms)}`
+      : e.gap_laps
+        ? `+${e.gap_laps} ${e.gap_laps === 1 ? 'lap' : 'laps'}`
+        : (e.reason_retired ?? '')
 ---
 
 <Seite
   titel={`${rennen.gpName} Grand Prix ${rennen.year} – Result`}
   beschreibung={`Round ${rennen.round} of the ${rennen.year} season in ${rennen.ort}${sieger ? `. Winner: ${sieger.fahrer}` : ''}.`}
 >
-  <p class="brotkrumen">
-    <a href={pfad.saison(rennen.year)}>{rennen.year} season</a> · Round {rennen.round}
-  </p>
-  <h1>{rennen.gpName} Grand Prix {rennen.year}</h1>
-  <p class="lead">
-    <a href={pfad.strecke(rennen.circuit_id)}>{rennen.strecke}</a> · {rennen.ort} · {datum(rennen.date)}
-    {rennen.laps && <> · {rennen.laps} laps</>}
-    {rennen.distance_km && <> · {ein(rennen.distance_km)} km</>}
-  </p>
+  <header class="seitenkopf">
+    <span class="wappen" title={rennen.land ?? ''}>{rennen.ioc ?? '—'}</span>
+    <div>
+      <p class="oberzeile">
+        <a href={pfad.saison(rennen.year)}>{rennen.year} season</a>
+        <span class="trenner">/</span>
+        <span class="still">Round {rennen.round}</span>
+      </p>
+      <h1>{rennen.gpName} Grand Prix {rennen.year}</h1>
+      <ul class="eckdaten">
+        <li><a href={pfad.strecke(rennen.circuit_id)}>{rennen.strecke}</a></li>
+        {rennen.ort && rennen.ort !== rennen.strecke && <li>{rennen.ort}</li>}
+        <li>{datum(rennen.date)}</li>
+        {rennen.laps > 0 && <li>{rennen.laps} laps</li>}
+        {rennen.distance_km > 0 && <li>{ein(rennen.distance_km)} km</li>}
+        {rennen.drivers_title_decider === 1 && <li class="stark">Title decided here</li>}
+      </ul>
+    </div>
+  </header>
 
-  {rennen.drivers_title_decider === 1 && (
-    <p class="hinweis">The drivers’ title was decided in this race.</p>
+  {podium.length > 0 && (
+    <ol class="podium" aria-label="Podium">
+      {podium.map((e) => (
+        <li class={`p${e.position}`}>
+          <span class={plakette(e.position)}>P{e.position}</span>
+          <a class="name" href={pfad.fahrer(e.fahrerId)}>{e.fahrer}</a>
+          <span class="team">{e.team}</span>
+          <span class="zeit">{zeitVon(e)}</span>
+        </li>
+      ))}
+    </ol>
   )}
 
-  <ul class="kacheln">
-    {sieger && (
-      <li><b>Winner</b><a href={pfad.fahrer(sieger.fahrerId)}>{sieger.fahrer}</a>
-        <i>{sieger.team}{sieger.grid_position ? ` · from P${sieger.grid_position} on the grid` : ''}</i></li>
-    )}
+  <ul class="kacheln namen">
     {pole && (
-      <li><b>Pole position</b><a href={pfad.fahrer(pole.fahrerId)}>{pole.fahrer}</a><i>{pole.team}</i></li>
+      <li><span>Pole position</span><b><a href={pfad.fahrer(pole.fahrerId)}>{pole.fahrer}</a></b><i>{pole.team}</i></li>
     )}
     {schnellste && (
-      <li><b>Fastest lap</b><a href={pfad.fahrer(schnellste.fahrerId)}>{schnellste.fahrer}</a>
+      <li><span>Fastest lap</span><b><a href={pfad.fahrer(schnellste.fahrerId)}>{schnellste.fahrer}</a></b>
         <i>{schnellste.team}</i></li>
+    )}
+    {sieger?.grid_position && (
+      <li><span>Winner started from</span><b>P{sieger.grid_position}</b><i>on the grid</i></li>
     )}
   </ul>
 
-  <section>
-    <h2>Result</h2>
+  <section class="abschnitt">
+    <div class="abschnitt-kopf"><div><h2>Result</h2></div></div>
     <div class="tabelle">
       <table>
         <thead>
           <tr>
-            <th class="num">#</th><th>Driver</th><th>Team</th>
+            <th class="num">Pos</th><th>Driver</th><th>Team</th>
             <th class="num">Grid</th><th class="num">Laps</th>
             <th>Time / Reason</th><th class="num">Points</th>
           </tr>
@@ -112,24 +145,17 @@ const schnellste = ergebnisse.find((e) => e.fastest_lap)
         <tbody>
           {ergebnisse.map((e) => (
             <tr class={e.classified ? '' : 'raus'}>
-              <td class="num">{e.position ?? e.position_text}</td>
+              <td class="num"><span class={plakette(e.position)}>{e.position ?? e.position_text}</span></td>
               <td>
                 <a class="zeile" href={pfad.fahrer(e.fahrerId)}>{e.fahrer}</a>
-                {e.shared_car === 1 && <span class="marke" title="Shared car">shared</span>}
+                {e.shared_car === 1 && <span class="etikett" title="Shared car">shared</span>}
+                {e.fastest_lap === 1 && <span class="etikett akzent" title="Fastest lap">fastest lap</span>}
               </td>
-              <td style="color:var(--muted)"><a class="leise" href={pfad.team(e.teamId)}>{e.team}</a></td>
+              <td class="leise"><a class="leise" href={pfad.team(e.teamId)}>{e.team}</a></td>
               <td class="num">{e.grid_position ?? '–'}</td>
               <td class="num">{e.laps ?? ''}</td>
-              <td style="color:var(--muted)">
-                {e.position === 1 && e.time_ms
-                  ? zeit(e.time_ms)
-                  : e.gap_ms
-                    ? `+${zeit(e.gap_ms)}`
-                    : e.gap_laps
-                      ? `+${e.gap_laps} ${e.gap_laps === 1 ? 'lap' : 'laps'}`
-                      : (e.reason_retired ?? '')}
-              </td>
-              <td class="num">{e.points ? ein(e.points) : ''}</td>
+              <td class="leise">{zeitVon(e)}</td>
+              <td class="num fett">{e.points ? ein(e.points) : ''}</td>
             </tr>
           ))}
         </tbody>
@@ -143,9 +169,9 @@ const schnellste = ergebnisse.find((e) => e.fastest_lap)
   </section>
 
   {boxenstopps.length > 0 && (
-    <section>
-      <h2>Pit stops</h2>
-      <div class="tabelle">
+    <section class="abschnitt">
+      <div class="abschnitt-kopf"><div><h2>Pit stops</h2></div></div>
+      <div class="tabelle boxen">
         <table>
           <thead><tr><th>Driver</th><th class="num">Stops</th><th class="num">Fastest</th></tr></thead>
           <tbody>
@@ -162,48 +188,78 @@ const schnellste = ergebnisse.find((e) => e.fastest_lap)
     </section>
   )}
 
-  <nav class="nachbarn">
+  <nav class="nachbarn" aria-label="Neighbouring races">
     {vorher
-      ? <a href={pfad.rennen(vorher.id)}>‹ {vorher.name}</a>
+      ? <a class="karte" href={pfad.rennen(vorher.id)}><span>‹ Previous round</span><b>{vorher.name}</b></a>
       : <span></span>}
-    {nachher && <a href={pfad.rennen(nachher.id)}>{nachher.name} ›</a>}
+    {nachher && <a class="karte rechts" href={pfad.rennen(nachher.id)}><span>Next round ›</span><b>{nachher.name}</b></a>}
   </nav>
 </Seite>
 
 <style>
-  .brotkrumen { margin: 0 0 0.4rem; font-size: 0.82rem; color: var(--muted); }
-  .brotkrumen a { color: var(--muted); }
-  .kacheln {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(min(12rem, 100%), 1fr));
-    gap: 0.75rem; margin: 1.75rem 0 0; padding: 0; list-style: none;
+  /*
+   * Das Podium: der Sieger in der Mitte und etwas höher, wie auf dem echten.
+   * Am Telefon untereinander in der Reihenfolge 1, 2, 3.
+   */
+  .podium {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: end;
+    gap: 0.75rem;
+    margin: 0 0 0.75rem;
+    padding: 0;
+    list-style: none;
   }
-  .kacheln li {
-    display: grid; gap: 0.1rem; padding: 0.85rem 1rem;
-    background: var(--surface-2); border: 1px solid var(--border); border-radius: 0.6rem;
+
+  .podium li {
+    display: grid;
+    justify-items: start;
+    gap: 0.2rem;
+    padding: 1rem 1.15rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-s);
+    min-width: 0;
   }
-  .kacheln b {
-    font-size: 0.66rem; font-weight: 700; letter-spacing: 0.1em;
-    text-transform: uppercase; color: var(--muted);
+
+  .podium > .p1 { order: 2; padding-block: 1.5rem; border-top: 4px solid var(--gold); }
+  .podium > .p2 { order: 1; border-top: 4px solid var(--silber); }
+  .podium > .p3 { order: 3; border-top: 4px solid var(--bronze); }
+
+  .podium .pos { margin-bottom: 0.3rem; }
+  .podium .name {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 1.15rem;
+    font-weight: 750;
+    color: var(--ink);
+    text-decoration: none;
   }
-  .kacheln a { color: var(--ink); font-weight: 650; text-decoration: none; }
-  .kacheln a:hover { color: var(--accent); }
-  .kacheln i { font-style: normal; font-size: 0.76rem; color: var(--muted); }
-  .hinweis {
-    margin: 1.25rem 0 0; padding: 0.8rem 1rem; font-size: 0.87rem;
-    background: var(--accent-wash); border: 1px solid var(--border);
-    border-left: 3px solid var(--accent); border-radius: 0.5rem; max-width: 46rem;
+  .podium > .p1 .name { font-size: 1.35rem; }
+  .podium .name:hover { color: var(--accent); }
+  .podium .team { font-size: 0.85rem; color: var(--muted); }
+  .podium .zeit { font-size: 0.85rem; font-weight: 600; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+
+  @media (max-width: 40rem) {
+    .podium { grid-template-columns: minmax(0, 1fr); }
+    .podium > li.p1, .podium > li.p2, .podium > li.p3 { order: 0; padding-block: 0.9rem; }
   }
-  section { margin-top: 2.5rem; }
-  h2 { font-size: 1.15rem; margin: 0 0 0.75rem; }
-  tr.raus td { color: var(--muted); }
-  tr.raus .zeile { color: var(--muted); font-weight: 500; }
-  a.leise { color: inherit; text-decoration: none; }
-  a.leise:hover { color: var(--accent); }
-  .marke {
-    margin-left: 0.4rem; padding: 0.05rem 0.3rem; font-size: 0.64rem;
-    color: var(--muted); background: var(--surface-3); border-radius: 0.25rem;
+
+  .kacheln.namen { grid-template-columns: repeat(auto-fit, minmax(min(14rem, 100%), 1fr)); }
+  .boxen { max-width: 36rem; }
+
+  .nachbarn {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.85rem;
+    margin-top: 3rem;
   }
-  .fussnote { margin: 0.85rem 0 0; font-size: 0.79rem; color: var(--muted); max-width: 46rem; text-wrap: pretty; }
-  .nachbarn { display: flex; justify-content: space-between; gap: 1rem; margin-top: 2.5rem; }
-  .nachbarn a { font-size: 0.9rem; font-weight: 600; text-decoration: none; }
+
+  .nachbarn .karte { display: grid; gap: 0.1rem; }
+  .nachbarn .rechts { text-align: right; grid-column: 2; }
+  .nachbarn span { font-size: 0.78rem; font-weight: 650; color: var(--muted); }
+  .nachbarn b { color: var(--ink); font-size: 1rem; }
 </style>

@@ -1,15 +1,15 @@
 ---
 import { datumKurz as datum, zahl } from '../../lib/format.js'
 import Seite from '../../layouts/Seite.astro'
-import { rennenListe, saisonListe, pfad } from '../../lib/db.js'
+import Filter from '../../components/Filter.astro'
+import { rennenListe, pfad } from '../../lib/db.js'
 
 const rennen = rennenListe()
-const saisons = saisonListe()
 
 /*
  * Alle 1172 Rennen auf einer Seite, nach Saison gegliedert. Das ist viel, aber
  * es ist fertiges HTML ohne Nachladen – und wer ein bestimmtes Rennen sucht,
- * findet es mit der Suche des Browsers schneller als über eine Blätterfunktion.
+ * findet es mit dem Filter schneller als über eine Blätterfunktion.
  */
 const proJahr = new Map()
 for (const r of rennen) {
@@ -18,60 +18,70 @@ for (const r of rennen) {
   proJahr.set(r.jahr, e)
 }
 const jahre = [...proJahr.keys()].sort((a, b) => b - a)
+
+/* Die Sprungleiste nach Jahrzehnten gebündelt – 77 Jahreszahlen in einer
+   Reihe waren eine Wand aus Ziffern. */
+const jahrzehnte = new Map()
+for (const j of jahre) {
+  const d = Math.floor(j / 10) * 10
+  if (!jahrzehnte.has(d)) jahrzehnte.set(d, [])
+  jahrzehnte.get(d).push(j)
+}
 ---
 
 <Seite
   titel="All Formula 1 races since 1950"
   beschreibung={`${zahl(rennen.length)} World Championship rounds with winner, circuit and date.`}
 >
-  <h1>Races</h1>
-  <p class="lead">
-    {zahl(rennen.length)} World Championship rounds since 1950, arranged by season.
-  </p>
+  <header class="seitenkopf">
+    <div>
+      <p class="oberzeile">Races</p>
+      <h1>Every race since 1950</h1>
+      <p class="lead">
+        {zahl(rennen.length)} World Championship rounds, arranged by season. Filter for a race,
+        a circuit or a winner – try “Monaco” or “Senna”.
+      </p>
+    </div>
+  </header>
 
   {/*
     * Die Sprungleiste bringt einen zu einer Saison. Sie hilft nicht, wenn die
-    * Frage quer dazu liegt – alle Rennen in Monaco, alle Siege von Senna. Der
-    * Filter arbeitet im Browser über das fertige HTML: Es ist schon alles da,
-    * es muss nur das Übrige verschwinden.
+    * Frage quer dazu liegt – alle Rennen in Monaco, alle Siege von Senna. Dafür
+    * ist der Filter da; solange er greift, tritt die Sprungleiste zurück.
     */}
-  <div class="filter">
-    <label for="rennenfilter">Filter</label>
-    <input
-      id="rennenfilter"
-      type="search"
-      placeholder="Race, circuit or winner – try “Monaco” or “Senna”"
-      autocomplete="off"
-    />
-    <output id="rennenzahl" aria-live="polite"></output>
-  </div>
+  <Filter platzhalter="Filter by race, circuit or winner" einheit={['race', 'races']} />
 
-  <nav class="jahre" aria-label="Jump to a season">
-    {jahre.map((j) => <a href={`#j${j}`}>{j}</a>)}
+  <nav class="jahre" aria-label="Jump to a season" data-beim-filtern-weg>
+    {[...jahrzehnte.entries()].map(([d, liste]) => (
+      <div>
+        <b>{d}s</b>
+        <span>{liste.map((j) => <a href={`#j${j}`}>{String(j).slice(2)}</a>)}</span>
+      </div>
+    ))}
   </nav>
 
   {jahre.map((j) => (
-    <section id={`j${j}`}>
-      <h2>
-        <a href={pfad.saison(j)}>{j}</a>
-        <span>{proJahr.get(j).length} races</span>
-      </h2>
+    <section class="abschnitt" id={`j${j}`} data-gruppe>
+      <div class="abschnitt-kopf">
+        <div><h2><a href={pfad.saison(j)}>{j}</a></h2></div>
+        <span class="leise">{proJahr.get(j).length} races</span>
+      </div>
       <div class="tabelle">
         <table>
           <thead>
-            <tr><th class="num">Round</th><th>Race</th><th>Circuit</th><th>Date</th><th>Winner</th></tr>
+            <tr><th class="num">Rd</th><th>Race</th><th>Circuit</th><th>Date</th><th>Winner</th></tr>
           </thead>
           <tbody>
             {proJahr.get(j).map((r) => (
-              <tr>
-                <td class="num">{r.runde}</td>
+              <tr class={r.siegerId ? undefined : 'raus'}>
+                <td class="num leise">{r.runde}</td>
                 <td><a class="zeile" href={pfad.rennen(r.id)}>{r.name}</a></td>
-                <td style="color:var(--muted)">{r.strecke}</td>
-                <td style="color:var(--muted)">{datum(r.datum)}</td>
+                <td class="leise">{r.strecke}</td>
+                <td class="leise">{datum(r.datum)}</td>
                 <td>
                   {r.siegerId
                     ? <a class="zeile" href={pfad.fahrer(r.siegerId)}>{r.sieger}</a>
-                    : <span style="color:var(--muted)">–</span>}
+                    : <span class="leise">still to come</span>}
                 </td>
               </tr>
             ))}
@@ -82,103 +92,34 @@ const jahre = [...proJahr.keys()].sort((a, b) => b - a)
   ))}
 </Seite>
 
-<script>
-  /*
-   * Filtern im Browser, über das bereits gelieferte HTML. Kein Nachladen, kein
-   * Gerüst – 1.249 Zeilen durchzugehen kostet Millisekunden.
-   *
-   * Der Suchtext wird einmal je Zeile vorbereitet und am Element hinterlegt:
-   * Sonst liefe bei jedem Tastendruck `textContent` über die ganze Tabelle,
-   * und das ist die einzige Stelle, an der es bei dieser Menge spürbar würde.
-   */
-  const feld = document.querySelector('#rennenfilter')
-  const anzeige = document.querySelector('#rennenzahl')
-  const abschnitte = [...document.querySelectorAll('main section[id^="j"]')]
-  const sprungleiste = document.querySelector('.jahre')
-
-  const falte = (s) => s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase()
-
-  const zeilen = [...document.querySelectorAll('main tbody tr')].map((tr) => {
-    tr.dataset.suche = falte(tr.textContent.replace(/\s+/g, ' '))
-    return tr
-  })
-
-  const gesamt = zeilen.length
-
-  function filtere() {
-    const q = falte(feld.value).trim()
-    let sichtbar = 0
-
-    for (const tr of zeilen) {
-      const passt = q === '' || tr.dataset.suche.includes(q)
-      tr.hidden = !passt
-      if (passt) sichtbar++
-    }
-
-    /* Eine Saison ohne Treffer verschwindet mitsamt Überschrift. */
-    for (const s of abschnitte) {
-      s.hidden = ![...s.querySelectorAll('tbody tr')].some((tr) => !tr.hidden)
-    }
-
-    /* Die Sprungleiste ist sinnlos, solange gefiltert wird. */
-    if (sprungleiste) sprungleiste.hidden = q !== ''
-
-    anzeige.textContent = q === '' ? '' : `${sichtbar} of ${gesamt} races`
-  }
-
-  feld.addEventListener('input', filtere)
-  filtere()
-</script>
-
 <style>
-  .filter {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.5rem 0.75rem;
-    margin-top: 1.5rem;
-  }
-
-  .filter label {
-    font-size: 0.66rem;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--muted);
-  }
-
-  .filter input {
-    flex: 1 1 18rem;
-    min-width: 0;
-    padding: 0.45rem 0.7rem;
-    font: inherit;
-    font-size: 0.88rem;
-    color: var(--ink);
-    background: var(--surface-2);
-    border: 1px solid var(--border);
-    border-radius: 0.4rem;
-    appearance: none;
-  }
-
-  .filter input:focus { border-color: var(--accent); outline: none; }
-  .filter output { font-size: 0.82rem; color: var(--muted); font-variant-numeric: tabular-nums; }
-
   .jahre {
-    display: flex; flex-wrap: wrap; gap: 0.25rem; margin: 1.5rem 0 0;
-    padding: 0.85rem 1rem; background: var(--surface); border: 1px solid var(--border);
-    border-radius: 0.6rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(14rem, 100%), 1fr));
+    gap: 0.6rem 1.5rem;
+    margin: 0 0 2.5rem;
+    padding: 1rem 1.2rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-s);
   }
+
+  .jahre div { display: flex; align-items: baseline; gap: 0.6rem; }
+  .jahre b { flex: none; width: 3rem; font-size: 0.8rem; font-weight: 750; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .jahre span { display: flex; flex-wrap: wrap; gap: 0.15rem; }
+
   .jahre a {
-    padding: 0.15rem 0.4rem; font-size: 0.8rem; color: var(--muted);
-    text-decoration: none; border-radius: 0.25rem; font-variant-numeric: tabular-nums;
+    padding: 0.1rem 0.35rem;
+    font-size: 0.8rem;
+    color: var(--muted);
+    text-decoration: none;
+    border-radius: 0.25rem;
+    font-variant-numeric: tabular-nums;
   }
+
   .jahre a:hover { color: var(--accent); background: var(--accent-wash); }
-  section { margin-top: 2.5rem; scroll-margin-top: 4.5rem; }
-  h2 {
-    display: flex; align-items: baseline; gap: 0.75rem;
-    font-size: 1.15rem; margin: 0 0 0.75rem;
-  }
+
   h2 a { color: var(--ink); text-decoration: none; }
   h2 a:hover { color: var(--accent); }
-  h2 span { font-size: 0.78rem; font-weight: 400; color: var(--muted); }
 </style>

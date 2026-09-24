@@ -14,6 +14,7 @@
  */
 import { DatabaseSync } from 'node:sqlite'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import {
   calculateAverageFinish, calculateAverageStart, calculateChampionships,
   calculateDNFRate, calculateEntries, calculateFastestLaps, calculatePodiums,
@@ -34,7 +35,8 @@ import {
 } from '../src/engine/motor.js'
 import { fahrerWertung, rangliste, zusammenhang } from '../src/engine/duell.js'
 
-const HIER = path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1'))
+// fileURLToPath statt .pathname: Dort bliebe ein Leerzeichen im Pfad als %20 stehen.
+const HIER = path.dirname(fileURLToPath(import.meta.url))
 const DB = path.join(HIER, '..', 'data', 'f1.sqlite')
 
 let bestanden = 0

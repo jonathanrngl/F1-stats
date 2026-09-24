@@ -15,8 +15,10 @@ import path from 'node:path'
 import { execFileSync } from 'node:child_process'
 import { Readable } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
+import { fileURLToPath } from 'node:url'
 
-const HIER = path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1'))
+// fileURLToPath statt .pathname: Dort bliebe ein Leerzeichen im Pfad als %20 stehen.
+const HIER = path.dirname(fileURLToPath(import.meta.url))
 const WURZEL = path.join(HIER, '..')
 /*
  * Standardmaessig gilt das neueste Release: Die Seite soll nach jedem

@@ -30,6 +30,7 @@ const heute = new Date().toISOString().slice(0, 10)
 const naechstes = naechstesRennen(db(), heute)
 const stand = naechstes ? standVorRennen(db(), naechstes) : null
 const fuehrend = stand?.fahrer?.[0] ?? null
+const zweiter = stand?.fahrer?.[1] ?? null
 
 const tageBis = naechstes
   ? Math.round(
@@ -47,115 +48,251 @@ const letzteMarke = datenStand
   ? (juengsteAenderungen(rekordVerlaeufe(db()), { seit: `${datenStand.jahr - 12}-01-01` })
       .einzeln[0] ?? null)
   : null
+
+/*
+ * Die Einstiege. Symbole als Pfade im SVG-Format für ein 24er-Raster – keine
+ * Schrift und kein Bild, das nachgeladen werden müsste.
+ */
+const EINSTIEGE = [
+  { weg: '/seasons/', titel: 'Seasons', text: 'Standings, calendar and points progression for every year', symbol: 'M4 5h16v15H4zM4 10h16M9 3v4M15 3v4' },
+  { weg: '/races/', titel: 'Races', text: `All ${zahl(zahlen.rennen)} races, result by result`, symbol: 'M5 21V4M5 4h11l-2 4 2 4H5' },
+  { weg: '/drivers/', titel: 'Drivers', text: `${zahl(zahlen.fahrer)} profiles with career, streaks and team-mates`, symbol: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0' },
+  { weg: '/teams/', titel: 'Teams', text: `${zahlen.teams} constructors and the names they raced under`, symbol: 'M3 17h18M5 17l2-6h10l2 6M8 11V8h8v3M7 20a1.5 1.5 0 1 0 0-3M17 20a1.5 1.5 0 1 0 0-3' },
+  { weg: '/circuits/', titel: 'Circuits', text: `${zahlen.strecken} circuits on a map, and who has gone well at each`, symbol: 'M12 21s-6-5.5-6-11a6 6 0 0 1 12 0c0 5.5-6 11-6 11zM12 12a2 2 0 1 0 0-4 2 2 0 0 0 0 4' },
+  { weg: '/records/', titel: 'Records', text: 'Every all-time mark, linked to the race behind it', symbol: 'M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4' },
+  { weg: '/comparison/', titel: 'Compare', text: 'Two careers side by side, over any period', symbol: 'M8 4v16M16 4v16M3 8h5M16 16h5M3 16h5M16 8h5' },
+  { weg: '/explorer/', titel: 'Explorer', text: 'Your own queries over every result, with export', symbol: 'M4 6h16M4 12h10M4 18h6M17 15l3 3M15 17a3 3 0 1 0 0-6 3 3 0 0 0 0 6' },
+]
 ---
 
 <Seite
   titel="Formula 1 statistics – every season since 1950"
   beschreibung={`Results, standings and analysis from ${zahl(zahlen.rennen)} races between ${zahlen.von} and ${zahlen.bis}.`}
 >
-  <h1>All of Formula 1</h1>
-  <p class="lead">
-    {zahl(zahlen.rennen)} races between {zahlen.von} and {zahlen.bis}, {zahl(zahlen.fahrer)} drivers, {zahlen.teams} teams, {zahlen.strecken} circuits.
-    Every number on this site comes from {zahl(zahlen.ergebnisse)} result rows – not from a
-    curated list of records.
-  </p>
+  <header class="start">
+    <div>
+      <p class="oberzeile">World Championship · {zahlen.von}–{zahlen.bis}</p>
+      <h1>All of Formula 1,<br /> in numbers</h1>
+      <p class="lead">
+        Results, standings and records for every race since {zahlen.von} – worked out from
+        {' '}{zahl(zahlen.ergebnisse)} result rows, not copied from a curated list.
+      </p>
+    </div>
+    <ul class="kacheln startzahlen">
+      <li><b>{zahl(zahlen.rennen)}</b><span>Races</span></li>
+      <li><b>{zahl(zahlen.fahrer)}</b><span>Drivers</span></li>
+      <li><b>{zahlen.teams}</b><span>Teams</span></li>
+      <li><b>{zahlen.strecken}</b><span>Circuits</span></li>
+    </ul>
+  </header>
 
   {(naechstes || fuehrend || letzteMarke) && (
-    <ul class="jetzt">
-      {naechstes && (
-        <li>
-          <span class="etikett">Next race</span>
-          <a class="gross" href={pfad.seite('/preview/')}>{naechstes.grandPrix} {naechstes.jahr}</a>
-          <span class="dazu">
-            {naechstes.strecke} · {datum(naechstes.datum)}
-            {tageBis > 1 ? ` · in ${tageBis} days` : tageBis === 1 ? ' · tomorrow' : tageBis === 0 ? ' · today' : ''}
-          </span>
-        </li>
-      )}
-      {fuehrend && (
-        <li>
-          <span class="etikett">Championship leader</span>
-          <a class="gross" href={pfad.fahrer(fuehrend.id)}>{fuehrend.name}</a>
-          <span class="dazu">
-            {zahl(fuehrend.punkte)} points
-            {stand.fahrer[1] && ` · ${zahl(fuehrend.punkte - stand.fahrer[1].punkte)} ahead of ${stand.fahrer[1].name}`}
-          </span>
-        </li>
-      )}
-      {letzteMarke && (
-        <li>
-          <span class="etikett">
-            Latest record change
-          </span>
-          <a class="gross" href={pfad.seite('/changes/')}>
-            {letzteMarke.kategorie.titel}
+    <section class="abschnitt">
+      <div class="abschnitt-kopf"><div><h2>Right now</h2></div></div>
+      <div class="jetzt">
+        {naechstes && (
+          <a class="karte jetzt-rennen" href={pfad.seite('/preview/')}>
+            <span class="etikett-klein">Next race · Round {naechstes.runde}</span>
+            <b class="gross">{naechstes.grandPrix} {naechstes.jahr}</b>
+            <span class="dazu">{naechstes.strecke} · {datum(naechstes.datum)}</span>
+            {tageBis !== null && tageBis >= 0 && (
+              <span class="countdown">
+                {tageBis === 0 ? <b>Today</b> : tageBis === 1 ? <b>Tomorrow</b> : <><b>{tageBis}</b> days to go</>}
+              </span>
+            )}
+            <span class="weiter">Read the preview →</span>
           </a>
-          <span class="dazu">
-            {letzteMarke.halter.map((h) => h.name).join(' and ')} ·{' '}
-            {zahlwort(letzteMarke.wert, letzteMarke.kategorie)} · {datum(letzteMarke.datum)}
-          </span>
-        </li>
-      )}
-    </ul>
+        )}
+        {fuehrend && (
+          <a class="karte" href={pfad.fahrer(fuehrend.id)}>
+            <span class="etikett-klein">Championship leader</span>
+            <b class="gross">{fuehrend.name}</b>
+            <span class="dazu">{fuehrend.team}</span>
+            <span class="zahlreihe">
+              <span><b>{zahl(fuehrend.punkte)}</b> points</span>
+              {zweiter && <span><b>+{zahl(fuehrend.punkte - zweiter.punkte)}</b> on {zweiter.name}</span>}
+            </span>
+          </a>
+        )}
+        {letzteMarke && (
+          <a class="karte" href={pfad.seite('/changes/')}>
+            <span class="etikett-klein">Latest record change</span>
+            <b class="gross">{letzteMarke.kategorie.titel}</b>
+            <span class="dazu">{letzteMarke.halter.map((h) => h.name).join(' and ')}</span>
+            <span class="zahlreihe">
+              <span><b>{zahlwort(letzteMarke.wert, letzteMarke.kategorie)}</b></span>
+              <span>{datum(letzteMarke.datum)}</span>
+            </span>
+          </a>
+        )}
+      </div>
+    </section>
   )}
 
-  <ul class="karten">
-    <li><a class="karte" href={pfad.seite('/preview/')}><b>Preview</b><span>The next race: circuit, championship standings and records within reach</span></a></li>
-    <li><a class="karte" href={pfad.seite('/drivers/')}><b>Drivers</b><span>{zahl(zahlen.fahrer)} profiles with career, streaks and team-mates</span></a></li>
-    <li><a class="karte" href={pfad.seite('/teams/')}><b>Teams</b><span>{zahlen.teams} constructors, including the names they raced under before</span></a></li>
-    <li><a class="karte" href={pfad.seite('/seasons/')}><b>Seasons</b><span>Standings, calendar and progression for each year</span></a></li>
-    <li><a class="karte" href={pfad.seite('/races/')}><b>Races</b><span>Every race since 1950, result by result</span></a></li>
-    <li><a class="karte" href={pfad.seite('/circuits/')}><b>Circuits</b><span>{zahlen.strecken} circuits, and who has gone well at each</span></a></li>
-    <li><a class="karte" href={pfad.seite('/records/')}><b>Records</b><span>Every record linked to the race behind it</span></a></li>
-  </ul>
+  <section class="abschnitt">
+    <div class="abschnitt-kopf"><div><h2>Explore</h2></div></div>
+    <ul class="einstiege">
+      {EINSTIEGE.map((e) => (
+        <li>
+          <a class="karte" href={pfad.seite(e.weg)}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d={e.symbol} />
+            </svg>
+            <b>{e.titel}</b>
+            <span>{e.text}</span>
+          </a>
+        </li>
+      ))}
+    </ul>
+  </section>
 
-  <h2 style="margin-top:2.5rem">Most recent</h2>
-  <ul class="karten">
-    {saisons.map((s) => (
-      <li>
-        <a class="karte" href={pfad.saison(s.jahr)}>
-          <b>{s.jahr}</b>
-          <span>{s.meister ?? 'season in progress'}{s.teamMeister ? ` · Constructors’ champion: ${s.teamMeister}` : ''}</span>
-        </a>
-      </li>
-    ))}
-  </ul>
+  <section class="abschnitt">
+    <div class="abschnitt-kopf">
+      <div><h2>Recent seasons</h2></div>
+      <a class="mehr" href={pfad.seite('/seasons/')}>All seasons →</a>
+    </div>
+    <ul class="saisons">
+      {saisons.map((s) => (
+        <li>
+          <a class="karte" href={pfad.saison(s.jahr)}>
+            <b class="jahr">{s.jahr}</b>
+            {s.meister ? (
+              <>
+                <span class="wer">{s.meister}</span>
+                {s.teamMeister && <span class="team">{s.teamMeister}</span>}
+              </>
+            ) : (
+              <span class="laeuft">Season in progress</span>
+            )}
+          </a>
+        </li>
+      ))}
+    </ul>
+  </section>
 </Seite>
 
 <style>
+  /* Der Kopf der Startseite: links die Aussage, rechts die vier Zahlen. */
+  .start {
+    display: grid;
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+    align-items: end;
+    gap: 2rem 3rem;
+    margin-bottom: 3rem;
+  }
+
+  .start h1 { font-size: clamp(2.2rem, 5vw, 3.4rem); }
+  .startzahlen { grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0; }
+
+  @media (max-width: 56rem) {
+    .start { grid-template-columns: minmax(0, 1fr); }
+    .startzahlen { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  }
+
+  @media (max-width: 34rem) {
+    .startzahlen { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+
   /*
-   * Das Band mit dem, was gerade gilt. Drei Felder nebeneinander, am Telefon
-   * untereinander. Kein Kasten mit Rahmen: Es ist kein Hinweis, sondern der
-   * Inhalt, mit dem die Seite anfängt.
+   * „Right now": drei Karten. Die erste – das nächste Rennen – ist dunkel und
+   * trägt den Countdown; sie ist der Grund, warum jemand während der Saison
+   * wiederkommt.
    */
   .jetzt {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr));
-    gap: 0.9rem 1.75rem;
-    margin: 1.75rem 0 0;
-    padding: 1.1rem 0 0;
-    border-top: 1px solid var(--border);
-    list-style: none;
+    grid-template-columns: repeat(auto-fit, minmax(min(17rem, 100%), 1fr));
+    gap: 0.85rem;
   }
 
-  .jetzt li { display: grid; gap: 0.15rem; align-content: start; min-width: 0; }
+  .jetzt .karte {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 0;
+  }
 
-  .jetzt .etikett {
-    font-size: 0.66rem;
-    font-weight: 700;
-    letter-spacing: 0.12em;
+  .etikett-klein {
+    font-size: 0.7rem;
+    font-weight: 750;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: var(--muted);
+    color: var(--accent);
   }
 
   .jetzt .gross {
-    font-size: 1.12rem;
-    font-weight: 650;
+    font-size: 1.35rem;
+    font-weight: 800;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
     color: var(--ink);
-    text-decoration: none;
-    letter-spacing: -0.01em;
   }
 
-  .jetzt .gross:hover { color: var(--accent); }
-  .jetzt .dazu { font-size: 0.82rem; color: var(--muted); text-wrap: pretty; }
+  .jetzt .dazu { font-size: 0.88rem; color: var(--muted); }
+
+  .zahlreihe {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1.1rem;
+    margin-top: auto;
+    padding-top: 0.8rem;
+    font-size: 0.86rem;
+    color: var(--muted);
+  }
+
+  .zahlreihe b { font-size: 1.15rem; font-weight: 800; color: var(--ink); font-variant-numeric: tabular-nums; }
+
+  .jetzt-rennen {
+    color: var(--kopf-muted);
+    background: var(--kopf-bg);
+    border-color: var(--kopf-bg);
+    border-left: 4px solid var(--accent);
+  }
+
+  .jetzt-rennen .gross { color: var(--kopf-ink); }
+  .jetzt-rennen .dazu { color: var(--kopf-muted); }
+  .countdown { margin-top: 0.8rem; font-size: 0.9rem; color: var(--kopf-muted); }
+  .countdown b { font-size: 2rem; font-weight: 800; color: var(--kopf-ink); letter-spacing: -0.03em; }
+  .weiter { margin-top: auto; padding-top: 0.6rem; font-size: 0.85rem; font-weight: 650; color: var(--accent); }
+
+  /* Einstiege: Symbol, Name, ein Satz. */
+  .einstiege {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(16rem, 100%), 1fr));
+    gap: 0.85rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .einstiege .karte { height: 100%; }
+
+  .einstiege svg {
+    display: block;
+    width: 2.3rem;
+    height: 2.3rem;
+    margin-bottom: 0.75rem;
+    padding: 0.45rem;
+    color: var(--accent);
+    background: var(--accent-wash);
+    border-radius: 0.55rem;
+  }
+
+  .einstiege b { display: block; font-size: 1.02rem; font-weight: 700; color: var(--ink); }
+  .einstiege span { display: block; margin-top: 0.2rem; font-size: 0.86rem; color: var(--muted); text-wrap: pretty; }
+
+  /* Saisons: Jahr groß, darunter die beiden Meister. */
+  .saisons {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(11rem, 100%), 1fr));
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .saisons .karte { display: grid; gap: 0.1rem; height: 100%; padding: 0.95rem 1.05rem; }
+  .saisons .jahr { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.03em; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .saisons .wer { font-size: 0.9rem; font-weight: 650; color: var(--ink-2); }
+  .saisons .team { font-size: 0.8rem; color: var(--muted); }
+  .saisons .laeuft { font-size: 0.85rem; font-weight: 650; color: var(--accent); }
 </style>

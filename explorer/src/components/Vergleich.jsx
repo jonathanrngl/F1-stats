@@ -291,7 +291,7 @@ export default function Vergleich({ index }) {
             </div>
           </div>
 
-          <div className="kopf">
+          <div className="vgl-kopf">
             {beide.map((p, i) => (
               <div key={p.id} className={`kopfkarte s${i}`}>
                 <span className="kuerzel">{p.land.code}</span>

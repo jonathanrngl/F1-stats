@@ -1,8 +1,9 @@
 ---
-import { datumKurz as datum, ein, zahl } from '../../lib/format.js'
+import { datumKurz as datum, ein, plakette, zahl } from '../../lib/format.js'
 import Seite from '../../layouts/Seite.astro'
 import { alle, eine, saisonListe, rennenListe, pfad } from '../../lib/db.js'
 import Verlauf from '../../components/Verlauf.astro'
+import Sprung from '../../components/Sprung.astro'
 import { db } from '../../lib/db.js'
 import { saisonNeuRechnen, systemDesJahres } from '../../engine/whatif.js'
 
@@ -119,32 +120,80 @@ const andererMeister =
   neuGerechnet && meisterId && neuGerechnet.tabelle[0] &&
   neuGerechnet.tabelle[0].driverId !== meisterId
 const teamMeister = teamWertung.find((t) => t.meister)
+const fuehrender = fahrerWertung[0] ?? null
+const gefahren = rennen.filter((r) => r.siegerId).length
+const saisonLaeuft = !meister && gefahren < rennen.length
+
+const ziele = [
+  verlauf.length > 0 && verlaufRunden.length > 1 && { id: 'verlauf', label: 'Progression' },
+  { id: 'wertung', label: 'Standings' },
+  { id: 'kalender', label: 'Calendar' },
+  neuGerechnet && neuGerechnet.tabelle.length > 0 && { id: 'heute', label: "Today's points" },
+].filter(Boolean)
 ---
 
 <Seite
   titel={`Formula 1 season ${jahr} – standings and races`}
   beschreibung={`${saison.rennen} races${meister ? `, World Champion ${meister.name}` : ''}${teamMeister ? `, constructors' title ${teamMeister.name}` : ''}.`}
 >
-  <h1>Season {jahr}</h1>
-  <p class="lead">
-    {saison.rennen} races
-    {meister && <> · World Champion <a href={pfad.fahrer(meister.id)}>{meister.name}</a></>}
-    {teamMeister && <> · Constructors' title <a href={pfad.team(teamMeister.id)}>{teamMeister.name}</a></>}
-  </p>
+  <header class="seitenkopf">
+    <div>
+      <p class="oberzeile">
+        <a href={pfad.seite('/seasons/')}>Seasons</a>
+        <span class="trenner">/</span>
+        <span class="still">{saisonLaeuft ? `${gefahren} of ${saison.rennen} races run` : `${saison.rennen} races`}</span>
+      </p>
+      <h1>{jahr} season</h1>
+      <ul class="eckdaten">
+        {saisonLaeuft && <li class="stark">In progress</li>}
+        {saison.dropped_scores === 1 && <li>Dropped scores</li>}
+        {entscheidung && <li>Title decided in round {entscheidung.runde}</li>}
+      </ul>
+    </div>
+  </header>
+
+  <ul class="kacheln namen">
+    {meister ? (
+      <li class="stark">
+        <span>World Champion</span>
+        <b><a href={pfad.fahrer(meister.id)}>{meister.name}</a></b>
+        <i>{ein(meister.points)} points · {meister.siege} {meister.siege === 1 ? 'win' : 'wins'}</i>
+      </li>
+    ) : fuehrender && (
+      <li class="stark">
+        <span>Championship leader</span>
+        <b><a href={pfad.fahrer(fuehrender.id)}>{fuehrender.name}</a></b>
+        <i>{ein(fuehrender.points)} points</i>
+      </li>
+    )}
+    {teamMeister ? (
+      <li>
+        <span>Constructors' champion</span>
+        <b><a href={pfad.team(teamMeister.id)}>{teamMeister.name}</a></b>
+        <i>{ein(teamMeister.points)} points</i>
+      </li>
+    ) : teamWertung[0] && (
+      <li>
+        <span>Leading constructor</span>
+        <b><a href={pfad.team(teamWertung[0].id)}>{teamWertung[0].name}</a></b>
+        <i>{ein(teamWertung[0].points)} points</i>
+      </li>
+    )}
+  </ul>
 
   <ul class="kacheln">
-    <li><b>{saison.rennen}</b><span>Races</span></li>
-    <li><b>{kennzahlen.sieger}</b><span>Different winners</span></li>
-    <li><b>{kennzahlen.polesetter}</b><span>Pole-sitters</span></li>
+    <li><span>Races</span><b>{saison.rennen}</b></li>
+    <li><span>Different winners</span><b>{kennzahlen.sieger}</b></li>
+    <li><span>Pole-sitters</span><b>{kennzahlen.polesetter}</b></li>
     <li>
+      <span>Not classified</span>
       <b>{kennzahlen.starts ? Math.round((kennzahlen.ausfaelle / kennzahlen.starts) * 100) : 0}%</b>
-      <span>Starts not classified</span>
-      <i>{kennzahlen.ausfaelle} of {kennzahlen.starts}</i>
+      <i>{kennzahlen.ausfaelle} of {kennzahlen.starts} starts</i>
     </li>
   </ul>
 
   {saison.dropped_scores === 1 && (
-    <p class="hinweis">
+    <p class="hinweis warn">
       In this season not every result counted towards the championship: only a driver's best
       races went into the standings, the rest were dropped. The championship standings therefore
       sit below the sum of the points scored in races.
@@ -152,16 +201,20 @@ const teamMeister = teamWertung.find((t) => t.meister)
   )}
 
   {entscheidung && (
-    <p class="hinweis entschieden">
-      The title was decided in round {entscheidung.runde}:{' '}
-      <a href={pfad.rennen(entscheidung.id)}>{entscheidung.name}</a>
-      {' '}on {datum(entscheidung.datum)}.
+    <p class="hinweis akzent">
+      <span>
+        The title was decided in round {entscheidung.runde}:{' '}
+        <a href={pfad.rennen(entscheidung.id)}>{entscheidung.name}</a>
+        {' '}on {datum(entscheidung.datum)}.
+      </span>
     </p>
   )}
 
+  <Sprung ziele={ziele} />
+
   {verlauf.length > 0 && verlaufRunden.length > 1 && (
-    <section>
-      <h2>Points progression</h2>
+    <section class="abschnitt" id="verlauf">
+      <div class="abschnitt-kopf"><div><h2>Points progression</h2></div></div>
       <Verlauf
         fahrer={verlauf}
         runden={verlaufRunden}
@@ -170,21 +223,73 @@ const teamMeister = teamWertung.find((t) => t.meister)
     </section>
   )}
 
-  <section>
-    <h2>Drivers' standings</h2>
+  <section class="abschnitt" id="wertung">
+    <div class="abschnitt-kopf"><div><h2>Standings</h2></div></div>
+    <div class="wertungen">
+      <div>
+        <h3>Drivers</h3>
+        <div class="tabelle">
+          <table>
+            <thead>
+              <tr><th class="num">Pos</th><th>Driver</th><th>Team</th><th class="num">Wins</th><th class="num">Points</th></tr>
+            </thead>
+            <tbody>
+              {fahrerWertung.map((f) => (
+                <tr class={f.meister ? 'meister' : undefined}>
+                  <td class="num"><span class={plakette(f.position)}>{f.position ?? '–'}</span></td>
+                  <td><a class="zeile" href={pfad.fahrer(f.id)}>{f.name}</a></td>
+                  <td class="leise">{f.teams}</td>
+                  <td class="num">{f.siege || ''}</td>
+                  <td class="num fett">{ein(f.points)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {teamWertung.length > 0 && (
+        <div>
+          <h3>Constructors</h3>
+          <div class="tabelle">
+            <table>
+              <thead><tr><th class="num">Pos</th><th>Team</th><th class="num">Points</th></tr></thead>
+              <tbody>
+                {teamWertung.map((t) => (
+                  <tr class={t.meister ? 'meister' : undefined}>
+                    <td class="num"><span class={plakette(t.position)}>{t.position ?? '–'}</span></td>
+                    <td><a class="zeile" href={pfad.team(t.id)}>{t.name}</a></td>
+                    <td class="num fett">{ein(t.points)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  </section>
+
+  <section class="abschnitt" id="kalender">
+    <div class="abschnitt-kopf"><div><h2>Race calendar</h2></div></div>
     <div class="tabelle">
       <table>
-        <thead>
-          <tr><th class="num">#</th><th>Driver</th><th>Team</th><th class="num">Wins</th><th class="num">Points</th></tr>
-        </thead>
+        <thead><tr><th class="num">Rd</th><th>Race</th><th>Circuit</th><th>Date</th><th>Winner</th></tr></thead>
         <tbody>
-          {fahrerWertung.map((f) => (
-            <tr>
-              <td class={`num${f.meister ? ' meister' : ''}`}>{f.position ?? '–'}</td>
-              <td><a class="zeile" href={pfad.fahrer(f.id)}>{f.name}</a></td>
-              <td style="color:var(--muted)">{f.teams}</td>
-              <td class="num">{f.siege || ''}</td>
-              <td class="num">{ein(f.points)}</td>
+          {rennen.map((r) => (
+            <tr class={r.siegerId ? undefined : 'raus'}>
+              <td class="num leise">{r.runde}</td>
+              <td>
+                <a class="zeile" href={pfad.rennen(r.id)}>{r.name}</a>
+                {r.titelentscheidung === 1 && <span class="etikett akzent">Title decided</span>}
+              </td>
+              <td class="leise">{r.strecke}</td>
+              <td class="leise">{datum(r.datum)}</td>
+              <td>
+                {r.siegerId
+                  ? <a class="zeile" href={pfad.fahrer(r.siegerId)}>{r.sieger}</a>
+                  : <span class="leise">still to come</span>}
+              </td>
             </tr>
           ))}
         </tbody>
@@ -192,50 +297,36 @@ const teamMeister = teamWertung.find((t) => t.meister)
     </div>
   </section>
 
-  {teamWertung.length > 0 && (
-    <section>
-      <h2>Constructors' standings</h2>
-      <div class="tabelle">
-        <table>
-          <thead><tr><th class="num">#</th><th>Team</th><th class="num">Points</th></tr></thead>
-          <tbody>
-            {teamWertung.map((t) => (
-              <tr>
-                <td class={`num${t.meister ? ' meister' : ''}`}>{t.position ?? '–'}</td>
-                <td><a class="zeile" href={pfad.team(t.id)}>{t.name}</a></td>
-                <td class="num">{ein(t.points)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </section>
-  )}
-
   {neuGerechnet && neuGerechnet.tabelle.length > 0 && (
-    <section>
-      <h2>Under today's points system</h2>
-      <p class="lead">
-        The same races, the same finishing positions – only scored under today's system
-        (25-18-15-12-10-8-6-4-2-1) instead of the one in force at the time. Dropped scores fall
-        away with it, because today there are none.
-      </p>
+    <section class="abschnitt" id="heute">
+      <div class="abschnitt-kopf">
+        <div>
+          <h2>Under today's points system</h2>
+          <p>
+            The same finishing positions, scored 25-18-15-12-10-8-6-4-2-1 instead of the system
+            in force at the time.
+          </p>
+        </div>
+      </div>
 
       {andererMeister ? (
-        <p class="hinweis entschieden">
-          The title would have changed hands: <a href={pfad.fahrer(neuGerechnet.tabelle[0].driverId)}>
-          {neuGerechnet.tabelle[0].name}</a> instead of {meister?.name}.
+        <p class="hinweis akzent">
+          <span>
+            The title would have changed hands:{' '}
+            <a href={pfad.fahrer(neuGerechnet.tabelle[0].driverId)}>{neuGerechnet.tabelle[0].name}</a>
+            {' '}instead of {meister?.name}.
+          </span>
         </p>
       ) : (
-        <p class="hinweis">The World Champion would be the same.</p>
+        <p class="hinweis gut">The World Champion would be the same.</p>
       )}
 
       <div class="tabelle">
         <table>
           <thead>
             <tr>
-              <th class="num">#</th><th>Driver</th><th class="num">Points today</th>
-              <th class="num">Official</th><th class="num">Championship position</th>
+              <th class="num">Pos</th><th>Driver</th><th class="num">Points today</th>
+              <th class="num">Official points</th><th class="num">Official position</th>
             </tr>
           </thead>
           <tbody>
@@ -244,11 +335,11 @@ const teamMeister = teamWertung.find((t) => t.meister)
               const verschoben = amtlich?.position && amtlich.position !== t.platz
               return (
                 <tr>
-                  <td class={`num${t.platz === 1 ? ' meister' : ''}`}>{t.platz}</td>
+                  <td class="num"><span class={plakette(t.platz)}>{t.platz}</span></td>
                   <td><a class="zeile" href={pfad.fahrer(t.driverId)}>{t.name}</a></td>
-                  <td class="num">{ein(t.punkte)}</td>
-                  <td class="num" style="color:var(--muted)">{amtlich ? ein(amtlich.points) : '–'}</td>
-                  <td class={`num ${verschoben ? 'verschoben' : ''}`} style={verschoben ? '' : 'color:var(--muted)'}>
+                  <td class="num fett">{ein(t.punkte)}</td>
+                  <td class="num leise">{amtlich ? ein(amtlich.points) : '–'}</td>
+                  <td class={`num ${verschoben ? 'verschoben' : 'leise'}`}>
                     {amtlich?.position ? 'P' + amtlich.position : '–'}
                   </td>
                 </tr>
@@ -259,6 +350,8 @@ const teamMeister = teamWertung.find((t) => t.meister)
       </div>
 
       <p class="fussnote">
+        Amber: the position differs from the official result. Dropped scores fall away, because
+        today there are none.{' '}
         {neuGerechnet.mitGeteiltenFahrten > 0 && (
           <>
             In this season drivers shared a car. The points for a shared position are split,
@@ -274,56 +367,23 @@ const teamMeister = teamWertung.find((t) => t.meister)
       </p>
     </section>
   )}
-
-  <section>
-    <h2>Race calendar</h2>
-    <div class="tabelle">
-      <table>
-        <thead><tr><th class="num">Round</th><th>Race</th><th>Circuit</th><th>Date</th><th>Winner</th></tr></thead>
-        <tbody>
-          {rennen.map((r) => (
-            <tr>
-              <td class="num">{r.runde}</td>
-              <td><a class="zeile" href={pfad.rennen(r.id)}>{r.name}</a></td>
-              <td style="color:var(--muted)">{r.strecke}</td>
-              <td style="color:var(--muted)">{datum(r.datum)}</td>
-              <td>
-                {r.siegerId
-                  ? <a class="zeile" href={pfad.fahrer(r.siegerId)}>{r.sieger}</a>
-                  : <span style="color:var(--muted)">–</span>}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  </section>
 </Seite>
 
 <style>
-  .kacheln {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(min(9rem, 100%), 1fr));
-    gap: 0.75rem; margin: 1.75rem 0 0; padding: 0; list-style: none;
+  /* Fahrer- und Teamwertung nebeneinander: Man liest sie zusammen. */
+  .wertungen {
+    display: grid;
+    grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+    align-items: start;
+    gap: 1.25rem;
   }
-  .kacheln li {
-    display: flex; flex-direction: column; gap: 0.1rem; padding: 0.9rem 1rem;
-    background: var(--surface-2); border: 1px solid var(--border); border-radius: 0.6rem;
+
+  @media (max-width: 60rem) {
+    .wertungen { grid-template-columns: minmax(0, 1fr); }
   }
-  .kacheln b {
-    font-size: 1.6rem; font-weight: 680; line-height: 1.1; color: var(--ink);
-    font-variant-numeric: tabular-nums; letter-spacing: -0.02em;
+
+  .kacheln.namen {
+    grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr));
+    margin-bottom: 0.75rem;
   }
-  .kacheln span { font-size: 0.78rem; color: var(--muted); }
-  .kacheln i { font-style: normal; font-size: 0.72rem; color: var(--muted); opacity: 0.8; }
-  .hinweis {
-    margin: 1.25rem 0 0; padding: 0.85rem 1rem; font-size: 0.87rem;
-    background: var(--surface-2); border: 1px solid var(--border);
-    border-left: 3px solid var(--axis); border-radius: 0.5rem; max-width: 46rem; text-wrap: pretty;
-  }
-  .hinweis.entschieden { border-left-color: var(--accent); background: var(--accent-wash); }
-  section { margin-top: 2.5rem; }
-  h2 { font-size: 1.15rem; margin: 0 0 0.75rem; }
-  td.meister { color: var(--accent); font-weight: 700; }
-  td.verschoben { color: var(--warn); font-weight: 650; }
-  .fussnote { margin: 0.85rem 0 0; font-size: 0.79rem; color: var(--muted); max-width: 46rem; text-wrap: pretty; }
 </style>
