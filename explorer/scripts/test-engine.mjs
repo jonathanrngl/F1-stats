@@ -28,12 +28,13 @@ import {
 } from '../src/engine/aenderungen.js'
 import {
   meistePodien, meistePoles, meisteSchnellsteRunden, meisteSiege, meisteStarts, teamRekorde,
-  grandSlams, zielabstand, groessteAufholjagden, meistePlaetzeGutgemacht,
+  grandSlams, zielabstand, groessteAufholjagden, meistePlaetzeGutgemacht, altersrekord,
 } from '../src/engine/records.js'
 import {
   motorProfil, motorTeams, motorTitel, motorenListe,
 } from '../src/engine/motor.js'
 import { fahrerWertung, rangliste, zusammenhang } from '../src/engine/duell.js'
+import { BEREICHE, erzeugeFragen, quizFragen, quizUebersicht } from '../src/engine/quiz.js'
 
 // fileURLToPath statt .pathname: Dort bliebe ein Leerzeichen im Pfad als %20 stehen.
 const HIER = path.dirname(fileURLToPath(import.meta.url))
@@ -589,6 +590,86 @@ console.log(
   `   ✓ ${orte.length} Strecken verortet, ${noerdlichste.name} (${noerdlichste.la.toFixed(1)}°N) ` +
     `bis ${suedlichste.name} (${Math.abs(suedlichste.la).toFixed(1)}°S)`,
 )
+
+// -------------------------------------------------- 11. Quiz
+
+console.log('\n11. Quiz')
+
+/*
+ * Die Fragen entstehen aus den Daten; geprüft wird deshalb weniger der
+ * einzelne Text als die Form, die jede Frage haben muss – und an einigen
+ * Stellen, ob die Antwort mit dem übereinstimmt, was die übrige Engine sagt.
+ */
+const quizAlle = erzeugeFragen(db)
+const quiz = quizFragen(db)
+const quizNach = new Map(quizAlle.map((f) => [f.i, f]))
+
+pruefe('Quiz hat Fragen', quiz.length > 500, `${quiz.length}`)
+pruefe(
+  'jede Frage hat vier verschiedene, nicht leere Antworten',
+  quiz.every((f) => f.o.length === 4 && new Set(f.o).size === 4 && f.o.every((o) => o.trim() !== '')),
+  quiz.filter((f) => new Set(f.o).size !== 4).map((f) => f.i).join(', '),
+)
+pruefe('Kennungen eindeutig', new Set(quizAlle.map((f) => f.i)).size === quizAlle.length)
+pruefe(
+  'Bereich und Stufe gültig',
+  quiz.every((f) => BEREICHE.some((b) => b.id === f.b) && [1, 2, 3].includes(f.s)),
+)
+pruefe(
+  'jeder Fragetext endet mit einem Fragezeichen',
+  quiz.every((f) => f.f.endsWith('?')),
+  quiz.filter((f) => !f.f.endsWith('?')).map((f) => f.i).join(', '),
+)
+pruefe(
+  'keine Frage nennt ihre Antwort im Text',
+  quiz.every((f) => f.n || !f.f.includes(f.o[0])),
+  quiz.filter((f) => !f.n && f.f.includes(f.o[0])).map((f) => f.i).join(', '),
+)
+pruefe(
+  'Zahlenfragen haben nur Zahlen zur Wahl',
+  quiz.filter((f) => f.n).every((f) => f.o.every((o) => /^P?[\d,.]+$/.test(o))),
+)
+
+// Keine Jahreszahl in der Zukunft, keine vor der ersten Saison.
+const jahrFragen = quiz.filter((f) => /^(erstersieg|debuet|streckenjahr)-/.test(f.i))
+const letztesJahr = db.prepare('SELECT MAX(year) AS j FROM race').get().j
+pruefe(
+  'Jahreszahlen liegen zwischen 1950 und heute',
+  jahrFragen.length > 0 && jahrFragen.every((f) => f.o.every((o) => +o >= 1950 && +o <= letztesJahr)),
+)
+
+/*
+ * Das Indianapolis 500 zählte zur Meisterschaft, war aber kein Formel-1-
+ * Rennen. Als Antwort zwischen Grands Prix fiele es sofort auf – zweimal ist
+ * es beim Bauen dieses Quiz dort gelandet.
+ */
+pruefe(
+  'das Indianapolis 500 steht nirgends zur Wahl',
+  quiz.every((f) => f.o.every((o) => !o.includes('Indianapolis 500'))),
+)
+
+const uebersicht = quizUebersicht(quiz)
+const zuWenig = uebersicht.flatMap((b) => [1, 2, 3].filter((s) => b.n[s] < 10).map((s) => `${b.id}/${s}: ${b.n[s]}`))
+pruefe('jeder Bereich hat je Stufe mindestens zehn Fragen', zuWenig.length === 0, zuWenig.join(', '))
+
+pruefe('zwei Läufe ergeben dieselben Fragen', JSON.stringify(erzeugeFragen(db)) === JSON.stringify(quizAlle))
+
+// Einzelne Antworten gegen die übrige Engine und die Geschichtsbücher.
+gleich('Weltmeister 2008', quizNach.get('wm-2008')?.o[0], 'Lewis Hamilton')
+gleich('Weltmeister 2021', quizNach.get('wm-2021')?.o[0], 'Max Verstappen')
+gleich('Konstrukteurs-Weltmeister 2009', quizNach.get('teamwm-2009')?.o[0], 'Brawn')
+gleich('Jaguar wurde 2005 Red Bull', quizNach.get('vorgaenger-jaguar-red-bull-2005')?.o[0], 'Jaguar')
+gleich('Schumachers Titelzahl', quizNach.get('titelzahl-michael-schumacher')?.o[0], '7')
+gleich('Sieger des ersten WM-Rennens', quizNach.get('erstesrennen-great-britain-grand-prix-1950')?.o[0], 'Nino Farina')
+gleich('Siegrekord wie in der Rekordliste', quizNach.get('rekord-siege')?.o[0], meisteSiege(db, 1)[0].name)
+gleich('jüngster Sieger wie in der Rekordliste', quizNach.get('alter-jungsieg')?.o[0], altersrekord(db, 'sieg', 'jung', 1)[0].name)
+
+// Die Fangfrage: 2008 gewann Massa mehr Rennen, Hamilton den Titel – und steht zur Wahl.
+const massa = quizNach.get('meistesiege-2008')
+gleich('meiste Siege 2008', massa?.o[0], 'Felipe Massa')
+pruefe('der Meister steht bei der Fangfrage zur Wahl', massa?.o.includes('Lewis Hamilton'))
+
+console.log(`   ✓ ${quiz.length} Fragen im Vorrat, ${quizAlle.length} vor der Begrenzung`)
 
 db.close()
 
