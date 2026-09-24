@@ -11,14 +11,14 @@
 :root {
   color-scheme: light dark;
 
-  --plane: light-dark(#f3f3f1, #0a0a0a); /* Seitenhintergrund */
-  --surface: light-dark(#ffffff, #141414); /* Karten, Tabelle, Diagrammfläche */
-  --surface-2: light-dark(#f7f7f5, #1c1c1b); /* Hover, Zebra */
-  --surface-3: light-dark(#eeeeea, #232322); /* Balkenrinne, Chips */
+  --plane: light-dark(#f4f4f2, #0b0b0c); /* Seitenhintergrund */
+  --surface: light-dark(#ffffff, #151517); /* Karten, Tabelle, Diagrammfläche */
+  --surface-2: light-dark(#f8f8f6, #1c1c1f); /* Hover, Zebra */
+  --surface-3: light-dark(#ececea, #26262a); /* Balkenrinne, Chips */
   --ink: light-dark(#0b0b0b, #ffffff);
   --ink-2: light-dark(#52514e, #c3c2b7);
   --muted: light-dark(#6b6a66, #8d8c86);
-  --border: light-dark(#e3e3e0, #2a2a28);
+  --border: light-dark(#e4e4e0, #2a2a2d);
   --grid: light-dark(#ebebe8, #242422); /* Gitternetz, haarfein */
   --axis: light-dark(#c9c9c4, #3a3a37);
 
@@ -50,6 +50,19 @@
   --s8: light-dark(#eda100, #c98500);
   --s-rest: light-dark(#b9b8b3, #4f4e4a);
 
+  /* Podestplätze – dieselben Töne wie im Explorer, dunkle Schrift auf allen drei. */
+  --gold: #e5b83a;
+  --silber: #c6c9ce;
+  --bronze: #d49563;
+  --podest-ink: #1a1a1a;
+
+  /* Kopf- und Fußleiste sind in beiden Modi dunkel, wie im Explorer: Beide
+     Anwendungen sollen als eine Website erkennbar sein. */
+  --kopf-bg: #111113;
+  --kopf-ink: #f5f5f3;
+  --kopf-muted: #a9a8a2;
+  --kopf-linie: rgba(255, 255, 255, 0.1);
+
   --radius: 0.75rem;
   --sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 
@@ -76,16 +89,19 @@
    selbst Kommas enthält, und eine Schattenliste besteht aus genau solchen. */
 :root {
   --shadow: 0 1px 2px rgba(11, 11, 11, 0.05), 0 8px 24px -12px rgba(11, 11, 11, 0.18);
+  --shadow-s: 0 1px 2px rgba(11, 11, 11, 0.04), 0 2px 6px -2px rgba(11, 11, 11, 0.06);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 8px 24px -12px rgba(0, 0, 0, 0.8);
+    --shadow-s: 0 1px 2px rgba(0, 0, 0, 0.4);
   }
 }
 
 :root[data-theme='dark'] {
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 8px 24px -12px rgba(0, 0, 0, 0.8);
+  --shadow-s: 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 
 * {

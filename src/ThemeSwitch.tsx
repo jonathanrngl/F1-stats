@@ -11,7 +11,15 @@ import { useEffect, useState } from 'react'
  */
 type Theme = 'system' | 'light' | 'dark'
 
-const KEY = 'f1:theme'
+/*
+ * Derselbe Schlüssel wie im Explorer (explorer/src/lib/modus.js): Beide liegen
+ * auf derselben Domain, und wer auf der einen Seite dunkel gewählt hat, soll
+ * auf der anderen nicht wieder hell landen. Gespeichert wird nur „light" oder
+ * „dark"; ohne Eintrag gilt das System. Der frühere Schlüssel wird noch
+ * gelesen, damit eine alte Wahl nicht verloren geht.
+ */
+const KEY = 'modus'
+const ALT = 'f1:theme'
 const OPTIONS: { id: Theme; label: string; title: string }[] = [
   { id: 'light', label: 'Light', title: 'Light appearance' },
   { id: 'dark', label: 'Dark', title: 'Dark appearance' },
@@ -20,8 +28,8 @@ const OPTIONS: { id: Theme; label: string; title: string }[] = [
 
 function stored(): Theme {
   try {
-    const value = localStorage.getItem(KEY)
-    if (value === 'light' || value === 'dark' || value === 'system') return value
+    const value = localStorage.getItem(KEY) ?? localStorage.getItem(ALT)
+    if (value === 'light' || value === 'dark') return value
   } catch {
     /* Privater Modus oder gesperrter Speicher: dann eben die Vorgabe. */
   }
@@ -36,7 +44,9 @@ export default function ThemeSwitch() {
     if (theme === 'system') root.removeAttribute('data-theme')
     else root.dataset.theme = theme
     try {
-      localStorage.setItem(KEY, theme)
+      if (theme === 'system') localStorage.removeItem(KEY)
+      else localStorage.setItem(KEY, theme)
+      localStorage.removeItem(ALT)
     } catch {
       /* Die Wahl gilt dann nur für diesen Besuch. */
     }

@@ -437,20 +437,38 @@ export default function App() {
       <div className="topbar">
         <div className="topbar-inner">
           <ViewMenu gruppen={MENU} aktiv={tab} onSelect={setTab} />
-          <span className="wortmarke">
-            <b>Formula 1</b> Statistics
-          </span>
+          {/* Relativ, wie alle Pfade hier: Die App liegt unter /F1-stats/classic/,
+              der Explorer eine Ebene darüber. */}
+          <a className="wortmarke" href="../" title="To the new site">
+            <span className="wortmarke-zeichen" aria-hidden="true">
+              <i />
+              <i />
+              <i />
+            </span>
+            <span className="wortmarke-text">
+              <b>Formula 1</b>
+              <span>Statistics</span>
+            </span>
+          </a>
+          <a className="zur-neuen" href="../">
+            ← <span>New site</span>
+          </a>
           <ThemeSwitch />
         </div>
       </div>
 
       <header className="masthead">
         <div className="masthead-inner">
-          <h1>Statistics</h1>
+          <p className="oberzeile">Classic version · live data</p>
+          <h1>Every race, every standing</h1>
           <p className="subtitle">
             Every season since 1950, at every race: the championship standings, the points
             progression, the balance of power inside the teams, and the question of when the title
             was decided.
+          </p>
+          <p className="neu-hinweis">
+            This is the earlier version of the site. The <a href="../">new version</a> adds
+            driver and team profiles, records, circuits and a data explorer.
           </p>
         </div>
       </header>
@@ -646,12 +664,25 @@ export default function App() {
           )}
         </div>
 
-        <footer>
-          Data from <a href="https://api.jolpi.ca">Jolpica-F1</a>. Not an official Formula 1 site.
-        </footer>
       </main>
+
+      <footer className="fuss">
+        <div className="fuss-inner">
+          <p>
+            Data from <a href="https://api.jolpi.ca">Jolpica-F1</a>. Not an official Formula 1
+            site.
+          </p>
+          <a href="../">To the new site →</a>
+        </div>
+      </footer>
     </>
   )
+}
+
+/** Plakette für eine Platzziffer; die API liefert sie als Text („1", „-"). */
+function platzKlasse(position: string) {
+  const p = Number(position)
+  return p >= 1 && p <= 3 ? `platz p${p}` : 'platz'
 }
 
 function TableSkeleton() {
@@ -713,7 +744,9 @@ function StandingsTable({
             const nat = nation(r.nationality)
             return (
               <tr key={r.key}>
-                <td className="pos">{r.position}</td>
+                <td className="pos">
+                  <span className={platzKlasse(r.position)}>{r.position}</span>
+                </td>
                 <td className="name">
                   <span className="code" title={nat.name}>
                     {nat.code}

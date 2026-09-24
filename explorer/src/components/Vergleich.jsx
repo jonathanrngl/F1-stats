@@ -98,15 +98,25 @@ const ZEILEN = [
 ]
 
 export default function Vergleich({ index }) {
-  const [ids, setIds] = useState(() => {
-    if (typeof window === 'undefined') return ['', '']
-    const p = new URLSearchParams(window.location.search)
-    return [p.get('a') ?? '', p.get('b') ?? '']
-  })
+  /*
+   * Die Auswahl steht in der Adresse (?a=…&b=…), gelesen wird sie aber erst
+   * nach dem Einhängen, nicht im Anfangswert. Der Server rendert die Seite
+   * ohne Adresse – las der erste Render im Browser sie schon, sahen beide
+   * verschieden aus, und React verwarf beim Hydrieren das ganze Gerüst.
+   */
+  const [ids, setIds] = useState(['', ''])
+  const [bereit, setBereit] = useState(false)
   const [profile, setProfile] = useState({})
   const [laedt, setLaedt] = useState(false)
   const [fehler, setFehler] = useState('')
   const [zeitraum, setZeitraum] = useState(null)
+
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search)
+    const aus = [p.get('a') ?? '', p.get('b') ?? '']
+    if (aus.some(Boolean)) setIds(aus)
+    setBereit(true)
+  }, [])
 
   // Profile nachladen, sobald eine Auswahl steht.
   useEffect(() => {
@@ -134,15 +144,16 @@ export default function Vergleich({ index }) {
     }
   }, [ids, profile])
 
-  // Die Adresse mitführen, damit ein Vergleich teilbar ist.
+  // Die Adresse mitführen, damit ein Vergleich teilbar ist – aber erst, wenn
+  // sie gelesen ist, sonst löschte der erste Durchlauf sie mit zwei leeren Feldern.
   useEffect(() => {
-    if (typeof window === 'undefined') return
+    if (!bereit) return
     const p = new URLSearchParams()
     if (ids[0]) p.set('a', ids[0])
     if (ids[1]) p.set('b', ids[1])
     const neu = p.toString() ? `?${p}` : window.location.pathname
     window.history.replaceState(null, '', neu)
-  }, [ids])
+  }, [ids, bereit])
 
   const beide = ids.map((id) => profile[id]).filter(Boolean)
   const vollstaendig = beide.length === 2 && ids.every(Boolean)
@@ -215,7 +226,7 @@ export default function Vergleich({ index }) {
       {fehler && <p className="fehler">{fehler}</p>}
       {laedt && <p className="status">Loading profiles …</p>}
 
-      {!vollstaendig && !laedt && (
+      {bereit && !vollstaendig && !laedt && (
         <div className="leer">
           <p className="status">
             Choose two drivers. The comparison is worked out in your browser – including for a

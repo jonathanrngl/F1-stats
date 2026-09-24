@@ -1,28 +1,54 @@
 /* ------------------------------------------------------------------ Gerüst */
 
-.masthead {
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-}
-
+/*
+ * Der Kopf steht auf dem Seitengrund, nicht in einem weißen Band – so wie im
+ * Explorer. Darüber die Oberzeile, die sagt, welche Fassung das ist.
+ */
 .masthead-inner {
   max-width: 72rem;
   margin: 0 auto;
-  padding: 1.5rem 1.25rem 1.75rem;
+  padding: 2.25rem 1.25rem 0.5rem;
+}
+
+.oberzeile {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
 }
 
 .masthead h1 {
-  margin: 0.5rem 0 0;
-  font-size: clamp(1.9rem, 5vw, 2.9rem);
-  line-height: 1.05;
+  margin: 0.45rem 0 0;
+  font-size: clamp(1.85rem, 4.2vw, 2.75rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.08;
 }
 
 .subtitle {
-  margin: 0.5rem 0 0;
-  max-width: 44rem;
-  color: var(--muted);
+  margin: 0.7rem 0 0;
+  max-width: 46rem;
+  font-size: 1.02rem;
+  color: var(--ink-2);
   text-wrap: pretty;
 }
+
+/* Der Hinweis auf die neue Fassung: da, aber nicht aufdringlich. */
+.neu-hinweis {
+  max-width: 46rem;
+  margin: 1.1rem 0 0;
+  padding: 0.75rem 1rem;
+  font-size: 0.88rem;
+  color: var(--ink-2);
+  background: var(--accent-wash);
+  border-left: 4px solid var(--accent);
+  border-radius: 0.45rem;
+  text-wrap: pretty;
+}
+
+.neu-hinweis a { font-weight: 650; }
 
 .app {
   max-width: 72rem;
@@ -34,7 +60,7 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-s);
 }
 
 /* ------------------------------------------------------- Darstellungswahl */
@@ -186,14 +212,20 @@ select:disabled {
 
 /* Bleibt beim Scrollen oben: Die Ansichtswahl soll erreichbar sein, ohne dass
    man an den Seitenanfang zurückmuss. */
+/*
+ * Dunkel in beiden Modi, mit der roten Linie unten – dieselbe Leiste wie im
+ * Explorer. `color-scheme: dark` lässt alle Tokens darin dunkel auflösen, so
+ * dass Menüknopf und Umschalter ohne eigene Farben auskommen. Das Menü, das
+ * aus ihr herausklappt, gehört wieder zum Inhalt und folgt dem Seitenmodus.
+ */
 .topbar {
-  border-top: 3px solid var(--accent);
   position: sticky;
   top: 0;
   z-index: 10;
-  background: color-mix(in srgb, var(--surface) 88%, transparent);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid var(--border);
+  color: var(--kopf-ink);
+  background: var(--kopf-bg);
+  border-bottom: 3px solid var(--accent);
+  color-scheme: dark;
 }
 
 .topbar-inner {
@@ -205,25 +237,72 @@ select:disabled {
   padding: 0.55rem 1.25rem;
 }
 
+/* Schriftzug: drei schräge rote Balken, daneben der Name. */
 .wortmarke {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
   flex: 1;
   min-width: 0;
-  font-size: 0.82rem;
-  color: var(--muted);
-  letter-spacing: 0.01em;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  color: var(--kopf-ink);
+  text-decoration: none;
   white-space: nowrap;
 }
 
-.wortmarke b {
-  color: var(--accent);
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  font-size: 0.72rem;
-  margin-right: 0.35rem;
+.wortmarke-zeichen {
+  display: grid;
+  gap: 3px;
+  flex: none;
+  width: 1.55rem;
+  transform: skewX(-18deg);
 }
+
+.wortmarke-zeichen i {
+  display: block;
+  height: 4px;
+  background: var(--accent);
+  border-radius: 1px;
+}
+
+.wortmarke-zeichen i:nth-child(2) { width: 78%; }
+.wortmarke-zeichen i:nth-child(3) { width: 56%; }
+
+.wortmarke-text {
+  display: grid;
+  line-height: 1.05;
+  min-width: 0;
+}
+
+.wortmarke-text b {
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.wortmarke-text span {
+  font-size: 1rem;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Der Weg zur neuen Fassung. */
+.zur-neuen {
+  flex: none;
+  padding: 0.45rem 0.8rem;
+  font-size: 0.85rem;
+  font-weight: 650;
+  color: var(--kopf-ink);
+  text-decoration: none;
+  border: 1px solid var(--kopf-linie);
+  border-radius: 0.45rem;
+  white-space: nowrap;
+}
+
+.zur-neuen:hover { border-color: var(--accent); color: var(--kopf-ink); }
 
 /* ------------------------------------------------------------ Ansichtsmenü */
 
@@ -325,6 +404,7 @@ select:disabled {
 }
 
 .menu-panel {
+  color-scheme: light dark;
   position: absolute;
   z-index: 11;
   top: calc(100% + 0.45rem);
@@ -338,6 +418,10 @@ select:disabled {
   box-shadow: var(--shadow);
   animation: menu-auf 0.14s ease-out;
 }
+
+/* Die Wahl hell/dunkel gilt auch im Menü, obwohl die Leiste darüber dunkel ist. */
+:root[data-theme='light'] .menu-panel { color-scheme: light; }
+:root[data-theme='dark'] .menu-panel { color-scheme: dark; }
 
 @keyframes menu-auf {
   from {
@@ -469,10 +553,24 @@ tbody tr:hover {
   font-variant-numeric: tabular-nums;
 }
 
-tbody tr:first-child .pos {
-  color: var(--accent);
-  font-weight: 700;
+/* Die Platzziffer als Plakette, die ersten drei in Gold, Silber und Bronze –
+   wie im Explorer. */
+.platz {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.9rem;
+  height: 1.6rem;
+  padding: 0 0.3rem;
+  font-size: 0.8rem;
+  font-weight: 750;
+  color: var(--ink-2);
+  background: var(--surface-3);
+  border-radius: 0.35rem;
 }
+
+.platz.p1 { color: var(--podest-ink); background: var(--gold); }
+.platz.p2 { color: var(--podest-ink); background: var(--silber); }
+.platz.p3 { color: var(--podest-ink); background: var(--bronze); }
 
 .name {
   color: var(--ink);
@@ -597,13 +695,29 @@ table.compact th {
   font-size: 0.9rem;
 }
 
-footer {
-  margin-top: 2.5rem;
-  padding-top: 1.25rem;
-  border-top: 1px solid var(--border);
-  font-size: 0.85rem;
-  color: var(--muted);
+/* Die Fußleiste ist dunkel und läuft über die volle Breite, wie im Explorer. */
+.fuss {
+  padding-block: 2rem 2.5rem;
+  font-size: 0.84rem;
+  color: var(--kopf-muted);
+  background: var(--kopf-bg);
+  border-top: 3px solid var(--accent);
 }
+
+.fuss-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 2rem;
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: 1.25rem;
+}
+
+.fuss a { color: var(--kopf-ink); text-decoration: none; }
+.fuss a:hover { color: var(--accent); text-decoration: underline; }
+.fuss p { margin: 0; }
 
 /* ------------------------------------------------------------------ Graph */
 
@@ -1139,9 +1253,12 @@ footer {
     gap: 0.8rem;
   }
 
-  /* Am Telefon weicht die Wortmarke, damit Menü und Theme-Schalter Platz
-     haben; das Panel spannt dafür über die ganze Breite. */
-  .wortmarke {
+  /* Am Telefon weichen Wortmarke und der Knopf zur neuen Fassung, damit Menü
+     und Theme-Schalter Platz haben – der Weg dorthin steht im Hinweis unter
+     der Überschrift und in der Fußleiste. Das Panel spannt dafür über die
+     ganze Breite. */
+  .wortmarke,
+  .zur-neuen {
     display: none;
   }
 
