@@ -2,19 +2,27 @@
   "name": "f1-explorer",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=24 <25"
+  },
   "scripts": {
     "import": "node scripts/import.mjs",
     "import:lokal": "node scripts/import.mjs --csv ../.cache/f1db-csv",
+    "runden": "node scripts/lade-runden.mjs",
+    "lint": "oxlint src scripts",
     "test": "node scripts/test-engine.mjs",
     "test:ausgabe": "node scripts/pruefe-ausgabe.mjs",
+    "test:oberflaeche": "node scripts/pruefe-oberflaeche.mjs",
     "dev": "astro dev",
     "build": "astro build && node scripts/pruefe-ausgabe.mjs",
     "build:schnell": "astro build",
-    "preview": "astro preview"
+    "vorschau": "node scripts/pruefe-oberflaeche.mjs --nur-server"
   },
   "devDependencies": {
     "@astrojs/react": "^6.0.5",
     "astro": "^7.3.2",
+    "oxlint": "^1.85.0",
+    "playwright-core": "^1.63.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
   }

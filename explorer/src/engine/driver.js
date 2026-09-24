@@ -176,9 +176,13 @@ export const calculatePodiumRate = (rennen) =>
  *
  * Bezugsgröße sind die Poles, nicht die Starts: Die Frage lautet „wie oft hat
  * er sie verwertet", nicht „wie oft hat er von vorn gewonnen".
+ *
+ * Und es sind dieselben Poles wie in `calculatePoles` – die schnellste Zeit im
+ * Qualifying. Hier stand F1DBs Flag, und die Fahrerseite zeigte deshalb 52
+ * Poles neben „37 von 48 verwertet“: zwei Zählungen in einer Zeile.
  */
 export function calculatePoleToWinRate(rennen) {
-  const poles = rennen.filter((r) => r.pole)
+  const poles = rennen.filter((r) => r.qualifying === 1)
   return rate(poles.filter((r) => r.position === 1).length, poles.length, spanne(rennen))
 }
 

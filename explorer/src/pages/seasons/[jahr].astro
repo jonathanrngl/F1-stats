@@ -4,8 +4,7 @@ import Seite from '../../layouts/Seite.astro'
 import { alle, eine, saisonListe, rennenListe, pfad } from '../../lib/db.js'
 import Verlauf from '../../components/Verlauf.astro'
 import Sprung from '../../components/Sprung.astro'
-import { db } from '../../lib/db.js'
-import { saisonNeuRechnen, systemDesJahres } from '../../engine/whatif.js'
+import WasWaereWenn from '../../components/WasWaereWenn.astro'
 
 export async function getStaticPaths() {
   return saisonListe().map((s) => ({ params: { jahr: String(s.jahr) } }))
@@ -106,29 +105,23 @@ const entscheidung = rennen.find((r) => r.titelentscheidung)
 const meister = fahrerWertung.find((f) => f.meister)
 const meisterId = meister?.id ?? null
 
-/*
- * Was wäre nach heutigem Punktesystem herausgekommen?
- *
- * Nur dort gezeigt, wo die Frage eine ist: Für Saisons, die ohnehin nach dem
- * heutigen System gewertet wurden, gäbe es nichts zu vergleichen. Interessant
- * wird es, wo der Titel wechselt – 1988 fuhr Prost mehr Punkte ein als Senna
- * und verlor trotzdem, weil Streichresultate verfielen.
- */
-const galtSchonHeute = systemDesJahres(jahr) === 'heute'
-const neuGerechnet = galtSchonHeute ? null : saisonNeuRechnen(db(), jahr, 'heute')
-const andererMeister =
-  neuGerechnet && meisterId && neuGerechnet.tabelle[0] &&
-  neuGerechnet.tabelle[0].driverId !== meisterId
 const teamMeister = teamWertung.find((t) => t.meister)
 const fuehrender = fahrerWertung[0] ?? null
 const gefahren = rennen.filter((r) => r.siegerId).length
 const saisonLaeuft = !meister && gefahren < rennen.length
 
+/*
+ * Was wäre unter einem anderen Punktesystem herausgekommen? Erst, wenn es
+ * Ergebnisse gibt – für eine Saison ohne ein gefahrenes Rennen gäbe es nichts
+ * neu zu rechnen.
+ */
+const mitWhatif = gefahren > 0
+
 const ziele = [
   verlauf.length > 0 && verlaufRunden.length > 1 && { id: 'verlauf', label: 'Progression' },
   { id: 'wertung', label: 'Standings' },
   { id: 'kalender', label: 'Calendar' },
-  neuGerechnet && neuGerechnet.tabelle.length > 0 && { id: 'heute', label: "Today's points" },
+  mitWhatif && { id: 'whatif', label: 'What if' },
 ].filter(Boolean)
 ---
 
@@ -297,74 +290,18 @@ const ziele = [
     </div>
   </section>
 
-  {neuGerechnet && neuGerechnet.tabelle.length > 0 && (
-    <section class="abschnitt" id="heute">
+  {mitWhatif && (
+    <section class="abschnitt" id="whatif">
       <div class="abschnitt-kopf">
         <div>
-          <h2>Under today's points system</h2>
+          <h2>What if – other points systems</h2>
           <p>
-            The same finishing positions, scored 25-18-15-12-10-8-6-4-2-1 instead of the system
-            in force at the time.
+            The same finishing positions, scored under any points system used since 1950
+            {saison.dropped_scores === 1 && ', with or without the dropped-scores rule of the time'}.
           </p>
         </div>
       </div>
-
-      {andererMeister ? (
-        <p class="hinweis akzent">
-          <span>
-            The title would have changed hands:{' '}
-            <a href={pfad.fahrer(neuGerechnet.tabelle[0].driverId)}>{neuGerechnet.tabelle[0].name}</a>
-            {' '}instead of {meister?.name}.
-          </span>
-        </p>
-      ) : (
-        <p class="hinweis gut">The World Champion would be the same.</p>
-      )}
-
-      <div class="tabelle">
-        <table>
-          <thead>
-            <tr>
-              <th class="num">Pos</th><th>Driver</th><th class="num">Points today</th>
-              <th class="num">Official points</th><th class="num">Official position</th>
-            </tr>
-          </thead>
-          <tbody>
-            {neuGerechnet.tabelle.slice(0, 12).map((t) => {
-              const amtlich = fahrerWertung.find((f) => f.id === t.driverId)
-              const verschoben = amtlich?.position && amtlich.position !== t.platz
-              return (
-                <tr>
-                  <td class="num"><span class={plakette(t.platz)}>{t.platz}</span></td>
-                  <td><a class="zeile" href={pfad.fahrer(t.driverId)}>{t.name}</a></td>
-                  <td class="num fett">{ein(t.punkte)}</td>
-                  <td class="num leise">{amtlich ? ein(amtlich.points) : '–'}</td>
-                  <td class={`num ${verschoben ? 'verschoben' : 'leise'}`}>
-                    {amtlich?.position ? 'P' + amtlich.position : '–'}
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      <p class="fussnote">
-        Amber: the position differs from the official result. Dropped scores fall away, because
-        today there are none.{' '}
-        {neuGerechnet.mitGeteiltenFahrten > 0 && (
-          <>
-            In this season drivers shared a car. The points for a shared position are split,
-            just as the era itself split them – {neuGerechnet.mitGeteiltenFahrten}
-            {' '}drivers are affected.{' '}
-          </>
-        )}
-        {neuGerechnet.sprintPunkte > 0 && (
-          <>Sprint points are left unchanged: a race points system does not apply to them. </>
-        )}
-        A calculation, not a rewriting of history – drivers would have raced differently if
-        different points had been at stake.
-      </p>
+      <WasWaereWenn jahr={jahr} amtlich={fahrerWertung} />
     </section>
   )}
 </Seite>

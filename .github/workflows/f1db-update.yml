@@ -1,0 +1,115 @@
+# Holt eine neue F1DB-Fassung herein - aber erst, wenn sie besteht.
+#
+#   1. pruefen        Gibt es eine neuere Fassung? Wenn ja: importieren,
+#                     alle Pruefungen laufen lassen, die Seite bauen.
+#                     Nur lesen, denn hier laeuft fremder Code und fremde Daten.
+#   2. festschreiben  Die Fassung nach explorer/f1db-version.txt schreiben,
+#                     committen und den Deploy anstossen. Fuehrt nichts aus,
+#                     was aus dem Release oder aus npm stammt.
+#
+# Faellt Schritt 1 durch, bleibt die Seite beim letzten guten Stand, und der
+# fehlgeschlagene Lauf steht in der Actions-Uebersicht. Vorher haette dasselbe
+# Release jeden Deploy angehalten, bis F1DB es korrigiert.
+#
+# Grenze der Plattform: GitHub schaltet geplante Workflows in oeffentlichen
+# Repos ab, wenn 60 Tage lang nichts im Repo passiert. Die Commits dieses
+# Workflows zaehlen als Aktivitaet; in der Winterpause ohne neue Releases kann
+# er trotzdem abgeschaltet werden. Dann steht in der Actions-Uebersicht ein
+# Hinweis und ein Knopf zum Wiedereinschalten.
+name: F1DB-Update
+
+on:
+  schedule:
+    # F1DB veroeffentlicht nach jedem Rennwochenende, meist Sonntagabend oder
+    # Montag. Viermal am Tag genuegt; ein Lauf ohne neue Fassung dauert
+    # Sekunden. Minute 23 statt 0: Zur vollen Stunde starten alle geplanten
+    # Workflows von GitHub gleichzeitig, und dort fallen Laeufe aus.
+    - cron: '23 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: f1db-update
+  cancel-in-progress: false
+
+jobs:
+  pruefen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    outputs:
+      version: ${{ steps.vergleich.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: explorer/package.json
+
+      # Schreibt version=<tag> nur, wenn es eine neuere Fassung gibt.
+      - id: vergleich
+        working-directory: explorer
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/f1db-neueste.mjs >> "$GITHUB_OUTPUT"
+
+      - if: steps.vergleich.outputs.version != ''
+        name: Abhaengigkeiten
+        working-directory: explorer
+        run: npm ci --ignore-scripts
+
+      # Die Version geht als Umgebungsvariable hinein, nie als ${{ }} direkt in
+      # die Kommandozeile: So kann ein seltsamer Tag nichts einschleusen.
+      - if: steps.vergleich.outputs.version != ''
+        name: Neue Fassung importieren
+        working-directory: explorer
+        env:
+          VERSION: ${{ steps.vergleich.outputs.version }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: npm run import -- --version "$VERSION"
+
+      - if: steps.vergleich.outputs.version != ''
+        name: Statistik-Engine pruefen
+        working-directory: explorer
+        run: npm test
+
+      - if: steps.vergleich.outputs.version != ''
+        name: Probebau
+        working-directory: explorer
+        run: npm run build
+
+  festschreiben:
+    needs: pruefen
+    if: needs.pruefen.outputs.version != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write   # die Versionsdatei committen
+      actions: write    # den Deploy anstossen
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Fassung festschreiben
+        env:
+          VERSION: ${{ needs.pruefen.outputs.version }}
+        run: |
+          # Noch einmal geprueft: Dieser Job hat Schreibrechte.
+          if ! printf '%s' "$VERSION" | grep -Eq '^v[0-9]{4}\.[0-9]{1,3}\.[0-9]{1,3}$'; then
+            echo "Kein gueltiger Tag: $VERSION" >&2
+            exit 1
+          fi
+          printf '%s\n' "$VERSION" > explorer/f1db-version.txt
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add explorer/f1db-version.txt
+          git commit -m "F1DB $VERSION"
+          # Kam inzwischen ein anderer Commit hinzu, obendrauf setzen.
+          git pull --rebase --quiet
+          git push
+
+      - name: Deploy anstossen
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy.yml --ref main

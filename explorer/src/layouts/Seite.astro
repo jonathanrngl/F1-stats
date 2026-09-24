@@ -10,6 +10,11 @@
 import '../styles/theme.css'
 import Suche from '../components/Suche.jsx'
 import { MODUS_SKRIPT } from '../lib/modus.js'
+import { herkunft } from '../lib/db.js'
+import { datum } from '../lib/format.js'
+
+/* Worauf die Zahlen beruhen – im Fuß jeder Seite, siehe herkunft() in db.js. */
+const quelle = herkunft()
 
 interface Props {
   titel: string
@@ -170,7 +175,9 @@ const werkzeugAktiv = WERKZEUGE.some((w) => istAktiv(w.pfad))
           </nav>
         </div>
         <p class="fuss-klein">
-          Data from <a href="https://github.com/f1db/f1db">F1DB</a>, Creative Commons BY 4.0.
+          Data from <a href="https://github.com/f1db/f1db">F1DB</a>
+          {quelle.version && <> {quelle.version}</>}, Creative Commons BY 4.0
+          {quelle.stand && <>, up to the {quelle.stand.jahr} {quelle.stand.grandPrixVoll} on {datum(quelle.stand.datum)}</>}.
           Not an official Formula 1 site. F1, FORMULA ONE and Formula 1 are trade marks of
           Formula One Licensing BV. The earlier version of this site is still available{' '}
           <a href={`${BASIS}/classic/`}>here</a>.

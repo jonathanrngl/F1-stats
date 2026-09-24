@@ -9,6 +9,7 @@
  * ein Sieg ist Platz 1 in der Wertung, eine Pole die schnellste Zeit im
  * Qualifying – nicht der Startplatz. Wer das ändert, muss es dort auch ändern.
  */
+import { maxRennpunkte, maxSprintpunkte, streichregel } from './punkte.js'
 
 /*
  * In den 1950ern übernahm ein Fahrer schon mal das Auto eines Teamkollegen;
@@ -40,21 +41,25 @@ const ZAEHLUNGEN = `
 /**
  * Das nächste Rennen: das früheste, zu dem noch kein Ergebnis vorliegt.
  *
- * Nicht schlicht „Datum in der Zukunft“: Liegt ein gefahrenes Rennen noch
- * ohne Ergebnis in den Daten, weil das Release hinterherhinkt, ist trotzdem
- * dieses das nächste, über das es etwas zu sagen gibt. Die Seite zeigt das
- * Datum, damit ein solcher Rückstand sichtbar bleibt.
+ * Nicht „Datum in der Zukunft“, und bewusst ohne das heutige Datum: Liegt ein
+ * gefahrenes Rennen noch ohne Ergebnis in den Daten, weil das Release
+ * hinterherhinkt, ist trotzdem dieses das nächste, über das es etwas zu sagen
+ * gibt – und seine Punkte sind noch zu vergeben. Wie weit es zurückliegt,
+ * rechnet der Browser beim Ansehen aus dem Datum (Countdown.astro).
+ *
+ * Damit hängt die Seite allein an den Daten: Dieselbe F1DB-Fassung ergibt
+ * an jedem Tag dieselbe Vorschau.
  */
-export function naechstesRennen(db, heute) {
+export function naechstesRennen(db) {
   return (
     db
       .prepare(
-        `SELECT r.id, r.year AS jahr, r.round AS runde, r.date AS datum,
+        `SELECT r.id, r.year AS jahr, r.round AS runde, r.date AS datum, r.time AS zeit,
                 r.official_name AS offiziell, r.laps AS runden,
                 r.distance_km AS distanz, r.course_length_km AS laenge,
                 r.turns AS kurven, r.had_sprint AS mitSprint,
                 r.qualifying_format AS qualiFormat,
-                g.id AS grandPrixId, g.name AS grandPrix,
+                g.id AS grandPrixId, g.name AS grandPrix, g.full_name AS grandPrixVoll,
                 z.id AS streckeId, z.name AS strecke, z.full_name AS streckeVoll,
                 z.place_name AS ort, z.type AS art, z.direction AS richtung,
                 z.length_km AS streckenlaenge, z.turns AS streckenkurven,
@@ -64,13 +69,38 @@ export function naechstesRennen(db, heute) {
            JOIN grand_prix g ON g.id = r.grand_prix_id
            JOIN circuit z ON z.id = r.circuit_id
            LEFT JOIN country c ON c.id = z.country_id
-          WHERE r.date >= ?
-            AND NOT EXISTS (SELECT 1 FROM race_result rr WHERE rr.race_id = r.id)
+          WHERE NOT EXISTS (SELECT 1 FROM race_result rr WHERE rr.race_id = r.id)
           ORDER BY r.date, r.round
           LIMIT 1`,
       )
-      .get(heute) ?? null
+      .get() ?? null
   )
+}
+
+/**
+ * Der Zeitplan des Wochenendes: jede Session mit Datum und Startzeit (UTC).
+ *
+ * F1DB führt die Zeiten erst für jüngere Jahre; fehlt eine, fehlt sie – eine
+ * Session ohne Uhrzeit steht mit Datum allein da.
+ */
+export function zeitplan(db, raceId) {
+  const r = db.prepare('SELECT * FROM race WHERE id = ?').get(raceId)
+  if (!r) return []
+  const SESSIONS = [
+    ['fp1', 'Practice 1'],
+    ['fp2', 'Practice 2'],
+    ['fp3', 'Practice 3'],
+    ['sprint_qualifying', 'Sprint qualifying'],
+    ['sprint', 'Sprint'],
+    ['qualifying', 'Qualifying'],
+  ]
+  const liste = SESSIONS.filter(([k]) => r[`${k}_date`]).map(([k, name]) => ({
+    name,
+    datum: r[`${k}_date`],
+    zeit: r[`${k}_time`] ?? null,
+  }))
+  liste.push({ name: 'Race', datum: r.date, zeit: r.time ?? null, rennen: true })
+  return liste.sort((a, b) => `${a.datum}${a.zeit ?? ''}`.localeCompare(`${b.datum}${b.zeit ?? ''}`))
 }
 
 /** Wie oft auf dieser Strecke schon gefahren wurde, und wann zuletzt. */
@@ -90,9 +120,12 @@ export function streckenHistorie(db, streckeId) {
 /**
  * Der Stand vor dem Rennen.
  *
- * Gerechnet wird auf dem letzten Rennen der Saison, zu dem ein Ergebnis
- * vorliegt – nicht auf `season_driver_standing`, das den Endstand führt.
- * Steht das nächste Rennen am Saisonanfang, gibt es diesen Bezugspunkt noch
+ * Gerechnet wird auf dem letzten Rennen der Saison *vor* diesem, zu dem ein
+ * Ergebnis vorliegt – nicht auf `season_driver_standing`, das den Endstand
+ * führt. Für das nächste Rennen ist das schlicht das zuletzt gewertete; die
+ * Einschränkung auf frühere Runden macht dieselbe Rechnung aber auch für
+ * vergangene Rennen richtig, und nur so lässt sie sich an der Geschichte
+ * prüfen. Steht das Rennen am Saisonanfang, gibt es den Bezugspunkt noch
  * nicht; dann kommt der Endstand der Vorsaison, und `vorsaison` sagt das.
  */
 export function standVorRennen(db, rennen) {
@@ -102,18 +135,19 @@ export function standVorRennen(db, rennen) {
               g.name AS grandPrix
          FROM race r
          JOIN grand_prix g ON g.id = r.grand_prix_id
-        WHERE r.year = ?
+        WHERE r.year = ? AND r.round < ?
           AND EXISTS (SELECT 1 FROM race_result rr WHERE rr.race_id = r.id)
         ORDER BY r.round DESC
         LIMIT 1`,
     )
-    .get(rennen.jahr)
+    .get(rennen.jahr, rennen.runde)
 
   const bezug = letztes ?? letztesRennenVor(db, rennen.jahr)
   if (!bezug) return null
 
   return {
     vorsaison: !letztes,
+    streichresultate: streichregel(rennen.jahr) !== null,
     bezug,
     fahrer: fahrerStand(db, bezug.id),
     teams: teamStand(db, bezug.id),
@@ -180,9 +214,10 @@ function teamStand(db, raceId, anzahl = 10) {
 }
 
 /*
- * Wie viel noch zu holen ist. Gezählt werden die Rennen der Saison ab dem
- * nächsten, ein Sieg zu 25 Punkten und ein Sprintsieg zu 8. Die schnellste
- * Runde bringt seit 2025 nichts mehr und steht deshalb nicht darin.
+ * Wie viel noch zu holen ist. Gezählt werden die Rennen der Saison ab diesem,
+ * jedes mit dem Höchstwert seines Jahres aus `punkte.js`: 2024 waren es 26
+ * (Sieg und schnellste Runde), seit 2025 sind es 25, und ein Sprintsieg bringt
+ * 8. Eine feste Zahl im Code stimmte immer nur für ein paar Jahre.
  *
  * Das ist die Obergrenze für einen einzelnen Fahrer, nicht für ein Team – ein
  * Team holt je Rennen bis zu 25 und 18. Wer die Zahl auf die Teamwertung
@@ -200,15 +235,39 @@ function offeneRennen(db, rennen) {
 
   const offen = z?.offen ?? 0
   const sprints = z?.sprints ?? 0
-  const sprintsDanach = Math.max(0, sprints - (rennen.mitSprint ? 1 : 0))
+  const sieg = maxRennpunkte(rennen.jahr)
+  const sprintsieg = maxSprintpunkte(rennen.jahr)
+  const maxFuerEinenFahrer = offen * sieg + sprints * sprintsieg
+  const maxDiesesRennen = sieg + (rennen.mitSprint ? sprintsieg : 0)
 
   return {
     offen,
     sprints,
-    maxFuerEinenFahrer: offen * 25 + sprints * 8,
-    /** Dasselbe für die Zeit *nach* dem nächsten Rennen – für die Titelfrage. */
-    maxDanach: Math.max(0, (offen - 1) * 25 + sprintsDanach * 8),
+    maxFuerEinenFahrer,
+    /** Was an diesem Wochenende selbst zu holen ist. */
+    maxDiesesRennen,
+    /** Dasselbe für die Zeit *nach* diesem Rennen – für die Titelfrage. */
+    maxDanach: Math.max(0, maxFuerEinenFahrer - maxDiesesRennen),
   }
+}
+
+/**
+ * Kann der Fahrertitel an diesem Wochenende fallen?
+ *
+ * Ja, wenn der Führende im besten Fall – er gewinnt alles, der Verfolger holt
+ * nichts – danach mehr Vorsprung hat, als noch zu vergeben ist. Das muss für
+ * jeden Verfolger gelten; der knappste ist der Zweite. Es ist die notwendige
+ * Bedingung, nicht die hinreichende: Ob der Titel wirklich fällt, entscheidet
+ * das Ergebnis. Die Seite sagt deshalb „kann“, nicht „wird“.
+ *
+ * In Saisons mit Streichresultaten sagt die Rechnung nichts: Dort zählt nicht
+ * jeder Punkt, und der Vorsprung in der Tabelle ist nicht der, um den es geht.
+ */
+export function titelKannFallen(stand) {
+  if (!stand || stand.vorsaison || stand.streichresultate) return false
+  const [erster, zweiter] = stand.fahrer
+  if (!erster || !zweiter) return false
+  return erster.punkte - zweiter.punkte + stand.maxDiesesRennen > stand.maxDanach
 }
 
 // ------------------------------------------------------------------- Das Feld

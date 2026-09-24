@@ -23,6 +23,15 @@ export const zahl = (n) => (n === null || n === undefined ? '–' : ZAHL.format(
  */
 export const ein = (n) => (n === null || n === undefined ? '–' : EINE_STELLE.format(n))
 
+const DREI_STELLEN = new Intl.NumberFormat('en-GB', { minimumFractionDigits: 3, maximumFractionDigits: 3 })
+
+/**
+ * Eine Streckenlänge: drei Nachkommastellen, wie sie die Formel 1 selbst
+ * angibt. Mit einer Stelle stand Baku als „6 km“ da – 6,003 km gerundet, und
+ * genau die drei Meter unterscheiden eine Streckenführung von der nächsten.
+ */
+export const km = (n) => (n === null || n === undefined ? '–' : `${DREI_STELLEN.format(n)} km`)
+
 /*
  * Zwei Datumsformen, und das ist Absicht: Im Fließtext liest sich der volle
  * Monat besser, in einer Tabelle mit tausend Zeilen kostet er Breite, ohne

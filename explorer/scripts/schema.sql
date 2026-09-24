@@ -14,6 +14,14 @@
 
 PRAGMA foreign_keys = ON;
 
+-- Aus welchen Daten diese Datenbank entstand: F1DB-Fassung und Prüfsumme des
+-- Archivs. Die Seite zeigt beides im Fuß, damit sich später noch sagen lässt,
+-- worauf eine Zahl beruht – das Bauprotokoll ist nach 90 Tagen gelöscht.
+CREATE TABLE meta (
+  key    TEXT PRIMARY KEY,
+  value  TEXT
+);
+
 -- ------------------------------------------------------------- Stammdaten
 
 CREATE TABLE country (
@@ -39,6 +47,7 @@ CREATE TABLE driver (
   date_of_birth     TEXT,
   date_of_death     TEXT,
   place_of_birth    TEXT,
+  country_of_birth_id TEXT REFERENCES country(id),
   nationality_id    TEXT REFERENCES country(id),
   -- Aus F1DB übernommene Gesamtzahlen. Nicht zum Anzeigen gedacht, sondern
   -- als unabhängige Gegenprobe für die eigene Engine: weicht sie ab, ist
@@ -104,6 +113,82 @@ CREATE TABLE tyre_manufacturer (
 
 -- Jaguar wurde Red Bull, Toro Rosso wurde AlphaTauri wurde RB. Ohne diese
 -- Tabelle ist jede Team-Historie falsch.
+-- Fahrer, die miteinander verwandt sind: Hill, Rosberg, Verstappen, Villeneuve …
+-- Richtung wie in F1DB: `type` beschreibt `relative_id` aus Sicht von `driver_id`
+-- ('CHILD' heißt: relative_id ist ein Kind von driver_id).
+CREATE TABLE driver_family (
+  driver_id    TEXT NOT NULL REFERENCES driver(id),
+  relative_id  TEXT NOT NULL REFERENCES driver(id),
+  type         TEXT NOT NULL,
+  sort_order   INTEGER NOT NULL,
+  PRIMARY KEY (driver_id, relative_id)
+);
+
+-- Chassis und Motormodelle. Ein Konstrukteur baut Jahr für Jahr ein neues Auto,
+-- ein Hersteller ein neues Aggregat – erst diese Ebene sagt, womit gefahren wurde.
+CREATE TABLE chassis (
+  id              TEXT PRIMARY KEY,
+  constructor_id  TEXT NOT NULL REFERENCES constructor(id),
+  name            TEXT NOT NULL,
+  full_name       TEXT
+);
+
+CREATE TABLE engine (
+  id                      TEXT PRIMARY KEY,
+  engine_manufacturer_id  TEXT NOT NULL REFERENCES engine_manufacturer(id),
+  name                    TEXT NOT NULL,
+  full_name               TEXT,
+  capacity_l              REAL,
+  configuration           TEXT,       -- 'V10', 'V6', 'L4' …
+  aspiration              TEXT        -- 'NATURALLY_ASPIRATED', 'TURBOCHARGED' …
+);
+
+-- Die meldende Organisation. Nicht dasselbe wie der Konstrukteur: 1958 meldete
+-- „Rob Walker Racing“ einen Cooper, gebaut hat ihn Cooper.
+CREATE TABLE entrant (
+  id    TEXT PRIMARY KEY,
+  name  TEXT NOT NULL
+);
+
+-- Die Nennliste einer Saison: wer mit welchem Auto, Motor und Reifen fuhr.
+CREATE TABLE season_entrant_driver (
+  year                    INTEGER NOT NULL REFERENCES season(year),
+  entrant_id              TEXT NOT NULL REFERENCES entrant(id),
+  constructor_id          TEXT NOT NULL REFERENCES constructor(id),
+  engine_manufacturer_id  TEXT NOT NULL REFERENCES engine_manufacturer(id),
+  driver_id               TEXT NOT NULL REFERENCES driver(id),
+  rounds_text             TEXT,
+  test_driver             INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (year, entrant_id, constructor_id, engine_manufacturer_id, driver_id)
+);
+
+CREATE TABLE season_entrant_chassis (
+  year                    INTEGER NOT NULL REFERENCES season(year),
+  entrant_id              TEXT NOT NULL REFERENCES entrant(id),
+  constructor_id          TEXT NOT NULL REFERENCES constructor(id),
+  engine_manufacturer_id  TEXT NOT NULL REFERENCES engine_manufacturer(id),
+  chassis_id              TEXT NOT NULL REFERENCES chassis(id),
+  PRIMARY KEY (year, entrant_id, constructor_id, engine_manufacturer_id, chassis_id)
+);
+
+CREATE TABLE season_entrant_engine (
+  year                    INTEGER NOT NULL REFERENCES season(year),
+  entrant_id              TEXT NOT NULL REFERENCES entrant(id),
+  constructor_id          TEXT NOT NULL REFERENCES constructor(id),
+  engine_manufacturer_id  TEXT NOT NULL REFERENCES engine_manufacturer(id),
+  engine_id               TEXT NOT NULL REFERENCES engine(id),
+  PRIMARY KEY (year, entrant_id, constructor_id, engine_manufacturer_id, engine_id)
+);
+
+CREATE TABLE season_entrant_tyre (
+  year                    INTEGER NOT NULL REFERENCES season(year),
+  entrant_id              TEXT NOT NULL REFERENCES entrant(id),
+  constructor_id          TEXT NOT NULL REFERENCES constructor(id),
+  engine_manufacturer_id  TEXT NOT NULL REFERENCES engine_manufacturer(id),
+  tyre_manufacturer_id    TEXT NOT NULL REFERENCES tyre_manufacturer(id),
+  PRIMARY KEY (year, entrant_id, constructor_id, engine_manufacturer_id, tyre_manufacturer_id)
+);
+
 CREATE TABLE constructor_chronology (
   parent_id       TEXT NOT NULL REFERENCES constructor(id),
   constructor_id  TEXT NOT NULL REFERENCES constructor(id),
@@ -173,6 +258,21 @@ CREATE TABLE race (
   circuit_id          TEXT NOT NULL REFERENCES circuit(id),
   circuit_layout_id   TEXT REFERENCES circuit_layout(id),
   date                TEXT NOT NULL,
+  -- Startzeiten in UTC, soweit F1DB sie führt (für jüngere Jahre). Sie tragen
+  -- den Zeitplan der Vorschau; ohne Uhrzeit steht dort nur das Datum.
+  time                TEXT,
+  fp1_date            TEXT,
+  fp1_time            TEXT,
+  fp2_date            TEXT,
+  fp2_time            TEXT,
+  fp3_date            TEXT,
+  fp3_time            TEXT,
+  qualifying_date     TEXT,
+  qualifying_time     TEXT,
+  sprint_qualifying_date TEXT,
+  sprint_qualifying_time TEXT,
+  sprint_date         TEXT,
+  sprint_time         TEXT,
   course_length_km    REAL,
   turns               INTEGER,
   laps                INTEGER,
@@ -213,6 +313,7 @@ CREATE TABLE race_result (
   -- 127 solcher Zeilen stecken in den Daten, markiert über shared_car.
   entry_index     INTEGER NOT NULL,
   display_order   INTEGER NOT NULL,
+  car_number      TEXT,               -- Startnummer, als Text: 1950 gab es „2“, 1952 auch „32A“
   position        INTEGER,            -- NULL = nicht gewertet
   position_text   TEXT NOT NULL,      -- '1', 'DNF', 'DSQ', 'DNQ', …
   classified      INTEGER NOT NULL,   -- abgeleitet: position IS NOT NULL
@@ -231,6 +332,7 @@ CREATE TABLE race_result (
   shared_car      INTEGER NOT NULL DEFAULT 0,
   laps            INTEGER,
   time_ms         INTEGER,
+  time_penalty_ms INTEGER,            -- Zeitstrafe, schon in time_ms enthalten
   gap_ms          INTEGER,
   gap_laps        INTEGER,
   reason_retired  TEXT,
@@ -294,6 +396,38 @@ CREATE TABLE sprint_result (
   classified      INTEGER NOT NULL,
   grid_position   INTEGER,
   points          REAL NOT NULL DEFAULT 0,
+  PRIMARY KEY (race_id, driver_id)
+);
+
+CREATE TABLE sprint_starting_grid (
+  race_id         TEXT NOT NULL REFERENCES race(id),
+  driver_id       TEXT NOT NULL REFERENCES driver(id),
+  constructor_id  TEXT NOT NULL REFERENCES constructor(id),
+  position        INTEGER,
+  position_text   TEXT,
+  grid_penalty    TEXT,
+  PRIMARY KEY (race_id, driver_id)
+);
+
+-- Die schnellsten Runden je Rennen, nicht nur die schnellste: Zeit und Runde.
+-- Daraus ergibt sich der Rundenrekord je Streckenführung.
+CREATE TABLE fastest_lap (
+  race_id         TEXT NOT NULL REFERENCES race(id),
+  driver_id       TEXT NOT NULL REFERENCES driver(id),
+  constructor_id  TEXT NOT NULL REFERENCES constructor(id),
+  position        INTEGER,
+  lap             INTEGER,
+  time_ms         INTEGER,
+  gap_ms          INTEGER,
+  PRIMARY KEY (race_id, driver_id)
+);
+
+-- Publikumswahl seit 2016, mit Stimmanteil, wo F1DB ihn führt.
+CREATE TABLE driver_of_the_day (
+  race_id         TEXT NOT NULL REFERENCES race(id),
+  driver_id       TEXT NOT NULL REFERENCES driver(id),
+  position        INTEGER,
+  percentage      REAL,
   PRIMARY KEY (race_id, driver_id)
 );
 
@@ -387,6 +521,9 @@ CREATE INDEX ix_race_gp          ON race (grand_prix_id, year);
 CREATE INDEX ix_quali_driver     ON qualifying_result (driver_id, position);
 CREATE INDEX ix_grid_driver      ON starting_grid (driver_id, position);
 CREATE INDEX ix_pit_race         ON pit_stop (race_id, driver_id);
+CREATE INDEX ix_fl_race          ON fastest_lap (race_id, position);
+CREATE INDEX ix_sed_driver       ON season_entrant_driver (driver_id, year);
+CREATE INDEX ix_sed_ctor         ON season_entrant_driver (constructor_id, year);
 CREATE INDEX ix_lap_race         ON lap_position (race_id, lap);
 CREATE INDEX ix_rds_driver       ON race_driver_standing (driver_id);
 CREATE INDEX ix_sds_driver       ON season_driver_standing (driver_id);

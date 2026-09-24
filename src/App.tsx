@@ -59,7 +59,7 @@ const MENU: MenuGruppe<Tab>[] = [
   {
     titel: 'Individual drivers',
     eintraege: [
-      { id: 'career', label: 'Career', hint: 'Search 881 drivers since 1950' },
+      { id: 'career', label: 'Career', hint: 'Search every driver since 1950' },
     ],
   },
 ]
@@ -530,7 +530,7 @@ export default function App() {
               {selectedRace.Circuit.circuitName} · {selectedRace.Circuit.Location.locality},{' '}
               {selectedRace.Circuit.Location.country}
             </span>
-            <span>{new Date(selectedRace.date).toLocaleDateString('en-GB')}</span>
+            <span>{new Date(selectedRace.date).toLocaleDateString('en-GB', { timeZone: 'UTC' })}</span>
           </div>
         )}
 
@@ -613,7 +613,7 @@ export default function App() {
                 progressBar(
                   index.done,
                   index.total || 9,
-                  'Loading the driver index – 881 names since 1950 …',
+                  'Loading the driver index – every name since 1950 …',
                 )
               )}
 

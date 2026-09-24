@@ -52,6 +52,36 @@ export function deckung() {
   )
 }
 
+// ------------------------------------------------------------------ Herkunft
+
+let herkunftCache = null
+
+/**
+ * Worauf jede Zahl der Seite beruht: die F1DB-Fassung und das jüngste Rennen
+ * mit Ergebnis. Steht im Fuß jeder Seite und in /data/version.json.
+ *
+ * Bewusst nicht das Datum des Bauens. Die Seite entsteht aus einer gepinnten
+ * Fassung; an welchem Tag sie gebaut wurde, sagt nichts darüber, wie aktuell
+ * ihre Zahlen sind.
+ */
+export function herkunft() {
+  if (herkunftCache) return herkunftCache
+  const meta = Object.fromEntries(alle('SELECT key, value FROM meta').map((z) => [z.key, z.value]))
+  const stand = eine(`
+    SELECT r.id, r.year AS jahr, r.round AS runde, r.date AS datum, g.name AS grandPrix,
+           COALESCE(g.full_name, g.name || ' Grand Prix') AS grandPrixVoll
+      FROM race r JOIN grand_prix g ON g.id = r.grand_prix_id
+     WHERE EXISTS (SELECT 1 FROM race_result rr WHERE rr.race_id = r.id)
+     ORDER BY r.date DESC, r.round DESC
+     LIMIT 1`)
+  herkunftCache = {
+    version: meta.f1db_version ?? null,
+    pruefsumme: meta.f1db_sha256 ?? null,
+    stand: stand ?? null,
+  }
+  return herkunftCache
+}
+
 // ------------------------------------------------------------------ Adressen
 
 /** Aus einem Namen ein Adresssegment machen – nur als Rückfall, wenn keine Kennung vorliegt. */

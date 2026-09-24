@@ -55,8 +55,9 @@ export default defineConfig({
   // (/F1-stats/). Die App hat kein Client-Routing, deshalb ist das gefahrlos.
   base: './',
   server: {
-    // Das Projekt liegt auf einem Netzlaufwerk (H:). Dort schlägt die native
-    // Dateiüberwachung von Windows fehl, deshalb wird gepollt.
-    watch: { usePolling: true, interval: 400 },
+    // Auf einem Netzlaufwerk schlägt die native Dateiüberwachung von Windows
+    // fehl; dort hilft nur Pollen. Es kostet aber dauernd Rechenzeit, deshalb
+    // nur auf Wunsch:  VITE_POLLING=1 npm run dev
+    watch: process.env.VITE_POLLING ? { usePolling: true, interval: 400 } : undefined,
   },
 })
