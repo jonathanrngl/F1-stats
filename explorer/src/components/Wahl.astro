@@ -1,0 +1,47 @@
+---
+/**
+ * Eine Auswahl zwischen vorgerechneten Ansichten – etwa den Rekorden einer Ära.
+ *
+ * Alle Ansichten stehen fertig im HTML, jede mit `data-wahl="<name>"` und
+ * `data-wahl-wert="<wert>"`; sichtbar ist die gewählte. Das Skript setzt nur
+ * `hidden`. Ohne JavaScript bleibt die Auswahl verborgen und die vorgewählte
+ * Ansicht stehen: kein Bedienelement, das nichts tut.
+ *
+ * Echte Optionsfelder unter den Pillen, damit Tastatur und Vorleser sie wie
+ * jedes andere Formular bedienen – Pfeiltasten eingeschlossen.
+ */
+interface Props {
+  name: string
+  /** Wofür die Auswahl steht, für Vorleser. */
+  legende: string
+  optionen: { wert: string; label: string }[]
+  vorwahl: string
+}
+
+const { name, legende, optionen, vorwahl } = Astro.props
+---
+
+<fieldset class="wahl" data-wahl-steuer={name} hidden>
+  <legend class="sr-only">{legende}</legend>
+  <div class="wahl-chips">
+    {optionen.map((o) => (
+      <label class="wahl-chip">
+        <input type="radio" name={`wahl-${name}`} value={o.wert} checked={o.wert === vorwahl} />
+        <span>{o.label}</span>
+      </label>
+    ))}
+  </div>
+</fieldset>
+
+<script>
+  for (const steuer of document.querySelectorAll<HTMLFieldSetElement>('[data-wahl-steuer]')) {
+    const name = steuer.dataset.wahlSteuer
+    steuer.hidden = false
+    steuer.addEventListener('change', () => {
+      const wert = steuer.querySelector<HTMLInputElement>('input:checked')?.value
+      for (const ziel of document.querySelectorAll<HTMLElement>(`[data-wahl="${name}"]`)) {
+        ziel.hidden = ziel.dataset.wahlWert !== wert
+      }
+    })
+  }
+</script>

@@ -41,6 +41,9 @@ import {
 } from '../src/engine/punkte.js'
 import { amtlicherEndstand, saisonNeuRechnen, systemDesJahres } from '../src/engine/whatif.js'
 import { naechstesRennen, standVorRennen, titelKannFallen } from '../src/engine/vorschau.js'
+import { uebersetze } from '../src/lib/frage.js'
+import { alsAdresse, ausAdresse, rechne, verzeichnis } from '../src/lib/abfrage.js'
+import { wuerfel } from '../src/lib/wuerfel.js'
 
 // fileURLToPath statt .pathname: Dort bliebe ein Leerzeichen im Pfad als %20 stehen.
 const HIER = path.dirname(fileURLToPath(import.meta.url))
@@ -866,6 +869,167 @@ pruefe(`an allen ${entscheidungen.length} Titelentscheidungen seit 1991 „kann 
 gleich('Pole-zu-Sieg beruht auf den sportlichen Poles',
   calculatePoleToWinRate(ver).sampleSize, calculatePoles(ver).value)
 console.log(`   ✓ ${entscheidungen.length} Titelentscheidungen nachgeprüft`)
+
+// -------------------------------------------------- 15. Fragen und Explorer
+
+console.log('\n15. Fragen in natürlicher Sprache, über den Explorer gerechnet')
+
+/*
+ * Dieselben Fragen, die ein Besucher stellt, durch dieselben Module, die der
+ * Browser benutzt: übersetzen, rechnen, und die Spitze der Tabelle gegen eine
+ * unabhängige SQL-Zählung halten. So fällt nicht nur eine falsch verstandene
+ * Frage auf, sondern auch eine richtig verstandene, die falsch gerechnet wird.
+ */
+const daten = wuerfel()
+const verz = verzeichnis(daten)
+const frageStellen = (t) => {
+  const a = uebersetze(t, verz)
+  return { a, erg: rechne(daten, a) }
+}
+const spitze = (t) => frageStellen(t).erg.reihen[0]
+const einzelwert = (sql, ...p) => db.prepare(sql).get(...p)
+
+{
+  const { a, erg } = frageStellen('Who has the most wins at Monaco?')
+  gleich('Monaco: Strecke erkannt', a.filter.strecke, 'monaco')
+  gleich('Monaco: nach Fahrern', a.dimension, 'fahrer')
+  gleich('Monaco: Senna vorn', erg.reihen[0]?.name, 'Ayrton Senna')
+  gleich('Monaco: mit sechs Siegen', erg.reihen[0]?.werte.siege, 6)
+}
+
+{
+  const { a, erg } = frageStellen('Drivers with the most wins before 1990')
+  gleich('„before 1990“ ist eine Obergrenze', a.filter.bisJahr, '1989')
+  gleich('… und keine Untergrenze', a.filter.vonJahr, undefined)
+  const soll = einzelwert(
+    `SELECT MAX(n) AS n FROM (SELECT COUNT(DISTINCT rr.race_id) AS n FROM race_result rr
+       JOIN race r ON r.id = rr.race_id WHERE rr.position = 1 AND r.year < 1990 GROUP BY rr.driver_id)`,
+  ).n
+  gleich('… und die Spitze stimmt mit SQL', erg.reihen[0]?.werte.siege, soll)
+}
+
+{
+  const a = uebersetze('Most wins in the 1980s', verz)
+  gleich('Jahrzehnt: von', a.filter.vonJahr, '1980')
+  gleich('Jahrzehnt: bis', a.filter.bisJahr, '1989')
+}
+
+{
+  const a = uebersetze("Hamilton's wins per season", verz)
+  gleich('Nachname allein: Lewis Hamilton', a.filter.fahrer, 'lewis-hamilton')
+  gleich('„per season“ gruppiert nach Saison', a.dimension, 'saison')
+  const mehr = uebersetze('Schumacher wins', verz)
+  pruefe('mehrdeutiger Nachname wird gemeldet, nicht geraten',
+    !mehr.filter.fahrer && mehr.unverstanden.some((u) => u.includes('schumacher')), JSON.stringify(mehr.unverstanden))
+}
+
+{
+  const a = uebersetze('Most wins at the Monaco circuit', verz)
+  gleich('„the Monaco circuit“ gruppiert nicht nach Strecke', a.dimension, 'fahrer')
+  gleich('„team-mates“ gruppiert nicht nach Team', uebersetze('Which team-mates won the most?', verz).dimension, 'fahrer')
+  gleich('Spa als Kurzform', uebersetze('Most wins at Spa', verz).filter.strecke, 'spa-francorchamps')
+  gleich('COTA als Kurzform', uebersetze('Wins at COTA', verz).filter.strecke, 'austin')
+}
+
+{
+  const { a, erg } = frageStellen('Drivers with at least five wins and twenty podiums since 2000')
+  gleich('zwei Bedingungen aus einem „at least“', a.filter.bedingungen?.map((b) => `${b.kennzahl}${b.op}${b.wert}`).join(), 'siege>=5,podien>=20')
+  gleich('„since 2000“', a.filter.vonJahr, '2000')
+  pruefe('jede Zeile erfüllt beide Bedingungen',
+    erg.reihen.length > 0 && erg.reihen.every((r) => r.werte.siege >= 5 && r.werte.podien >= 20))
+}
+
+{
+  const { a, erg } = frageStellen('Which team has the most titles since 2000?')
+  gleich('Titel: nach Teams', a.dimension, 'team')
+  gleich('Titel: sortiert nach Titeln', a.sortiere, 'titel')
+  const soll = einzelwert(
+    `SELECT k.name AS name, COUNT(*) AS n FROM season_constructor_standing s JOIN constructor k ON k.id = s.constructor_id
+      WHERE s.championship_won = 1 AND s.year >= 2000 GROUP BY s.constructor_id ORDER BY n DESC LIMIT 1`,
+  )
+  gleich('… und die Spitze stimmt mit SQL', `${erg.reihen[0]?.name} ${erg.reihen[0]?.werte.titel}`, `${soll.name} ${soll.n}`)
+}
+
+{
+  const a = uebersetze('Highest win rate', verz)
+  gleich('Siegquote sortiert', a.sortiere, 'siegquote')
+  pruefe('… mit einer Mindestzahl an Starts', a.filter.bedingungen?.some((b) => b.kennzahl === 'starts' && b.wert >= 20))
+}
+
+{
+  const a = uebersetze('Wer hat die meisten Siege in Monaco?', verz)
+  gleich('deutsch: Strecke', a.filter.strecke, 'monaco')
+  gleich('deutsch: Siege', a.sortiere, 'siege')
+  const b = uebersetze('Welches Team hat seit 2010 die meisten Pole-Positions?', verz)
+  gleich('deutsch: nach Team', b.dimension, 'team')
+  gleich('deutsch: seit', b.filter.vonJahr, '2010')
+  gleich('deutsch: Poles', b.sortiere, 'poles')
+}
+
+{
+  gleich('Nationalität', uebersetze('British drivers with the most poles', verz).filter.land, 'united-kingdom')
+  gleich('Land statt Nationalität', uebersetze('Most wins by drivers from Brazil', verz).filter.land, 'brazil')
+  const motor = uebersetze('Most wins with Ferrari engines', verz)
+  gleich('Motor statt Team', `${motor.filter.motor}|${motor.filter.team ?? ''}`, 'ferrari|')
+  const gp = uebersetze('Most points at the British Grand Prix', verz)
+  gleich('Grand Prix statt Nationalität', `${gp.filter.gp}|${gp.filter.land ?? ''}`, 'great-britain|')
+}
+
+{
+  const { a, erg } = frageStellen('Most starts without a win')
+  gleich('„without a win“ ist eine Obergrenze von null', a.filter.bedingungen?.map((b) => `${b.kennzahl}${b.op}${b.wert}`).join(), 'siege<=0')
+  const soll = einzelwert(
+    `SELECT MAX(n) AS n FROM (SELECT COUNT(DISTINCT rr.race_id) AS n FROM race_result rr
+       WHERE rr.started = 1 GROUP BY rr.driver_id
+       HAVING SUM(CASE WHEN rr.position = 1 THEN 1 ELSE 0 END) = 0)`,
+  ).n
+  gleich('… und die Spitze stimmt mit SQL', erg.reihen[0]?.werte.starts, soll)
+}
+
+{
+  const { a, erg } = frageStellen('Which season had the most different winners?')
+  gleich('verschiedene Sieger: nach Saison', a.dimension, 'saison')
+  const soll = einzelwert(
+    `SELECT MAX(n) AS n FROM (SELECT COUNT(DISTINCT rr.driver_id) AS n FROM race_result rr
+       JOIN race r ON r.id = rr.race_id WHERE rr.position = 1 GROUP BY r.year)`,
+  ).n
+  gleich('… und die Spitze stimmt mit SQL', erg.reihen[0]?.werte.verschiedeneSieger, soll)
+}
+
+{
+  const a = uebersetze('Most wins frobnicate zebra', verz)
+  pruefe('unbekannte Wörter werden immer gemeldet',
+    a.unverstanden.some((u) => u.includes('frobnicate') && u.includes('zebra')), JSON.stringify(a.unverstanden))
+  gleich('„from the back“', uebersetze('Wins from the back of the grid', verz).filter.nurVonHinten, true)
+  gleich('„2000 points“ ist kein Jahr', uebersetze('Drivers with at least 2000 points', verz).filter.vonJahr, undefined)
+  gleich('Anteil möglicher Punkte', uebersetze('Best share of possible points since 2010', verz).sortiere, 'normiert')
+}
+
+// Die Adresse trägt die ganze Abfrage, hin und zurück.
+{
+  const a = uebersetze('Drivers with at least five wins and twenty podiums at Monaco since 2000', verz)
+  const zurueck = ausAdresse(alsAdresse(a)).abfrage
+  pruefe('Adresse hin und zurück ergibt dieselbe Abfrage',
+    JSON.stringify([zurueck.dimension, zurueck.sortiere, zurueck.filter.strecke, zurueck.filter.vonJahr, zurueck.filter.bedingungen]) ===
+      JSON.stringify([a.dimension, a.sortiere, a.filter.strecke, a.filter.vonJahr, a.filter.bedingungen]))
+  gleich('Unbekanntes in der Adresse wird verworfen', ausAdresse('d=quatsch&k=gibtsnicht&strecke=../x').abfrage.dimension, 'fahrer')
+}
+
+// Der Explorer zählt wie die Engine: Siege je Fahrer gegen driverRaces.
+{
+  const alle = rechne(daten, { dimension: 'fahrer', kennzahlen: ['starts', 'siege', 'poles', 'titel'], sortiere: 'siege', filter: {} })
+  const ham = alle.reihen.find((r) => r.id === 'lewis-hamilton')
+  const hamRennen = driverRaces(db, 'lewis-hamilton')
+  gleich('Explorer: Siege wie die Engine', ham?.werte.siege, calculateWins(hamRennen).value)
+  gleich('Explorer: Starts wie die Engine', ham?.werte.starts, calculateStarts(hamRennen).value)
+  gleich('Explorer: Poles wie die Engine', ham?.werte.poles, calculatePoles(hamRennen).value)
+  gleich('Explorer: Titel', ham?.werte.titel, calculateChampionships(db, 'lewis-hamilton').titles.value)
+  const sprint = rechne(daten, { dimension: 'fahrer', kennzahlen: ['sprintSiege'], sortiere: 'sprintSiege', filter: {} })
+  gleich('Explorer: Sprintsiege gesamt',
+    sprint.reihen.reduce((s, r) => s + r.werte.sprintSiege, 0),
+    einzelwert('SELECT COUNT(*) AS n FROM sprint_result WHERE position = 1').n)
+}
+console.log(`   ✓ Fragen übersetzt und gegen SQL gerechnet`)
 
 db.close()
 

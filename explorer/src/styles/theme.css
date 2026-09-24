@@ -25,6 +25,10 @@
   --muted: light-dark(#6b6a66, #8f8e88);
   --border: light-dark(#e4e4e0, #2a2a2d);
   --border-strong: light-dark(#d2d2cd, #3a3a3e);
+  /* Der Rand eines Bedienelements muss sich abheben, nicht nur andeuten:
+     mindestens 3:1 zur Fläche (WCAG 1.4.11). --border-strong erreicht 1,5:1
+     und bleibt für Trennlinien. */
+  --border-input: light-dark(#8f8e88, #6b6a66);
   --grid: light-dark(#ebebe8, #242426); /* Gitternetz, haarfein */
   --axis: light-dark(#c9c9c4, #3a3a37);
 
@@ -162,6 +166,13 @@ input {
   outline-offset: 2px;
   border-radius: 0.35rem;
 }
+
+/*
+ * Mit und ohne JavaScript. Die Klasse `js` setzt das Skript im Kopf jeder
+ * Seite (lib/modus.js), bevor gezeichnet wird – ohne Skript fehlt sie.
+ */
+html:not(.js) .nur-mit-js { display: none !important; }
+html.js .nur-ohne-js { display: none !important; }
 
 /* Nur für Hilfsmittel: erklärt, was ein Platzhalter gerade tut. */
 .sr-only {
@@ -1157,10 +1168,12 @@ thead button {
 }
 
 thead button:hover { color: var(--ink); }
-thead button::after { content: ' ↕'; opacity: 0.35; }
-thead button[data-aktiv='1'] { color: var(--accent); }
-thead button[data-aktiv='1']::after { content: ' ▾'; opacity: 1; font-size: 0.8em; }
-thead button[data-aktiv='1'][data-richtung='auf']::after { content: ' ▴'; }
+/* Die Pfeile mit leerem Alternativtext: Sie zeigen die Richtung, sind aber nicht
+   Teil des Knopfnamens – die sagt aria-sort am Spaltenkopf. */
+thead button::after { content: ' ↕' / ''; opacity: 0.35; }
+thead button[data-aktiv='1'] { color: var(--accent-strong); }
+thead button[data-aktiv='1']::after { content: ' ▾' / ''; opacity: 1; font-size: 0.8em; }
+thead button[data-aktiv='1'][data-richtung='auf']::after { content: ' ▴' / ''; }
 
 /* ---------------------------------------------------------- Filterleiste */
 
@@ -1220,6 +1233,34 @@ thead button[data-aktiv='1'][data-richtung='auf']::after { content: ' ▴'; }
   color: var(--muted);
 }
 
+/*
+ * Auswahl zwischen vorgerechneten Ansichten (Wahl.astro, What-if): echte
+ * Optionsfelder, unsichtbar über der Pille – Tastatur, Pfeiltasten und
+ * Vorleser bekommen sie so ohne eigenes Zutun.
+ */
+.wahl { display: grid; gap: 0.6rem; margin: 0 0 1rem; padding: 0; border: none; min-width: 0; }
+.wahl[hidden] { display: none; }
+.wahl-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.wahl-chip { position: relative; }
+.wahl-chip input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; margin: 0; cursor: pointer; }
+
+.wahl-chip span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.25rem;
+  padding: 0.35rem 0.85rem;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--ink-2);
+  background: var(--surface);
+  border: 1px solid var(--border-input);
+  border-radius: 999px;
+}
+
+.wahl-chip:hover span { border-color: var(--accent); color: var(--ink); }
+.wahl-chip input:checked + span { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
+.wahl-chip input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+
 /* ============================================================ Ranglisten */
 
 /*
@@ -1272,12 +1313,18 @@ thead button[data-aktiv='1'][data-richtung='auf']::after { content: ' ▴'; }
 }
 
 .rangliste li:last-child { border-bottom: none; }
+.rangliste li[data-rang]::before { content: attr(data-rang); }
 
+/*
+ * Der Rang steht im Attribut, gerechnet von `raenge()` in format.js – ein
+ * Zähler kennt keinen Gleichstand. Der Zähler bleibt als Rückfall für Listen
+ * ohne Attribut.
+ */
 .rangliste li::before {
   counter-increment: rang;
   content: counter(rang);
   flex: none;
-  min-width: 1.3rem;
+  min-width: 1.7rem;
   font-size: 0.78rem;
   font-weight: 650;
   color: var(--muted);
@@ -1321,12 +1368,12 @@ thead button[data-aktiv='1'][data-richtung='auf']::after { content: ' ▴'; }
   font-variant-numeric: tabular-nums;
 }
 
-/* Der erste Eintrag: der Halter. Größer, mit Plakette statt Ziffer. */
-.rangkarte .rangliste li:first-child {
+/* Rang eins: der Halter – bei Gleichstand alle. Größer, mit Plakette statt Ziffer. */
+.rangkarte .rangliste li.vorn {
   padding: 0.55rem 0 0.7rem;
 }
 
-.rangkarte .rangliste li:first-child::before {
+.rangkarte .rangliste li.vorn::before {
   display: grid;
   place-items: center;
   min-width: 1.75rem;
@@ -1336,9 +1383,9 @@ thead button[data-aktiv='1'][data-richtung='auf']::after { content: ' ▴'; }
   border-radius: 0.4rem;
 }
 
-.rangkarte .rangliste li:first-child a { font-size: 1.02rem; font-weight: 700; }
+.rangkarte .rangliste li.vorn a { font-size: 1.02rem; font-weight: 700; }
 
-.rangkarte .rangliste li:first-child b {
+.rangkarte .rangliste li.vorn b {
   font-size: 1.5rem;
   font-weight: 800;
   letter-spacing: -0.02em;

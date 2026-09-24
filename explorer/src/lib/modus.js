@@ -12,6 +12,11 @@
  * zweimal da, bräche die Richtlinie beim ersten Ändern still.
  *
  * Ohne Speicher (privates Fenster) gilt das System.
+ *
+ * Dazu setzt es die Klasse `js` am Wurzelelement. Daran hängt, was nur mit
+ * JavaScript etwas tut – Suchfeld, Explorer, Vergleichsauswahl: Ohne Skript
+ * blendet theme.css es aus und zeigt stattdessen, was ohne geht. Ein Feld,
+ * in das man tippt und das nichts tut, ist schlimmer als keines.
  */
 export const MODUS_SKRIPT =
-  "try{var m=localStorage.getItem('modus');if(m==='light'||m==='dark')document.documentElement.dataset.theme=m}catch(e){}"
+  "document.documentElement.classList.add('js');try{var m=localStorage.getItem('modus');if(m==='light'||m==='dark')document.documentElement.dataset.theme=m}catch(e){}"

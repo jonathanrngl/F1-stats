@@ -1,84 +1,64 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { beschreibe, uebersetze } from '../lib/frage.js'
+import {
+  DIMENSIONEN, KENNZAHLEN, LEERER_FILTER, STANDARD_KENNZAHLEN,
+  alsAdresse, ausAdresse, rechne, verzeichnis, zeige,
+} from '../lib/abfrage.js'
 
 /*
  * Der Data Explorer.
  *
- * Der gesamte Datenbestand liegt im Browser – 27.599 Ergebniszeilen, 130 KB
- * gepackt. Jede Abfrage läuft deshalb ohne Netzzugriff, und ein verstellter
- * Filter wirkt sofort statt nach einer Anfrage.
+ * Der gesamte Datenbestand liegt im Browser – jede Ergebniszeile seit 1950.
+ * Jede Abfrage läuft deshalb ohne Netzzugriff, und ein verstellter Filter
+ * wirkt sofort statt nach einer Anfrage.
  *
- * Gruppieren und Kennzahlen sind getrennt gedacht: Man wählt, *worüber*
- * gezählt wird (Fahrer, Team, Saison, Strecke) und *was* gezählt wird. Daraus
- * ergeben sich die Fragen der Spezifikation von selbst – „meiste Siege in
- * Monaco" ist Gruppierung nach Fahrer, Filter auf Strecke, Sortierung nach
- * Siegen.
+ * Gerechnet wird in lib/abfrage.js, nicht hier: Dieselbe Rechnung läuft in den
+ * Tests, dort mit denselben Fragen, die ein Besucher stellt. Diese Datei ist
+ * nur die Bedienung – und die Adresse: Jede Abfrage steht in der URL und lässt
+ * sich so verschicken wie eine Seite.
  */
-
-/** Worüber gruppiert wird. `schluessel` liefert je Zeile den Gruppenwert. */
-const DIMENSIONEN = {
-  fahrer: { label: 'Driver', einzahl: 'driver', mehrzahl: 'drivers', spalte: 'fahrer', namen: 'fahrerNamen', ids: 'fahrer', link: (id) => `/drivers/${id}/` },
-  team: { label: 'Team', einzahl: 'team', mehrzahl: 'teams', spalte: 'team', namen: 'teamNamen', ids: 'team', link: (id) => `/teams/${id}/` },
-  saison: { label: 'Season', einzahl: 'season', mehrzahl: 'seasons', spalte: 'jahr', link: (id) => `/seasons/${id}/` },
-  strecke: { label: 'Circuit', einzahl: 'circuit', mehrzahl: 'circuits', spalte: 'strecke', namen: 'streckenNamen', ids: 'strecke', link: (id) => `/circuits/${id}/` },
-  gp: { label: 'Grand Prix', einzahl: 'Grand Prix', mehrzahl: 'Grands Prix', spalte: 'gp', namen: 'gpNamen', ids: 'gp' },
-}
-
-/**
- * Die Kennzahlen.
- *
- * `zaehle` addiert je Zeile, `fertig` rechnet am Ende – so entstehen auch
- * Durchschnitte, ohne alle Zeilen aufzuheben. Jede Kennzahl sagt über
- * `nenner`, worauf sie sich bezieht, damit eine Quote nicht durch null teilt.
- */
-const KENNZAHLEN = {
-  starts: { label: 'Starts', zaehle: (r) => (r.gestartet ? 1 : 0) },
-  siege: { label: 'Wins', zaehle: (r) => (r.platz === 1 ? 1 : 0) },
-  podien: { label: 'Podiums', zaehle: (r) => (r.gewertet && r.platz >= 1 && r.platz <= 3 ? 1 : 0) },
-  poles: { label: 'Poles', zaehle: (r) => (r.quali === 1 ? 1 : 0) },
-  schnellste: { label: 'Fastest laps', zaehle: (r) => r.schnellste },
-  punkte: { label: 'Points', zaehle: (r) => r.punkte / 10, format: (v) => v.toFixed(1) },
-  ausfaelle: { label: 'Retirements', zaehle: (r) => (r.gestartet && !r.gewertet ? 1 : 0) },
-  oZiel: {
-    label: 'Avg finish',
-    zaehle: (r) => (r.gewertet && r.platz > 0 ? r.platz : 0),
-    nenner: (r) => (r.gewertet && r.platz > 0 ? 1 : 0),
-    format: (v) => v.toFixed(1),
-  },
-  oStart: {
-    label: 'Avg grid position',
-    zaehle: (r) => (r.gestartet && r.start > 0 ? r.start : 0),
-    nenner: (r) => (r.gestartet && r.start > 0 ? 1 : 0),
-    format: (v) => v.toFixed(1),
-  },
-  gutgemacht: {
-    label: 'Positions gained',
-    zaehle: (r) => (r.gewertet && r.platz > 0 && r.start > 0 ? r.start - r.platz : 0),
-    format: (v) => (v > 0 ? '+' : '') + Math.round(v),
-  },
-}
 
 /* Vorsatz der Seite: auf GitHub Pages "/F1-stats", beim Entwickeln leer. */
 const BASIS = import.meta.env.BASE_URL.replace(/\/$/, '')
 
-const STANDARD = ['starts', 'siege', 'podien', 'poles', 'punkte']
+const SCHRITT = 200
 
-export default function Explorer() {
+const STANDARD = {
+  dimension: 'fahrer',
+  kennzahlen: STANDARD_KENNZAHLEN,
+  sortiere: 'siege',
+  absteigend: true,
+  filter: LEERER_FILTER,
+}
+
+const nachName = (ids, namen) =>
+  ids.map((id, i) => ({ id, name: namen[i] })).sort((a, b) => a.name.localeCompare(b.name, 'en'))
+
+export default function Explorer({ groesse = '' }) {
   const [daten, setDaten] = useState(null)
   const [fehler, setFehler] = useState('')
-  const [dimension, setDimension] = useState('fahrer')
-  const [kennzahlen, setKennzahlen] = useState(STANDARD)
-  const [sortiere, setSortiere] = useState('siege')
-  const [absteigend, setAbsteigend] = useState(true)
+  const [abfrage, setAbfrage] = useState(STANDARD)
   const [frage, setFrage] = useState('')
+  /** Die zuletzt übersetzte Frage – gilt, bis jemand selbst etwas verstellt. */
   const [uebersetzt, setUebersetzt] = useState(null)
-  const [filter, setFilter] = useState({
-    vonJahr: '', bisJahr: '', strecke: '', team: '', fahrer: '',
-    minStarts: '', minSiege: '', minPodien: '',
-    nurSieger: false, nurVonHinten: false,
-  })
+  const [sichtbar, setSichtbar] = useState(SCHRITT)
+  const [kopiert, setKopiert] = useState('')
+  const gelesen = useRef(false)
+  /** Die Frage aus der Adresse, gelesen, bevor der erste Schreibvorgang sie tilgt. */
+  const frageAusAdresse = useRef('')
 
+  /*
+   * Erst nach dem Einhängen die Adresse lesen und den Würfel holen. Läse schon
+   * der erste Render die Adresse, sähe er anders aus als das HTML vom Server,
+   * und React verwürfe beim Hydrieren das Gerüst – der Fehler, den der
+   * Vergleich schon einmal hatte.
+   */
   useEffect(() => {
+    const aus = ausAdresse(window.location.search)
+    setAbfrage(aus.abfrage)
+    setFrage(aus.frage)
+    frageAusAdresse.current = aus.frage
+    gelesen.current = true
     fetch(`${BASIS}/data/wuerfel.json`)
       .then((r) => {
         if (!r.ok) throw new Error('The data cube could not be loaded.')
@@ -88,95 +68,59 @@ export default function Explorer() {
       .catch((e) => setFehler(e.message))
   }, [])
 
-  const ergebnis = useMemo(() => {
-    if (!daten) return null
-    const s = daten.spalten
-    const n = daten.zeilen
-    const dim = DIMENSIONEN[dimension]
+  // Jede Änderung in die Adresse – ersetzen, nicht anhängen: Der Zurück-Knopf
+  // soll die Seite verlassen, nicht durch jeden Filterklick zurücklaufen.
+  useEffect(() => {
+    if (!gelesen.current) return
+    const suche = alsAdresse(abfrage, uebersetzt ? frage : '')
+    window.history.replaceState(null, '', suche ? `?${suche}` : window.location.pathname)
+  }, [abfrage, uebersetzt, frage])
 
-    // Filter einmal in Indizes übersetzen, statt je Zeile Zeichenketten zu vergleichen.
-    const streckeIdx = filter.strecke ? daten.strecke.indexOf(filter.strecke) : -2
-    const teamIdx = filter.team ? daten.team.indexOf(filter.team) : -2
-    const fahrerIdx = filter.fahrer ? daten.fahrer.indexOf(filter.fahrer) : -2
-    const vonJahr = filter.vonJahr ? Number(filter.vonJahr) : -Infinity
-    const bisJahr = filter.bisJahr ? Number(filter.bisJahr) : Infinity
+  const verz = useMemo(() => (daten ? verzeichnis(daten) : null), [daten])
 
-/*
-     * Ein Mindestfilter braucht seine Kennzahl, auch wenn sie nicht als
-     * Spalte gewählt ist. Sonst hinge das Ergebnis davon ab, welche Spalten
-     * gerade sichtbar sind – ein Filter, der still nichts tut, ist schlimmer
-     * als keiner.
-     */
-    const noetig = new Set(kennzahlen)
-    if (filter.minStarts) noetig.add('starts')
-    if (filter.minSiege) noetig.add('siege')
-    if (filter.minPodien) noetig.add('podien')
-    const gerechnet = [...noetig]
+  /*
+   * Kam die Seite mit einer Frage in der Adresse, steht ihre Übersetzung
+   * wieder darüber – so sieht, wer einen Link bekommt, was gefragt war. Die
+   * Abfrage selbst kommt aus der Adresse, nicht aus einer neuen Übersetzung:
+   * Sie ist das, was der Absender gesehen hat.
+   */
+  useEffect(() => {
+    if (verz && frageAusAdresse.current) setUebersetzt(uebersetze(frageAusAdresse.current, verz))
+  }, [verz])
+  const listen = useMemo(
+    () =>
+      daten && {
+        strecken: nachName(daten.strecke, daten.streckenNamen),
+        gps: nachName(daten.gp, daten.gpNamen),
+        teams: nachName(daten.team, daten.teamNamen),
+        motoren: nachName(daten.motor, daten.motorNamen),
+        fahrer: nachName(daten.fahrer, daten.fahrerNamen),
+        laender: nachName(daten.land, daten.landNamen),
+      },
+    [daten],
+  )
+  const namen = useMemo(
+    () =>
+      daten && {
+        strecke: Object.fromEntries(daten.strecke.map((id, i) => [id, daten.streckenNamen[i]])),
+        gp: Object.fromEntries(daten.gp.map((id, i) => [id, daten.gpNamen[i]])),
+        team: Object.fromEntries(daten.team.map((id, i) => [id, daten.teamNamen[i]])),
+        motor: Object.fromEntries(daten.motor.map((id, i) => [id, daten.motorNamen[i]])),
+        fahrer: Object.fromEntries(daten.fahrer.map((id, i) => [id, daten.fahrerNamen[i]])),
+        land: Object.fromEntries(daten.land.map((id, i) => [id, daten.landNamen[i]])),
+      },
+    [daten],
+  )
 
-    const gruppen = new Map()
-    let betrachtet = 0
+  const ergebnis = useMemo(() => (daten ? rechne(daten, abfrage) : null), [daten, abfrage])
 
-    for (let i = 0; i < n; i++) {
-      if (s.jahr[i] < vonJahr || s.jahr[i] > bisJahr) continue
-      if (streckeIdx !== -2 && s.strecke[i] !== streckeIdx) continue
-      if (teamIdx !== -2 && s.team[i] !== teamIdx) continue
-      if (fahrerIdx !== -2 && s.fahrer[i] !== fahrerIdx) continue
-      if (filter.nurSieger && s.platz[i] !== 1) continue
-      // „Von weit hinten": Sieg aus einem Startplatz jenseits der ersten zehn.
-      if (filter.nurVonHinten && !(s.platz[i] === 1 && s.start[i] > 10)) continue
-
-      betrachtet++
-      const schluessel = s[dim.spalte][i]
-      let g = gruppen.get(schluessel)
-      if (!g) {
-        g = { schluessel, werte: {}, nenner: {} }
-        for (const k of gerechnet) {
-          g.werte[k] = 0
-          g.nenner[k] = 0
-        }
-        gruppen.set(schluessel, g)
-      }
-
-      const zeile = {
-        platz: s.platz[i], gestartet: s.gestartet[i], gewertet: s.gewertet[i],
-        start: s.start[i], quali: s.quali[i], punkte: s.punkte[i],
-        pole: s.pole[i], schnellste: s.schnellste[i],
-      }
-      for (const k of gerechnet) {
-        const kz = KENNZAHLEN[k]
-        g.werte[k] += kz.zaehle(zeile)
-        if (kz.nenner) g.nenner[k] += kz.nenner(zeile)
-      }
-    }
-
-
-    let reihen = [...gruppen.values()].map((g) => {
-      const werte = {}
-      for (const k of gerechnet) {
-        const kz = KENNZAHLEN[k]
-        werte[k] = kz.nenner ? (g.nenner[k] > 0 ? g.werte[k] / g.nenner[k] : null) : g.werte[k]
-      }
-      const id = dim.ids ? daten[dim.ids][g.schluessel] : g.schluessel
-      const name = dim.namen ? daten[dim.namen][g.schluessel] : String(g.schluessel)
-      return { id, name, werte, roh: g.werte }
-    })
-
-    for (const [feld, k] of [['minStarts', 'starts'], ['minSiege', 'siege'], ['minPodien', 'podien']]) {
-      if (!filter[feld]) continue
-      const grenze = Number(filter[feld])
-      reihen = reihen.filter((r) => (r.werte[k] ?? 0) >= grenze)
-    }
-
-    reihen.sort((a, b) => {
-      const x = a.werte[sortiere] ?? -Infinity
-      const y = b.werte[sortiere] ?? -Infinity
-      return absteigend ? y - x : x - y
-    })
-
-    return { reihen, betrachtet, gesamt: n }
-  }, [daten, dimension, kennzahlen, filter, sortiere, absteigend])
-
-  const setzeFilter = (k, v) => setFilter((f) => ({ ...f, [k]: v }))
+  /** Eine Änderung von Hand: Die übersetzte Frage gilt dann nicht mehr. */
+  const aendere = (neu) => {
+    setAbfrage((a) => ({ ...a, ...neu }))
+    setUebersetzt(null)
+    setSichtbar(SCHRITT)
+  }
+  const setzeFilter = (k, v) => aendere({ filter: { ...abfrage.filter, [k]: v } })
 
   /*
    * Eine Frage anwenden heißt: die Bedienelemente stellen, nicht eine Antwort
@@ -186,43 +130,47 @@ export default function Explorer() {
    */
   const wendeFrageAn = (e) => {
     e?.preventDefault()
-    if (!frage.trim() || !daten) return
-    const a = uebersetze(frage, {
-      strecken: daten.strecke.map((id, i) => ({ id, name: daten.streckenNamen[i] })),
-      teams: daten.team.map((id, i) => ({ id, name: daten.teamNamen[i] })),
-      fahrer: daten.fahrer.map((id, i) => ({ id, name: daten.fahrerNamen[i] })),
-    })
-    setDimension(a.dimension)
-    setKennzahlen(a.kennzahlen)
-    setSortiere(a.sortiere)
-    setAbsteigend(a.sortiere !== 'oZiel' && a.sortiere !== 'oStart')
-    setFilter({
-      vonJahr: '', bisJahr: '', strecke: '', team: '', fahrer: '',
-      minStarts: '', minSiege: '', minPodien: '',
-      nurSieger: false, nurVonHinten: false,
-      ...a.filter,
+    if (!frage.trim() || !verz) return
+    const a = uebersetze(frage, verz)
+    setAbfrage({
+      dimension: a.dimension,
+      kennzahlen: a.kennzahlen,
+      sortiere: a.sortiere,
+      absteigend: a.absteigend,
+      filter: { ...LEERER_FILTER, ...a.filter },
     })
     setUebersetzt(a)
+    setSichtbar(SCHRITT)
   }
 
-  const kippeKennzahl = (k) =>
-    setKennzahlen((alt) => {
-      if (alt.includes(k)) return alt.length > 1 ? alt.filter((x) => x !== k) : alt
-      return [...alt, k]
-    })
+  const kippeKennzahl = (k) => {
+    const alt = abfrage.kennzahlen
+    if (alt.includes(k)) {
+      if (alt.length > 1) aendere({ kennzahlen: alt.filter((x) => x !== k) })
+    } else aendere({ kennzahlen: [...alt, k] })
+  }
+
+  const sortiereNach = (k) => {
+    if (abfrage.sortiere === k) aendere({ absteigend: !abfrage.absteigend })
+    else aendere({ sortiere: k, absteigend: !KENNZAHLEN[k].aufsteigend })
+  }
+
+  const bedingungen = abfrage.filter.bedingungen ?? []
+  const setzeBedingung = (i, neu) =>
+    setzeFilter('bedingungen', bedingungen.map((b, j) => (j === i ? { ...b, ...neu } : b)))
 
   /** Export als CSV – mit Komma, dem Trennzeichen des englischen Gebietsschemas. */
   const exportiere = (art) => {
     if (!ergebnis) return
-    const dim = DIMENSIONEN[dimension]
+    const dim = DIMENSIONEN[abfrage.dimension]
     let inhalt
     let typ
     let name
     if (art === 'csv') {
-      const kopf = [dim.label, ...kennzahlen.map((k) => KENNZAHLEN[k].label)]
+      const kopf = [dim.label, ...abfrage.kennzahlen.map((k) => KENNZAHLEN[k].label)]
       const zeilen = ergebnis.reihen.map((r) => [
         r.name,
-        ...kennzahlen.map((k) => (r.werte[k] === null ? '' : String(r.werte[k]))),
+        ...abfrage.kennzahlen.map((k) => (r.werte[k] === null || r.werte[k] === undefined ? '' : String(r.werte[k]))),
       ])
       inhalt = [kopf, ...zeilen].map((z) => z.map((f) => `"${String(f).replace(/"/g, '""')}"`).join(',')).join('\n')
       typ = 'text/csv;charset=utf-8'
@@ -230,9 +178,8 @@ export default function Explorer() {
     } else {
       inhalt = JSON.stringify(
         {
-          gruppierung: dim.label,
-          kennzahlen: kennzahlen.map((k) => KENNZAHLEN[k].label),
-          filter,
+          abfrage: beschreibe(abfrage, labels.kennzahlen, labels.dimensionen, namen),
+          adresse: window.location.href,
           zeilen: ergebnis.reihen.map((r) => ({ id: r.id, name: r.name, ...r.werte })),
         },
         null,
@@ -248,15 +195,28 @@ export default function Explorer() {
     URL.revokeObjectURL(a.href)
   }
 
-  if (fehler) return <p className="fehler">{fehler}</p>
-  if (!daten) return <p className="status">Loading the dataset … (130 KB, once only)</p>
+  const kopiereLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href)
+      setKopiert('Link copied.')
+    } catch {
+      setKopiert('Copy the address from the address bar – this browser did not allow it here.')
+    }
+  }
 
-  const dim = DIMENSIONEN[dimension]
+  if (fehler) return <p className="fehler" role="alert">{fehler}</p>
+  if (!daten || !ergebnis) {
+    return <p className="status" role="status">Loading the dataset{groesse && ` (${groesse}, once only)`} …</p>
+  }
+
+  const dim = DIMENSIONEN[abfrage.dimension]
+  const f = abfrage.filter
+  const zeigtTitel = abfrage.kennzahlen.includes('titel')
 
   return (
     <div className="explorer">
       <form className="frage" onSubmit={wendeFrageAn}>
-        <label htmlFor="frage-feld">Ask a question</label>
+        <label htmlFor="frage-feld">Ask a question – in English or German</label>
         <div className="zeile">
           <input
             id="frage-feld"
@@ -268,25 +228,18 @@ export default function Explorer() {
           <button type="submit">Ask</button>
         </div>
         {uebersetzt && (
-          <div className="verstanden">
-            <p>
-              <b>Understood as:</b>{' '}
-              {beschreibe(
-                uebersetzt,
-                Object.fromEntries(Object.entries(KENNZAHLEN).map(([k, v]) => [k, v.label])),
-                Object.fromEntries(Object.entries(DIMENSIONEN).map(([k, v]) => [k, v.label])),
-                {
-                  strecke: Object.fromEntries(daten.strecke.map((id, i) => [id, daten.streckenNamen[i]])),
-                  team: Object.fromEntries(daten.team.map((id, i) => [id, daten.teamNamen[i]])),
-                  fahrer: Object.fromEntries(daten.fahrer.map((id, i) => [id, daten.fahrerNamen[i]])),
-                },
-              )}
-            </p>
-            {uebersetzt.unverstanden.map((u) => <p className="luecke">{u}</p>)}
+          <div className="verstanden" aria-live="polite">
+            <p><b>Understood as:</b></p>
+            <ul>
+              {uebersetzt.erkannt.map((e, i) => (
+                <li key={i}>{e.was} <span>– {e.warum}</span></li>
+              ))}
+            </ul>
+            {uebersetzt.unverstanden.map((u, i) => <p key={i} className="luecke">{u}</p>)}
             <p className="quelle">
-              The question only sets the controls. The calculation runs over all{' '}
-              {daten.zeilen.toLocaleString('en-GB')} result rows – the figures below come
-              from the data, not from the translation.
+              The question only sets the controls below. The calculation runs over all{' '}
+              {daten.rennzeilen.toLocaleString('en-GB')} result rows – the figures come from the
+              data, not from the translation.
             </p>
           </div>
         )}
@@ -295,32 +248,29 @@ export default function Explorer() {
       <div className="steuerung">
         <fieldset>
           <legend>Group by</legend>
-          <div className="chips">
+          <div className="wahl-chips">
             {Object.entries(DIMENSIONEN).map(([k, d]) => (
-              <button
-                key={k}
-                type="button"
-                className={dimension === k ? 'on' : ''}
-                onClick={() => setDimension(k)}
-              >
-                {d.label}
-              </button>
+              <label key={k} className="wahl-chip">
+                <input
+                  type="radio"
+                  name="explorer-dimension"
+                  checked={abfrage.dimension === k}
+                  onChange={() => aendere({ dimension: k })}
+                />
+                <span>{d.label}</span>
+              </label>
             ))}
           </div>
         </fieldset>
 
         <fieldset>
-          <legend>Metrics</legend>
-          <div className="chips">
+          <legend>Columns</legend>
+          <div className="wahl-chips">
             {Object.entries(KENNZAHLEN).map(([k, z]) => (
-              <button
-                key={k}
-                type="button"
-                className={kennzahlen.includes(k) ? 'on' : ''}
-                onClick={() => kippeKennzahl(k)}
-              >
-                {z.label}
-              </button>
+              <label key={k} className="wahl-chip">
+                <input type="checkbox" checked={abfrage.kennzahlen.includes(k)} onChange={() => kippeKennzahl(k)} />
+                <span>{z.label}</span>
+              </label>
             ))}
           </div>
         </fieldset>
@@ -330,131 +280,147 @@ export default function Explorer() {
           <div className="felder">
             <label>
               Year from
-              <input type="number" min="1950" max="2030" value={filter.vonJahr}
+              <input type="number" inputMode="numeric" min="1950" max={daten.letztesJahr} value={f.vonJahr}
                 onChange={(e) => setzeFilter('vonJahr', e.target.value)} placeholder="1950" />
             </label>
             <label>
-              to
-              <input type="number" min="1950" max="2030" value={filter.bisJahr}
-                onChange={(e) => setzeFilter('bisJahr', e.target.value)} placeholder="2026" />
+              Year to
+              <input type="number" inputMode="numeric" min="1950" max={daten.letztesJahr} value={f.bisJahr}
+                onChange={(e) => setzeFilter('bisJahr', e.target.value)} placeholder={String(daten.letztesJahr)} />
             </label>
-            <label>
-              Circuit
-              <select value={filter.strecke} onChange={(e) => setzeFilter('strecke', e.target.value)}>
-                <option value="">all</option>
-                {daten.strecke.map((id, i) => (
-                  <option key={id} value={id}>{daten.streckenNamen[i]}</option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Team
-              <select value={filter.team} onChange={(e) => setzeFilter('team', e.target.value)}>
-                <option value="">all</option>
-                {daten.team.map((id, i) => (
-                  <option key={id} value={id}>{daten.teamNamen[i]}</option>
-                ))}
-              </select>
-            </label>
-            <label>
-              min. starts
-              <input type="number" min="0" value={filter.minStarts}
-                onChange={(e) => setzeFilter('minStarts', e.target.value)} />
-            </label>
-            <label>
-              min. wins
-              <input type="number" min="0" value={filter.minSiege}
-                onChange={(e) => setzeFilter('minSiege', e.target.value)} />
-            </label>
-            <label>
-              min. podiums
-              <input type="number" min="0" value={filter.minPodien}
-                onChange={(e) => setzeFilter('minPodien', e.target.value)} />
-            </label>
+            {[
+              ['fahrer', 'Driver', listen.fahrer],
+              ['team', 'Team', listen.teams],
+              ['motor', 'Engine', listen.motoren],
+              ['land', 'Nationality', listen.laender],
+              ['strecke', 'Circuit', listen.strecken],
+              ['gp', 'Grand Prix', listen.gps],
+            ].map(([feld, label, liste]) => (
+              <label key={feld}>
+                {label}
+                <select value={f[feld]} onChange={(e) => setzeFilter(feld, e.target.value)}>
+                  <option value="">all</option>
+                  {liste.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
+                </select>
+              </label>
+            ))}
           </div>
+
+          <div className="bedingungen">
+            {bedingungen.map((b, i) => (
+              <div key={i} className="bedingung" role="group" aria-label={`Condition ${i + 1}`}>
+                <select aria-label="Metric" value={b.kennzahl} onChange={(e) => setzeBedingung(i, { kennzahl: e.target.value })}>
+                  {Object.entries(KENNZAHLEN).map(([k, z]) => <option key={k} value={k}>{z.label}</option>)}
+                </select>
+                <select aria-label="Comparison" value={b.op} onChange={(e) => setzeBedingung(i, { op: e.target.value })}>
+                  <option value=">=">at least</option>
+                  <option value="<=">at most</option>
+                </select>
+                <input aria-label="Value" type="number" inputMode="decimal" step="any" value={b.wert}
+                  onChange={(e) => setzeBedingung(i, { wert: Number(e.target.value) })} />
+                <button type="button" className="leise-knopf"
+                  onClick={() => setzeFilter('bedingungen', bedingungen.filter((_, j) => j !== i))}>
+                  Remove<span className="sr-only"> condition {i + 1}</span>
+                </button>
+              </div>
+            ))}
+            <button type="button" className="leise-knopf"
+              onClick={() => setzeFilter('bedingungen', [...bedingungen, { kennzahl: 'siege', op: '>=', wert: 1 }])}>
+              + Add a condition
+            </button>
+          </div>
+
           <div className="schalter">
             <label>
-              <input type="checkbox" checked={filter.nurSieger}
-                onChange={(e) => setzeFilter('nurSieger', e.target.checked)} />
+              <input type="checkbox" checked={f.nurSieger} onChange={(e) => setzeFilter('nurSieger', e.target.checked)} />
               wins only
             </label>
             <label>
-              <input type="checkbox" checked={filter.nurVonHinten}
-                onChange={(e) => setzeFilter('nurVonHinten', e.target.checked)} />
+              <input type="checkbox" checked={f.nurVonHinten} onChange={(e) => setzeFilter('nurVonHinten', e.target.checked)} />
               wins from outside the top ten on the grid only
+            </label>
+            <label>
+              <input type="checkbox" checked={f.ohneIndy} onChange={(e) => setzeFilter('ohneIndy', e.target.checked)} />
+              without the Indianapolis 500 (1950–1960)
             </label>
           </div>
         </fieldset>
       </div>
 
       <div className="kopfzeile">
-        <p>
+        <p aria-live="polite">
           <b>{ergebnis.reihen.length.toLocaleString('en-GB')}</b>{' '}
           {ergebnis.reihen.length === 1 ? dim.einzahl : dim.mehrzahl}, counted over{' '}
           <b>{ergebnis.betrachtet.toLocaleString('en-GB')}</b>{' '}
           of {ergebnis.gesamt.toLocaleString('en-GB')} result rows
         </p>
         <div className="export">
+          <button type="button" onClick={kopiereLink}>Copy link</button>
           <button type="button" onClick={() => exportiere('csv')}>CSV</button>
           <button type="button" onClick={() => exportiere('json')}>JSON</button>
+          <button type="button" onClick={() => { setAbfrage(STANDARD); setUebersetzt(null); setFrage('') }}>Reset</button>
         </div>
       </div>
+      <p className="beschreibung">
+        {beschreibe(abfrage, labels.kennzahlen, labels.dimensionen, namen)}
+        {kopiert && <span role="status"> {kopiert}</span>}
+      </p>
+      {zeigtTitel && ergebnis.titelOhneSinn && (
+        <p className="hinweis">
+          Titles belong to a season, not to a circuit, a team or an engine – with those filters set,
+          the title column stays empty.
+        </p>
+      )}
 
       <div className="tabelle">
         <table>
           <thead>
             <tr>
-              <th>{dim.label}</th>
-              {kennzahlen.map((k) => (
-                <th key={k} className="num">
-                  <button
-                    type="button"
-                    className={sortiere === k ? 'sortiert' : ''}
-                    onClick={() => {
-                      if (sortiere === k) setAbsteigend((a) => !a)
-                      else {
-                        setSortiere(k)
-                        setAbsteigend(true)
-                      }
-                    }}
-                  >
-                    {KENNZAHLEN[k].label}
-                    {sortiere === k && <i>{absteigend ? '▾' : '▴'}</i>}
-                  </button>
-                </th>
-              ))}
+              <th scope="col">{dim.label}</th>
+              {abfrage.kennzahlen.map((k) => {
+                const aktiv = abfrage.sortiere === k
+                return (
+                  <th key={k} scope="col" className="num"
+                    aria-sort={aktiv ? (abfrage.absteigend ? 'descending' : 'ascending') : 'none'}>
+                    <button type="button" data-aktiv={aktiv ? '1' : undefined}
+                      data-richtung={abfrage.absteigend ? 'ab' : 'auf'} onClick={() => sortiereNach(k)}>
+                      {KENNZAHLEN[k].label}
+                    </button>
+                  </th>
+                )
+              })}
             </tr>
           </thead>
           <tbody>
-            {ergebnis.reihen.slice(0, 200).map((r) => (
+            {ergebnis.reihen.slice(0, sichtbar).map((r) => (
               <tr key={r.id}>
-                <td>
-                  {dim.link ? <a href={`${BASIS}${dim.link(r.id)}`}>{r.name}</a> : r.name}
-                </td>
-                {kennzahlen.map((k) => {
-                  const v = r.werte[k]
-                  const f = KENNZAHLEN[k].format
-                  return (
-                    <td key={k} className="num">
-                      {v === null ? '–' : f ? f(v) : v.toLocaleString('en-GB')}
-                    </td>
-                  )
-                })}
+                <td>{r.link ? <a href={`${BASIS}${r.link}`}>{r.name}</a> : r.name}</td>
+                {abfrage.kennzahlen.map((k) => (
+                  <td key={k} className="num">{zeige(k, r.werte[k])}</td>
+                ))}
               </tr>
             ))}
           </tbody>
         </table>
       </div>
 
-      {ergebnis.reihen.length > 200 && (
-        <p className="hinweis">
-          Showing the first 200 of {ergebnis.reihen.length.toLocaleString('en-GB')}{' '}
-          rows. The export contains all of them.
+      {ergebnis.reihen.length > sichtbar && (
+        <p className="mehr-zeilen">
+          Showing {sichtbar.toLocaleString('en-GB')} of {ergebnis.reihen.length.toLocaleString('en-GB')} rows.{' '}
+          <button type="button" className="leise-knopf" onClick={() => setSichtbar((n) => n + SCHRITT)}>
+            Show {Math.min(SCHRITT, ergebnis.reihen.length - sichtbar)} more
+          </button>{' '}
+          The export always contains all of them.
         </p>
       )}
       {ergebnis.reihen.length === 0 && (
-        <p className="hinweis">No row meets these conditions.</p>
+        <p className="hinweis">No row meets these conditions. Loosen a filter or a condition.</p>
       )}
     </div>
   )
+}
+
+const labels = {
+  kennzahlen: Object.fromEntries(Object.entries(KENNZAHLEN).map(([k, v]) => [k, v.label])),
+  dimensionen: Object.fromEntries(Object.entries(DIMENSIONEN).map(([k, v]) => [k, v.label])),
 }

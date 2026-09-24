@@ -25,13 +25,22 @@ const eintrag = (z) => ({
 })
 
 /**
+ * Ein Zeitraum als Bedingung. Ohne Angabe gilt alles – die ewige Bestenliste.
+ * @typedef {{ von?: number, bis?: number }} Zeitraum
+ */
+const zeitraum = (spalte, z = {}) => ({
+  sql: `${z.von ? ` AND ${spalte} >= ${Number(z.von)}` : ''}${z.bis ? ` AND ${spalte} <= ${Number(z.bis)}` : ''}`,
+})
+
+/**
  * Bestenlisten nach einer einfachen Zählung.
  *
  * `bedingung` filtert die Ergebniszeilen, `distinct` zählt Rennen statt
  * Zeilen – nötig, weil in den 1950ern ein Fahrer zweimal im selben Rennen
- * stehen kann.
+ * stehen kann. Mit Zeitraum zählt nur, was darin geschah: „die meisten Siege
+ * der 1980er“, nicht die Karrieresumme derer, die in den 1980ern fuhren.
  */
-function bestenliste(db, bedingung, anzahl = 10) {
+function bestenliste(db, bedingung, anzahl = 10, z = {}) {
   return db
     .prepare(
       `SELECT rr.driver_id AS driverId, d.display_name AS name,
@@ -39,7 +48,7 @@ function bestenliste(db, bedingung, anzahl = 10) {
          FROM race_result rr
          JOIN race r ON r.id = rr.race_id
          JOIN driver d ON d.id = rr.driver_id
-        WHERE ${bedingung}
+        WHERE ${bedingung}${zeitraum('r.year', z).sql}
         GROUP BY rr.driver_id
         ORDER BY wert DESC, d.last_name
         LIMIT ?`,
@@ -48,11 +57,11 @@ function bestenliste(db, bedingung, anzahl = 10) {
     .map(eintrag)
 }
 
-export const meisteStarts = (db, n) => bestenliste(db, 'rr.started = 1', n)
-export const meisteSiege = (db, n) => bestenliste(db, 'rr.position = 1', n)
-export const meistePodien = (db, n) => bestenliste(db, 'rr.classified = 1 AND rr.position <= 3', n)
-export const meistePoles = (db, n) => bestenliste(db, 'rr.qualifying_position = 1', n)
-export const meisteSchnellsteRunden = (db, n) => bestenliste(db, 'rr.fastest_lap = 1', n)
+export const meisteStarts = (db, n, z) => bestenliste(db, 'rr.started = 1', n, z)
+export const meisteSiege = (db, n, z) => bestenliste(db, 'rr.position = 1', n, z)
+export const meistePodien = (db, n, z) => bestenliste(db, 'rr.classified = 1 AND rr.position <= 3', n, z)
+export const meistePoles = (db, n, z) => bestenliste(db, 'rr.qualifying_position = 1', n, z)
+export const meisteSchnellsteRunden = (db, n, z) => bestenliste(db, 'rr.fastest_lap = 1', n, z)
 
 /**
  * Meiste Punkte – über die Rennergebnisse, nicht über die Wertung.
@@ -62,11 +71,12 @@ export const meisteSchnellsteRunden = (db, n) => bestenliste(db, 'rr.fastest_lap
  * als ein Dutzend Mal geändert. Beides macht die Zahl ohnehin nur bedingt
  * vergleichbar; die Seite sagt das dazu.
  */
-export function meistePunkte(db, anzahl = 10) {
+export function meistePunkte(db, anzahl = 10, z = {}) {
   return db
     .prepare(
       `SELECT rr.driver_id AS driverId, d.display_name AS name, SUM(rr.points) AS wert
-         FROM race_result rr JOIN driver d ON d.id = rr.driver_id
+         FROM race_result rr JOIN race r ON r.id = rr.race_id JOIN driver d ON d.id = rr.driver_id
+        WHERE 1 = 1${zeitraum('r.year', z).sql}
         GROUP BY rr.driver_id HAVING wert > 0
         ORDER BY wert DESC LIMIT ?`,
     )
@@ -74,18 +84,42 @@ export function meistePunkte(db, anzahl = 10) {
     .map(eintrag)
 }
 
-export function meisteTitel(db, anzahl = 10) {
+export function meisteTitel(db, anzahl = 10, z = {}) {
   return db
     .prepare(
       `SELECT sds.driver_id AS driverId, d.display_name AS name,
               COUNT(*) AS wert, MIN(sds.year) AS jahr
          FROM season_driver_standing sds JOIN driver d ON d.id = sds.driver_id
-        WHERE sds.championship_won = 1
+        WHERE sds.championship_won = 1${zeitraum('sds.year', z).sql}
         GROUP BY sds.driver_id ORDER BY wert DESC, jahr LIMIT ?`,
     )
     .all(anzahl)
     .map(eintrag)
 }
+
+/**
+ * Das genaue Alter an einem Tag: volle Jahre und die Tage seit dem letzten
+ * Geburtstag.
+ *
+ * Vorher stand dafür eine Division durch 365,25. Die liegt je nach Lage der
+ * Schaltjahre bis zu einen Tag daneben – und bei „jüngster Sieger“ ist ein
+ * Tag der Unterschied zwischen zwei Namen. Wer am 29. Februar geboren ist,
+ * hat in Gemeinjahren am 1. März Geburtstag.
+ */
+export function alterAm(geboren, datum) {
+  const [gj, gm, gt] = geboren.split('-').map(Number)
+  const [j, m, t] = datum.split('-').map(Number)
+  const jahre = j - gj - (m < gm || (m === gm && t < gt) ? 1 : 0)
+  const letzter = Date.UTC(gj + jahre, gm - 1, gt)
+  const tage = Math.round((Date.UTC(j, m - 1, t) - letzter) / 86400000)
+  return { jahre, tage }
+}
+
+/**
+ * Ein Alter als Zahl, die sich sortieren und abrunden lässt: Abgerundet sind es
+ * genau die vollen Jahre, weil die Tage durch 366 geteilt nie ein Jahr ergeben.
+ */
+const alsJahre = (a) => a.jahre + a.tage / 366
 
 /**
  * Längste ununterbrochene Serien.
@@ -169,28 +203,32 @@ export function altersrekord(db, ereignis, richtung = 'jung', anzahl = 10) {
     start: 'rr.started = 1',
   }[ereignis]
 
+  // Sortiert wird nach Tagen, und die sind exakt; umgerechnet wird erst danach.
   return db
     .prepare(
-      `SELECT rr.driver_id AS driverId, d.display_name AS name,
-              r.id AS raceId, r.year AS jahr, g.name AS grandPrix, r.date,
-              (julianday(r.date) - julianday(d.date_of_birth)) / 365.25 AS alter_jahre
+      `SELECT rr.driver_id AS driverId, d.display_name AS name, d.date_of_birth AS geboren,
+              r.id AS raceId, r.year AS jahr, g.name AS grandPrix, r.date AS datum
          FROM race_result rr
          JOIN race r ON r.id = rr.race_id
          JOIN grand_prix g ON g.id = r.grand_prix_id
          JOIN driver d ON d.id = rr.driver_id
         WHERE ${bedingung} AND d.date_of_birth IS NOT NULL
-        ORDER BY alter_jahre ${richtung === 'jung' ? 'ASC' : 'DESC'}
+        ORDER BY julianday(r.date) - julianday(d.date_of_birth) ${richtung === 'jung' ? 'ASC' : 'DESC'}
         LIMIT ?`,
     )
     .all(anzahl)
-    .map((z) => ({
-      driverId: z.driverId,
-      name: z.name,
-      wert: z.alter_jahre,
-      raceId: z.raceId,
-      rennen: `${z.grandPrix} ${z.jahr}`,
-      jahr: z.jahr,
-    }))
+    .map((z) => {
+      const a = alterAm(z.geboren, z.datum)
+      return {
+        driverId: z.driverId,
+        name: z.name,
+        wert: alsJahre(a),
+        alter: a,
+        raceId: z.raceId,
+        rennen: `${z.grandPrix} ${z.jahr}`,
+        jahr: z.jahr,
+      }
+    })
 }
 
 /** Jüngste und älteste Weltmeister – über das letzte Rennen der Saison datiert. */
@@ -198,7 +236,7 @@ export function altersrekordMeister(db, richtung = 'jung', anzahl = 10) {
   return db
     .prepare(
       `SELECT sds.driver_id AS driverId, d.display_name AS name, sds.year AS jahr,
-              (julianday(letztes.date) - julianday(d.date_of_birth)) / 365.25 AS alter_jahre,
+              d.date_of_birth AS geboren, letztes.date AS datum,
               letztes.id AS raceId, g.name AS grandPrix
          FROM season_driver_standing sds
          JOIN driver d ON d.id = sds.driver_id
@@ -207,18 +245,22 @@ export function altersrekordMeister(db, richtung = 'jung', anzahl = 10) {
                  FROM race) letztes ON letztes.year = sds.year AND letztes.rn = 1
          JOIN grand_prix g ON g.id = letztes.grand_prix_id
         WHERE sds.championship_won = 1 AND d.date_of_birth IS NOT NULL
-        ORDER BY alter_jahre ${richtung === 'jung' ? 'ASC' : 'DESC'}
+        ORDER BY julianday(letztes.date) - julianday(d.date_of_birth) ${richtung === 'jung' ? 'ASC' : 'DESC'}
         LIMIT ?`,
     )
     .all(anzahl)
-    .map((z) => ({
-      driverId: z.driverId,
-      name: z.name,
-      wert: z.alter_jahre,
-      raceId: z.raceId,
-      rennen: `Title ${z.jahr}`,
-      jahr: z.jahr,
-    }))
+    .map((z) => {
+      const a = alterAm(z.geboren, z.datum)
+      return {
+        driverId: z.driverId,
+        name: z.name,
+        wert: alsJahre(a),
+        alter: a,
+        raceId: z.raceId,
+        rennen: `Title ${z.jahr}`,
+        jahr: z.jahr,
+      }
+    })
 }
 
 /**
@@ -380,7 +422,11 @@ export function grandSlams(db, anzahl = 10) {
               MIN(r.year) AS jahr,
               (SELECT r2.id FROM race_result x JOIN race r2 ON r2.id = x.race_id
                 WHERE x.driver_id = rr.driver_id AND x.grand_slam = 1
-                ORDER BY r2.year DESC, r2.round DESC LIMIT 1) AS raceId
+                ORDER BY r2.year DESC, r2.round DESC LIMIT 1) AS raceId,
+              (SELECT g2.name || ' ' || r2.year FROM race_result x JOIN race r2 ON r2.id = x.race_id
+                 JOIN grand_prix g2 ON g2.id = r2.grand_prix_id
+                WHERE x.driver_id = rr.driver_id AND x.grand_slam = 1
+                ORDER BY r2.year DESC, r2.round DESC LIMIT 1) AS rennen
          FROM race_result rr
          JOIN race r ON r.id = rr.race_id
          JOIN driver d ON d.id = rr.driver_id

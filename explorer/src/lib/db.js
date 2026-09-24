@@ -184,15 +184,23 @@ export function streckenListe() {
      ORDER BY rennen DESC, z.name`)
 }
 
+/*
+ * Der Sieger eines Rennens. In den 1950ern teilten sich zwei Fahrer ein Auto
+ * und damit den Sieg; dann stehen beide da, in der Reihenfolge des Ergebnisses.
+ * Vorher nahm `LIMIT 1` ohne Sortierung irgendeinen – welchen, entschied die
+ * Datenbank.
+ */
 export function rennenListe(jahr) {
   return alle(
-    `SELECT r.id, r.year AS jahr, r.round AS runde, g.name AS name, r.date AS datum,
-            r.circuit_id AS streckeId, z.name AS strecke, c.ioc AS land,
+    `SELECT r.id, r.year AS jahr, r.round AS runde, g.name AS name,
+            COALESCE(g.full_name, g.name || ' Grand Prix') AS nameVoll, r.date AS datum,
+            r.circuit_id AS streckeId, z.name AS strecke, c.ioc AS land, r.had_sprint AS mitSprint,
             r.drivers_title_decider AS titelentscheidung,
-            (SELECT d.display_name FROM race_result rr JOIN driver d ON d.id = rr.driver_id
-              WHERE rr.race_id = r.id AND rr.position = 1 LIMIT 1) AS sieger,
+            (SELECT GROUP_CONCAT(name, ' / ') FROM (
+               SELECT d.display_name AS name FROM race_result rr JOIN driver d ON d.id = rr.driver_id
+                WHERE rr.race_id = r.id AND rr.position = 1 ORDER BY rr.display_order)) AS sieger,
             (SELECT rr.driver_id FROM race_result rr
-              WHERE rr.race_id = r.id AND rr.position = 1 LIMIT 1) AS siegerId
+              WHERE rr.race_id = r.id AND rr.position = 1 ORDER BY rr.display_order LIMIT 1) AS siegerId
        FROM race r
        JOIN grand_prix g ON g.id = r.grand_prix_id
        JOIN circuit z ON z.id = r.circuit_id

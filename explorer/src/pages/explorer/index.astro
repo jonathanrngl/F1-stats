@@ -1,14 +1,57 @@
 ---
+import { gzipSync } from 'node:zlib'
 import Seite from '../../layouts/Seite.astro'
 import Explorer from '../../components/Explorer.jsx'
-import { eine } from '../../lib/db.js'
+import { eine, pfad } from '../../lib/db.js'
+import { wuerfel } from '../../lib/wuerfel.js'
 
 const z = eine('SELECT COUNT(*) AS n FROM race_result')
+
+/*
+ * Wie groß der Datensatz wirklich ist, gemessen beim Bauen: Hier stand „130 KB“,
+ * als er längst größer war. Gepackt, weil es das ist, was über die Leitung geht.
+ */
+const kb = Math.round(gzipSync(JSON.stringify(wuerfel())).length / 1024)
+const groesse = `about ${kb} KB`
+
+/*
+ * Beispiele als Links: Jeder öffnet den Explorer mit genau dieser Abfrage.
+ * Die Adressen sind dieselben, die der Explorer selbst schreibt.
+ */
+const BEISPIELE = [
+  { frage: 'Who has the most wins at Monaco?', wie: 'Group by Driver, filter Circuit: Monaco, sort by wins.', q: { strecke: 'monaco' } },
+  {
+    frage: 'All drivers from 2000 to today with at least five wins and twenty podiums',
+    wie: 'Group by Driver, year from 2000, conditions: wins at least 5, podiums at least 20.',
+    q: { von: '2000', b: 'siege>=5,podien>=20' },
+  },
+  {
+    frage: 'Which drivers have won from outside the top ten on the grid?',
+    wie: 'Group by Driver, tick “wins from outside the top ten on the grid only”.',
+    q: { hinten: '1' },
+  },
+  {
+    frage: 'Which season had the most different winners?',
+    wie: 'Group by Season, sort by “Different winners”.',
+    q: { d: 'saison', k: 'starts,siege,verschiedeneSieger', s: 'verschiedeneSieger' },
+  },
+  {
+    frage: 'Who has scored the most points for Ferrari?',
+    wie: 'Group by Driver, filter Team: Ferrari, sort by points.',
+    q: { team: 'ferrari', s: 'punkte' },
+  },
+  {
+    frage: 'Who scored the highest share of the points on offer, era for era?',
+    wie: 'Sort by “Share of possible points”, with at least 50 starts – a win was 9 points in 1955 and 26 in 2024, and this share evens that out.',
+    q: { k: 'starts,siege,punkte,normiert', s: 'normiert', b: 'starts>=50' },
+  },
+]
 ---
 
 <Seite
   titel="Statistics Explorer – your own queries across the whole of Formula 1 history"
-  beschreibung="Freely combinable queries across 27,599 result rows: group, filter, sort, export."
+  kopf="Explorer"
+  beschreibung={`Freely combinable queries across ${z.n.toLocaleString('en-GB')} result rows: group, filter, sort, share as a link, export.`}
 >
   <header class="seitenkopf">
     <div>
@@ -17,7 +60,8 @@ const z = eine('SELECT COUNT(*) AS n FROM race_result')
       <p class="lead">
         Ask anything of {z.n.toLocaleString('en-GB')} result rows going back to 1950. Pick what to
         count and what to count it over – the answer appears at once, because the whole dataset
-        is already in your browser.
+        is already in your browser. Every query is in the address, so a result can be shared like
+        any page.
       </p>
     </div>
   </header>
@@ -25,20 +69,24 @@ const z = eine('SELECT COUNT(*) AS n FROM race_result')
   <details class="beispiele">
     <summary>Example questions and how to ask them</summary>
     <dl>
-      <dt>Who has the most wins at Monaco?</dt>
-      <dd>Group by <b>Driver</b>, filter <b>Circuit: Monaco</b>, sort by wins.</dd>
-      <dt>All drivers from 2000 to today with at least five wins and twenty podiums</dt>
-      <dd>Group by <b>Driver</b>, year from <b>2000</b>, <b>min. wins 5</b>, <b>min. podiums 20</b>.</dd>
-      <dt>Which drivers have won from outside the top ten on the grid?</dt>
-      <dd>Group by <b>Driver</b>, toggle <b>wins from outside the top ten on the grid only</b>.</dd>
-      <dt>Which season had the most different winners?</dt>
-      <dd>Group by <b>Season</b>, toggle <b>wins only</b>, sort by starts.</dd>
-      <dt>Who has scored the most points for Ferrari?</dt>
-      <dd>Group by <b>Driver</b>, filter <b>Team: Ferrari</b>, sort by points.</dd>
+      {BEISPIELE.map((b) => (
+        <>
+          <dt><a href={`${pfad.seite('/explorer/')}?${new URLSearchParams(b.q)}`}>{b.frage}</a></dt>
+          <dd>{b.wie}</dd>
+        </>
+      ))}
     </dl>
   </details>
 
-  <Explorer client:load />
+  <p class="hinweis nur-ohne-js">
+    The Explorer runs in your browser and needs JavaScript. Everything it counts is also on the
+    static pages – start from the <a href={pfad.seite('/records/')}>records</a>, a
+    {' '}<a href={pfad.seite('/seasons/')}>season</a> or a <a href={pfad.seite('/drivers/')}>driver</a>.
+  </p>
+
+  <div class="nur-mit-js">
+    <Explorer client:load groesse={groesse} />
+  </div>
 </Seite>
 
 <style is:global>
@@ -52,9 +100,8 @@ const z = eine('SELECT COUNT(*) AS n FROM race_result')
 
   .beispiele summary { cursor: pointer; font-size: 0.88rem; font-weight: 600; color: var(--ink); }
   .beispiele dl { margin: 0.85rem 0 0; display: grid; gap: 0.6rem; }
-  .beispiele dt { font-size: 0.88rem; color: var(--ink); font-weight: 550; }
-  .beispiele dd { margin: 0.15rem 0 0; font-size: 0.83rem; color: var(--muted); }
-  .beispiele b { color: var(--ink-2); font-weight: 600; }
+  .beispiele dt { font-size: 0.9rem; font-weight: 600; }
+  .beispiele dd { margin: 0.15rem 0 0; font-size: 0.84rem; color: var(--muted); }
 
   .explorer { margin-top: 1.75rem; }
 
@@ -63,6 +110,7 @@ const z = eine('SELECT COUNT(*) AS n FROM race_result')
   .steuerung fieldset {
     margin: 0;
     padding: 0.8rem 1rem 0.9rem;
+    min-width: 0;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius);
@@ -70,51 +118,58 @@ const z = eine('SELECT COUNT(*) AS n FROM race_result')
 
   .steuerung legend {
     padding: 0 0.35rem;
-    font-size: 0.64rem;
+    font-size: 0.75rem;
     font-weight: 700;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--muted);
   }
 
-  .chips { display: flex; flex-wrap: wrap; gap: 0.35rem; }
-
-  .chips button {
-    padding: 0.3rem 0.7rem;
-    font: inherit;
-    font-size: 0.82rem;
-    color: var(--ink-2);
-    background: var(--surface-2);
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    cursor: pointer;
-  }
-
-  .chips button:hover { border-color: var(--accent); }
-  .chips button.on { color: var(--accent); background: var(--accent-wash); border-color: var(--accent); }
-
   .felder {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(9rem, 100%), 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(11rem, 100%), 1fr));
     gap: 0.6rem 0.8rem;
   }
 
-  .felder label { display: grid; gap: 0.2rem; font-size: 0.74rem; color: var(--muted); }
+  .felder label { display: grid; gap: 0.2rem; font-size: 0.8rem; color: var(--muted); }
 
   .felder input,
-  .felder select {
+  .felder select,
+  .bedingung input,
+  .bedingung select {
+    min-height: 2.25rem;
     padding: 0.35rem 0.5rem;
     font: inherit;
-    font-size: 0.85rem;
+    font-size: 0.88rem;
     color: var(--ink);
     background: var(--surface);
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-input);
     border-radius: 0.35rem;
     min-width: 0;
   }
 
-  .schalter { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; margin-top: 0.75rem; }
-  .schalter label { display: flex; align-items: center; gap: 0.4rem; font-size: 0.83rem; color: var(--ink-2); }
+  .bedingungen { display: grid; gap: 0.5rem; margin-top: 0.85rem; justify-items: start; }
+  .bedingung { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }
+  .bedingung input { width: 6rem; }
+
+  .leise-knopf {
+    min-height: 2.25rem;
+    padding: 0.3rem 0.75rem;
+    font: inherit;
+    font-size: 0.84rem;
+    font-weight: 600;
+    color: var(--accent-strong);
+    background: none;
+    border: 1px dashed var(--border-input);
+    border-radius: 0.4rem;
+    cursor: pointer;
+  }
+
+  .leise-knopf:hover { border-style: solid; border-color: var(--accent); }
+
+  .schalter { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; margin-top: 0.85rem; }
+  .schalter label { display: flex; align-items: center; gap: 0.45rem; min-height: 2rem; font-size: 0.86rem; color: var(--ink-2); }
+  .schalter input { width: 1.1rem; height: 1.1rem; accent-color: var(--accent); }
 
   .kopfzeile {
     display: flex;
@@ -125,26 +180,30 @@ const z = eine('SELECT COUNT(*) AS n FROM race_result')
     margin-top: 1.5rem;
   }
 
-  .kopfzeile p { margin: 0; font-size: 0.86rem; color: var(--muted); }
+  .kopfzeile p { margin: 0; font-size: 0.88rem; color: var(--muted); }
   .kopfzeile b { color: var(--ink); font-variant-numeric: tabular-nums; }
 
-  .export { display: flex; gap: 0.35rem; }
+  .beschreibung { margin: 0.4rem 0 0.9rem; font-size: 0.85rem; color: var(--ink-2); text-wrap: pretty; }
+
+  .export { display: flex; flex-wrap: wrap; gap: 0.35rem; }
 
   .export button {
+    min-height: 2.25rem;
     padding: 0.3rem 0.8rem;
     font: inherit;
-    font-size: 0.82rem;
+    font-size: 0.84rem;
     font-weight: 600;
     color: var(--ink-2);
     background: var(--surface);
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-input);
     border-radius: 0.4rem;
     cursor: pointer;
   }
 
-  .export button:hover { border-color: var(--accent); color: var(--accent); }
+  .export button:hover { border-color: var(--accent); color: var(--accent-strong); }
 
   .explorer th button {
+    min-height: 2rem;
     padding: 0;
     font: inherit;
     font-size: inherit;
@@ -157,17 +216,17 @@ const z = eine('SELECT COUNT(*) AS n FROM race_result')
   }
 
   .explorer th button:hover { color: var(--ink); }
-  .explorer th button.sortiert { color: var(--accent); }
-  .explorer th i { font-style: normal; margin-left: 0.2rem; }
   .explorer td a { color: var(--ink); font-weight: 600; text-decoration: none; }
-  .explorer td a:hover { color: var(--accent); }
+  .explorer td a:hover { color: var(--accent); text-decoration: underline; }
+
+  .mehr-zeilen { margin-top: 0.75rem; font-size: 0.86rem; color: var(--muted); }
 
   .explorer .hinweis,
   .explorer .status,
   .explorer .fehler {
     margin-top: 1rem;
     padding: 0.8rem 1rem;
-    font-size: 0.86rem;
+    font-size: 0.88rem;
     background: var(--surface-2);
     border: 1px solid var(--border);
     border-radius: 0.5rem;
@@ -193,9 +252,9 @@ const z = eine('SELECT COUNT(*) AS n FROM race_result')
   .frage > label {
     display: block;
     margin-bottom: 0.4rem;
-    font-size: 0.64rem;
+    font-size: 0.75rem;
     font-weight: 700;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--muted);
   }
@@ -205,16 +264,17 @@ const z = eine('SELECT COUNT(*) AS n FROM race_result')
   .frage input {
     flex: 1;
     min-width: 0;
+    min-height: 2.5rem;
     padding: 0.55rem 0.75rem;
     font: inherit;
     color: var(--ink);
     background: var(--surface-2);
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-input);
     border-radius: 0.45rem;
     appearance: none;
   }
 
-  .frage input:focus { border-color: var(--accent); }
+  .frage input:focus-visible { border-color: var(--accent); outline: 2px solid var(--accent); outline-offset: 1px; }
 
   .frage button {
     flex: none;
@@ -228,9 +288,12 @@ const z = eine('SELECT COUNT(*) AS n FROM race_result')
     cursor: pointer;
   }
 
-  .verstanden { margin-top: 0.75rem; font-size: 0.85rem; }
+  .verstanden { margin-top: 0.75rem; font-size: 0.86rem; }
   .verstanden p { margin: 0 0 0.3rem; color: var(--ink-2); }
+  .verstanden ul { margin: 0 0 0.5rem; padding-left: 1.1rem; }
+  .verstanden li { color: var(--ink); }
+  .verstanden li span { color: var(--muted); }
   .verstanden b { color: var(--ink); }
-  .verstanden .luecke { color: var(--warn); }
-  .verstanden .quelle { font-size: 0.78rem; color: var(--muted); text-wrap: pretty; }
+  .verstanden .luecke { color: var(--warn); font-weight: 600; }
+  .verstanden .quelle { font-size: 0.8rem; color: var(--muted); text-wrap: pretty; }
 </style>
