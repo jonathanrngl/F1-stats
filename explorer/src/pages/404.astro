@@ -1,0 +1,117 @@
+---
+/**
+ * Die Fehlerseite. GitHub Pages liefert sie unter jeder Adresse aus, die es
+ * nicht gibt – vorher stand dort die nackte Meldung von GitHub, ohne
+ * Navigation und ohne Weg zurück.
+ *
+ * Die meisten falschen Adressen sind fast richtig: ein Tippfehler im Namen,
+ * ein alter Link auf /drivers/hamilton/. Aus dem Pfad wird deshalb eine
+ * Suchanfrage, und die Treffer stehen gleich da. Das geschieht im Browser,
+ * denn die Seite ist für alle falschen Adressen dieselbe Datei.
+ */
+import Seite from '../layouts/Seite.astro'
+import { pfad } from '../lib/db.js'
+
+const WEITER = [
+  { weg: '/preview/', titel: 'Next race' },
+  { weg: '/seasons/', titel: 'Seasons' },
+  { weg: '/races/', titel: 'Races' },
+  { weg: '/drivers/', titel: 'Drivers' },
+  { weg: '/teams/', titel: 'Teams' },
+  { weg: '/records/', titel: 'Records' },
+]
+---
+
+<Seite titel="Page not found" beschreibung="There is no page at this address." ohneIndex>
+  <header class="seitenkopf-schlicht">
+    <p class="oberzeile">Error 404</p>
+    <h1>Off the track</h1>
+    <p class="lead">
+      There is no page at <code data-pfad>this address</code>. It may have moved, or the link
+      has a typo in it.
+    </p>
+  </header>
+
+  <section class="abschnitt" data-vorschlaege hidden>
+    <div class="abschnitt-kopf"><div><h2>Did you mean</h2></div></div>
+    <ul class="vorschlaege" data-liste></ul>
+  </section>
+
+  <section class="abschnitt">
+    <div class="abschnitt-kopf"><div><h2>Or start from here</h2></div></div>
+    <ul class="weiter">
+      {WEITER.map((w) => (
+        <li><a class="karte" href={pfad.seite(w.weg)}>{w.titel} →</a></li>
+      ))}
+    </ul>
+  </section>
+</Seite>
+
+<script>
+  import { ARTEN, anfrageAusPfad, vorschlaege } from '../lib/suche.js'
+
+  const BASIS = import.meta.env.BASE_URL.replace(/\/$/, '')
+  const weg = decodeURIComponent(window.location.pathname)
+  const code = document.querySelector('[data-pfad]')
+  if (code) code.textContent = weg
+
+  const ohneBasis = weg.slice(BASIS.length)
+  const abschnitt = document.querySelector<HTMLElement>('[data-vorschlaege]')
+  const liste = document.querySelector<HTMLElement>('[data-liste]')
+
+  // Den Index nur holen, wenn im Pfad überhaupt etwas zu raten steht.
+  if (anfrageAusPfad(ohneBasis) && abschnitt && liste) {
+    fetch(`${BASIS}/data/suche.json`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then((index) => {
+        const gefunden = vorschlaege(index, ohneBasis)
+        if (!gefunden.length) return
+        liste.replaceChildren(
+          ...gefunden.map((e) => {
+            const li = document.createElement('li')
+            const a = Object.assign(document.createElement('a'), {
+              className: 'karte',
+              href: `${BASIS}/${ARTEN[e.a as keyof typeof ARTEN].pfad}/${e.i}/`,
+            })
+            const name = Object.assign(document.createElement('b'), { textContent: e.n })
+            const art = Object.assign(document.createElement('span'), {
+              textContent: ARTEN[e.a as keyof typeof ARTEN].label,
+            })
+            a.append(name, art)
+            li.append(a)
+            return li
+          }),
+        )
+        abschnitt.hidden = false
+      })
+      // Ohne Index bleibt es bei den festen Verweisen darunter – die reichen.
+      .catch(() => {})
+  }
+</script>
+
+<style>
+  .seitenkopf-schlicht { margin-bottom: 2.5rem; }
+  [data-vorschlaege][hidden] { display: none; }
+  .seitenkopf-schlicht code {
+    padding: 0.1em 0.35em;
+    font-size: 0.9em;
+    word-break: break-all;
+    background: var(--accent-wash);
+    border-radius: 0.3rem;
+  }
+
+  .vorschlaege,
+  .weiter {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(11rem, 100%), 1fr));
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* :global – die Vorschläge schreibt erst das Skript, ohne Astros Kennung für diese Seite. */
+  .vorschlaege :global(.karte),
+  .weiter .karte { display: grid; gap: 0.15rem; height: 100%; font-weight: 650; color: var(--ink); }
+  .vorschlaege :global(span) { font-size: 0.8rem; font-weight: 500; color: var(--muted); }
+</style>

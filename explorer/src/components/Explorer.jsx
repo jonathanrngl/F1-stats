@@ -372,7 +372,9 @@ export default function Explorer({ groesse = '' }) {
         </p>
       )}
 
-      <div className="tabelle">
+      {/* Ab 25 Zeilen mit fester Höhe und klebendem Kopf, wie auf den Teamseiten –
+          sonst ist die Sortierung nach dem ersten Bildschirm aus dem Blick. */}
+      <div className={`tabelle${Math.min(sichtbar, ergebnis.reihen.length) > 25 ? ' lang' : ''}`}>
         <table>
           <thead>
             <tr>

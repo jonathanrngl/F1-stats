@@ -177,6 +177,26 @@ async function pruefeAlles() {
     pruefe('genau eine Variante sichtbar', (await p.locator('.whatif-variante:not([hidden])').count()) === 1)
   })
 
+  /*
+   * Saisons ohne Punkte: F1DB führt sie nicht in der Wertung, gefahren wurden
+   * sie trotzdem. Senna 1994 fehlte in seiner eigenen Tabelle, Minardi 1985.
+   */
+  await schritt('Saisons ohne Punkte', '/drivers/ayrton-senna/', {}, async (p) => {
+    pruefe('Senna 1994 in der Saisontabelle', (await p.locator('#saisons tbody').textContent()).includes('1994'))
+  })
+  await schritt('Team-Saisons ohne Punkte', '/teams/minardi/', {}, async (p) => {
+    pruefe('Minardi 1985 in der Saisontabelle', (await p.locator('#saisons tbody').textContent()).includes('1985'))
+  })
+
+  // Fehlerseite: unter einer falschen Adresse die eigene Seite, nicht GitHubs.
+  await schritt('Fehlerseite', '/drivers/lewis-hamiltn/', {}, async (p) => {
+    pruefe('Fehlerseite hat die Navigation', (await p.locator('nav[aria-label="Main navigation"]').count()) === 1)
+    pruefe('Fehlerseite nennt die Adresse', (await p.locator('[data-pfad]').textContent()).includes('/drivers/lewis-hamiltn/'))
+    const vorschlag = p.locator('[data-liste] a[href$="/drivers/lewis-hamilton/"]')
+    await vorschlag.waitFor({ timeout: 5000 })
+    pruefe('Fehlerseite schlägt Lewis Hamilton vor', (await vorschlag.count()) === 1)
+  })
+
   await browser.close()
   srv.close()
 

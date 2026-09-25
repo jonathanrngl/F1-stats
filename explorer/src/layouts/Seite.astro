@@ -26,9 +26,11 @@ interface Props {
   strukturiert?: object[]
   /** Pfade für die Brotkrumen, vom Allgemeinen zum Besonderen, ohne die Seite selbst. */
   brotkrumen?: { name: string; pfad: string }[]
+  /** Nicht in Suchmaschinen – für die Fehlerseite, die unter jeder falschen Adresse steht. */
+  ohneIndex?: boolean
 }
 
-const { titel, beschreibung, strukturiert = [], brotkrumen = [] } = Astro.props
+const { titel, beschreibung, strukturiert = [], brotkrumen = [], ohneIndex = false } = Astro.props
 
 /*
  * Die Leiste zerfiel in zwei Arten von Punkten, und mit zwölf davon lief sie
@@ -118,7 +120,7 @@ const ldText = ld.length ? JSON.stringify(ld.length === 1 ? ld[0] : ld).replace(
     <meta name="theme-color" content="#111113" />
     <title>{seitentitel}</title>
     <meta name="description" content={beschreibung} />
-    <link rel="canonical" href={kanonisch} />
+    {ohneIndex ? <meta name="robots" content="noindex" /> : <link rel="canonical" href={kanonisch} />}
     <link rel="sitemap" type="application/xml" href={`${BASIS}/sitemap.xml`} />
     <link rel="alternate" type="application/atom+xml" title="Formula 1 Statistics – changes" href={`${BASIS}/feed.xml`} />
     <meta property="og:site_name" content={MARKE} />

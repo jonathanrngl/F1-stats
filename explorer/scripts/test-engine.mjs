@@ -44,6 +44,8 @@ import { naechstesRennen, standVorRennen, titelKannFallen } from '../src/engine/
 import { uebersetze } from '../src/lib/frage.js'
 import { alsAdresse, ausAdresse, rechne, verzeichnis } from '../src/lib/abfrage.js'
 import { wuerfel } from '../src/lib/wuerfel.js'
+import { anfrageAusPfad, vorschlaege } from '../src/lib/suche.js'
+import { suchindex } from '../src/lib/suchindex.js'
 
 // fileURLToPath statt .pathname: Dort bliebe ein Leerzeichen im Pfad als %20 stehen.
 const HIER = path.dirname(fileURLToPath(import.meta.url))
@@ -1030,6 +1032,28 @@ const einzelwert = (sql, ...p) => db.prepare(sql).get(...p)
     einzelwert('SELECT COUNT(*) AS n FROM sprint_result WHERE position = 1').n)
 }
 console.log(`   ✓ Fragen übersetzt und gegen SQL gerechnet`)
+
+// -------------------------------------------------- Fehlerseite
+
+console.log('\n16. Vorschläge auf der Fehlerseite')
+
+// Nichts zu raten: die Startseite und die Übersichten selbst.
+for (const weg of ['/', '', '/drivers/', '/races/index.html']) gleich(`Pfad ${weg || '(leer)'} ergibt keine Anfrage`, anfrageAusPfad(weg), '')
+gleich('Jahr aus zwei Ziffern', anfrageAusPfad('/races/monaco-grand-prix-88/'), 'mona grand prix 1988')
+gleich('Jahr 20xx', anfrageAusPfad('/races/bahrain-grand-prix-24/'), 'bahr grand prix 2024')
+gleich('Endung und Unterstrich', anfrageAusPfad('/drivers/michael_schumacher.html'), 'mich schu')
+
+{
+  const index = suchindex()
+  const erster = (weg) => vorschlaege(index, weg)[0]?.i
+  gleich('Tippfehler hinten: hamiltn', erster('/drivers/lewis-hamiltn/'), 'lewis-hamilton')
+  gleich('Tippfehler im vierten Buchstaben: ferari', vorschlaege(index, '/teams/ferari/').some((e) => e.i === 'ferrari'), true)
+  gleich('falsche Art vorn: /fahrer/senna', erster('/fahrer/senna'), 'ayrton-senna')
+  gleich('Rennen mit Kurzjahr', erster('/races/monaco-grand-prix-88/'), 'monaco-grand-prix-1988')
+  gleich('Akzente im Pfad: /drivers/pérez/', erster('/drivers/pérez/'), 'sergio-perez')
+  gleich('Übersicht ohne Vorschlag', vorschlaege(index, '/drivers/').length, 0)
+}
+console.log('   ✓ Pfade gedeutet und gegen den Suchindex gefunden')
 
 db.close()
 

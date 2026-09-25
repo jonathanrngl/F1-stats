@@ -104,10 +104,21 @@ const zeitraum =
       : `${rennen[0].year}–${rennen.at(-1).year}`
 
 /*
+ * Die Saisons kommen aus den Rennen, die Wertung wird nur dazugesucht. F1DB
+ * führt in der Wertung nur, wer Punkte holte – aus ihr allein fehlten 1.585
+ * Fahrer-Saisons, darunter Sennas letzte, 1994 bei Williams. So wie in
+ * lib/profil.js.
+ */
+const wmProJahr = new Map(titel.seasons.map((s) => [s.year, s]))
+const saisons = [...new Set(rennen.map((r) => r.year))].map(
+  (year) => wmProJahr.get(year) ?? { year, position: null, points: 0, won: 0 },
+)
+
+/*
  * Die Saisonzahlen fuer das Bild – aus denselben Quellen wie die Tabelle
  * darunter, damit Bild und Tabelle nicht auseinanderlaufen koennen.
  */
-const karriere = titel.seasons.map((s) => {
+const karriere = saisons.map((s) => {
   const jahrRennen = rennen.filter((r) => r.year === s.year)
   return {
     jahr: s.year,
@@ -132,7 +143,7 @@ const titelJahre = titel.seasons.filter((s) => s.won).map((s) => s.year)
 const ziele = [
   { id: 'zahlen', label: 'Numbers' },
   karriere.length > 1 && { id: 'karriere', label: 'Career' },
-  titel.seasons.length > 0 && { id: 'saisons', label: 'Seasons' },
+  saisons.length > 0 && { id: 'saisons', label: 'Seasons' },
   duelle.length > 0 && { id: 'teamkollegen', label: 'Team-mates' },
   strecken.length > 0 && { id: 'strecken', label: 'Circuits' },
 ].filter(Boolean)
@@ -226,7 +237,7 @@ const ziele = [
     </section>
   )}
 
-  {titel.seasons.length > 0 && (
+  {saisons.length > 0 && (
     <section class="abschnitt" id="saisons">
       <div class="abschnitt-kopf"><div><h2>Season by season</h2></div></div>
       <div class="tabelle">
@@ -239,7 +250,7 @@ const ziele = [
             </tr>
           </thead>
           <tbody>
-            {titel.seasons.map((s) => {
+            {saisons.map((s) => {
               const jahrRennen = rennen.filter((r) => r.year === s.year)
               return (
                 <tr class={s.won ? 'meister' : undefined}>
