@@ -9,7 +9,7 @@
 import Seite from '../../layouts/Seite.astro'
 import Karriere from '../../components/Karriere.astro'
 import Sprung from '../../components/Sprung.astro'
-import { ein, prozent, zahl } from '../../lib/format.js'
+import { ein, prozent, raenge, zahl } from '../../lib/format.js'
 import { db, pfad } from '../../lib/db.js'
 import { land } from '../../lib/laender.js'
 import {
@@ -162,8 +162,8 @@ const ziele = [
       <div class="abschnitt-kopf"><div><h2>Drivers who won with it</h2></div></div>
       <div class="rangkarte sieger">
         <ol class="rangliste">
-          {sieger.map((f) => (
-            <li>
+          {raenge(sieger, (f) => f.siege).map((f) => (
+            <li data-rang={f.rang} class={f.vorn ? 'vorn' : undefined}>
               <a href={pfad.fahrer(f.id)}>{f.name}</a>
               <b>{f.siege}</b>
             </li>

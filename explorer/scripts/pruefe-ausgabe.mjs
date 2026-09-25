@@ -1,7 +1,11 @@
 /**
- * Prüfung der gebauten Ausgabe auf zusammengeklebten Text.
+ * Prüfung der gebauten Ausgabe: zusammengeklebter Text und tote Verweise.
  *
  *   node scripts/pruefe-ausgabe.mjs [verzeichnis]
+ *
+ * Tote Verweise: Jeder seiteninterne Link muss auf eine Datei zeigen, die der
+ * Bau erzeugt hat. Eine Seite, die auf /drivers/<id>/ verlinkt, obwohl es für
+ * diesen Fahrer keine Seite gibt, fällt sonst erst dem Besucher auf.
  *
  * In JSX endet eine Zeile auf ein Wort und die nächste beginnt mit einem
  * Ausdruck – dazwischen verschluckt der Übersetzer das Leerzeichen, und auf der
@@ -60,9 +64,40 @@ const seiten = sammle(VERZEICHNIS)
 /** Je Fundstelle die Zahl der betroffenen Seiten und ein Beispiel. */
 const funde = new Map()
 
+/*
+ * Der Vorsatz, unter dem die Seite liegt. Verweise ohne ihn zeigten auf GitHub
+ * Pages an der Seite vorbei auf die Wurzel der Domain – auch das ist tot.
+ */
+const BASIS = '/F1-stats/'
+const gibtEs = new Map()
+const vorhanden = (weg) => {
+  if (!gibtEs.has(weg)) {
+    const rel = decodeURIComponent(weg.slice(BASIS.length))
+    const ziel = path.join(VERZEICHNIS, rel)
+    gibtEs.set(
+      weg,
+      fs.existsSync(ziel) && (fs.statSync(ziel).isFile() || fs.existsSync(path.join(ziel, 'index.html'))),
+    )
+  }
+  return gibtEs.get(weg)
+}
+/** Tote Verweise: Ziel → Zahl der Vorkommen und eine Seite als Beispiel. */
+const tot = new Map()
+
 for (const datei of seiten) {
-  const html = fs
-    .readFileSync(datei, 'utf8')
+  const roh = fs.readFileSync(datei, 'utf8')
+
+  for (const m of roh.matchAll(/\b(?:href|src)="(\/[^"#?]*)/g)) {
+    const weg = m[1]
+    if (weg.startsWith('//')) continue
+    if (!weg.startsWith(BASIS) || !vorhanden(weg)) {
+      const e = tot.get(weg) ?? { n: 0, seite: path.relative(VERZEICHNIS, datei).replace(/\\/g, '/') }
+      e.n++
+      tot.set(weg, e)
+    }
+  }
+
+  const html = roh
     .replace(/<script[\s\S]*?<\/script>/g, ' ')
     .replace(/<style[\s\S]*?<\/style>/g, ' ')
 
@@ -85,19 +120,31 @@ for (const datei of seiten) {
   }
 }
 
-console.log(`${seiten.length} Seiten geprüft.`)
+console.log(`${seiten.length} Seiten geprüft, ${gibtEs.size} verschiedene Verweisziele.`)
+
+let fehlgeschlagen = false
 
 if (funde.size === 0) {
   console.log('Kein zusammengeklebter Text.')
-  process.exit(0)
+} else {
+  fehlgeschlagen = true
+  const sortiert = [...funde.values()].sort((a, b) => b.n - a.n)
+  console.error(`\n${sortiert.length} Stelle(n) mit fehlendem Leerzeichen:\n`)
+  for (const f of sortiert) {
+    console.error(`  ${f.n}× ${f.stelle}   (${f.name})`)
+    console.error(`     …${f.umfeld}…`)
+    console.error(`     z. B. ${f.seite}\n`)
+  }
+  console.error('Im Quelltext fehlt dort ein {\' \'} zwischen Wort und Ausdruck.')
 }
 
-const sortiert = [...funde.values()].sort((a, b) => b.n - a.n)
-console.error(`\n${sortiert.length} Stelle(n) mit fehlendem Leerzeichen:\n`)
-for (const f of sortiert) {
-  console.error(`  ${f.n}× ${f.stelle}   (${f.name})`)
-  console.error(`     …${f.umfeld}…`)
-  console.error(`     z. B. ${f.seite}\n`)
+if (tot.size === 0) {
+  console.log('Kein toter Verweis.')
+} else {
+  fehlgeschlagen = true
+  const sortiert = [...tot.entries()].sort((a, b) => b[1].n - a[1].n)
+  console.error(`\n${sortiert.length} tote(r) Verweis(e):\n`)
+  for (const [weg, e] of sortiert.slice(0, 30)) console.error(`  ${e.n}× ${weg}   (z. B. auf ${e.seite})`)
 }
-console.error('Im Quelltext fehlt dort ein {\' \'} zwischen Wort und Ausdruck.')
-process.exit(1)
+
+process.exit(fehlgeschlagen ? 1 : 0)

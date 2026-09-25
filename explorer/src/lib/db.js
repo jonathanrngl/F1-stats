@@ -52,6 +52,36 @@ export function deckung() {
   )
 }
 
+// ------------------------------------------------------------------ Herkunft
+
+let herkunftCache = null
+
+/**
+ * Worauf jede Zahl der Seite beruht: die F1DB-Fassung und das jüngste Rennen
+ * mit Ergebnis. Steht im Fuß jeder Seite und in /data/version.json.
+ *
+ * Bewusst nicht das Datum des Bauens. Die Seite entsteht aus einer gepinnten
+ * Fassung; an welchem Tag sie gebaut wurde, sagt nichts darüber, wie aktuell
+ * ihre Zahlen sind.
+ */
+export function herkunft() {
+  if (herkunftCache) return herkunftCache
+  const meta = Object.fromEntries(alle('SELECT key, value FROM meta').map((z) => [z.key, z.value]))
+  const stand = eine(`
+    SELECT r.id, r.year AS jahr, r.round AS runde, r.date AS datum, g.name AS grandPrix,
+           COALESCE(g.full_name, g.name || ' Grand Prix') AS grandPrixVoll
+      FROM race r JOIN grand_prix g ON g.id = r.grand_prix_id
+     WHERE EXISTS (SELECT 1 FROM race_result rr WHERE rr.race_id = r.id)
+     ORDER BY r.date DESC, r.round DESC
+     LIMIT 1`)
+  herkunftCache = {
+    version: meta.f1db_version ?? null,
+    pruefsumme: meta.f1db_sha256 ?? null,
+    stand: stand ?? null,
+  }
+  return herkunftCache
+}
+
 // ------------------------------------------------------------------ Adressen
 
 /** Aus einem Namen ein Adresssegment machen – nur als Rückfall, wenn keine Kennung vorliegt. */
@@ -154,15 +184,23 @@ export function streckenListe() {
      ORDER BY rennen DESC, z.name`)
 }
 
+/*
+ * Der Sieger eines Rennens. In den 1950ern teilten sich zwei Fahrer ein Auto
+ * und damit den Sieg; dann stehen beide da, in der Reihenfolge des Ergebnisses.
+ * Vorher nahm `LIMIT 1` ohne Sortierung irgendeinen – welchen, entschied die
+ * Datenbank.
+ */
 export function rennenListe(jahr) {
   return alle(
-    `SELECT r.id, r.year AS jahr, r.round AS runde, g.name AS name, r.date AS datum,
-            r.circuit_id AS streckeId, z.name AS strecke, c.ioc AS land,
+    `SELECT r.id, r.year AS jahr, r.round AS runde, g.name AS name,
+            COALESCE(g.full_name, g.name || ' Grand Prix') AS nameVoll, r.date AS datum,
+            r.circuit_id AS streckeId, z.name AS strecke, c.ioc AS land, r.had_sprint AS mitSprint,
             r.drivers_title_decider AS titelentscheidung,
-            (SELECT d.display_name FROM race_result rr JOIN driver d ON d.id = rr.driver_id
-              WHERE rr.race_id = r.id AND rr.position = 1 LIMIT 1) AS sieger,
+            (SELECT GROUP_CONCAT(name, ' / ') FROM (
+               SELECT d.display_name AS name FROM race_result rr JOIN driver d ON d.id = rr.driver_id
+                WHERE rr.race_id = r.id AND rr.position = 1 ORDER BY rr.display_order)) AS sieger,
             (SELECT rr.driver_id FROM race_result rr
-              WHERE rr.race_id = r.id AND rr.position = 1 LIMIT 1) AS siegerId
+              WHERE rr.race_id = r.id AND rr.position = 1 ORDER BY rr.display_order LIMIT 1) AS siegerId
        FROM race r
        JOIN grand_prix g ON g.id = r.grand_prix_id
        JOIN circuit z ON z.id = r.circuit_id

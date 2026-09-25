@@ -1,7 +1,8 @@
 ---
-import { zahl } from '../../lib/format.js'
+import { alter, raenge, sekunden, zahl } from '../../lib/format.js'
 import Seite from '../../layouts/Seite.astro'
 import Sprung from '../../components/Sprung.astro'
+import Wahl from '../../components/Wahl.astro'
 import { pfad, db } from '../../lib/db.js'
 import {
   altersrekord, altersrekordMeister, groessteAufholjagden, laengsteKarrieren,
@@ -18,60 +19,55 @@ const knapp = zielabstand(d, 'knapp', N)
 const weit = zielabstand(d, 'weit', N)
 
 const ganz = (v) => zahl(Math.round(v))
-/** Ein Zielabstand: unter zehn Sekunden auf Tausendstel, darueber auf Zehntel. */
-const sekunden = (v) => (v < 10 ? v.toFixed(3) : v.toFixed(1)) + 's'
-const jahreAlt = (v) => {
-  const j = Math.floor(v)
-  const tage = Math.round((v - j) * 365.25)
-  return `${j}y ${tage}d`
-}
 const jahreSpanne = (v) => `${zahl(Math.round(v * 10) / 10)} years`
+
+/*
+ * Die Karrierewerte je Ära. „Die meisten Siege“ ist über 76 Jahre eine Frage
+ * der Kalenderlänge – Fangio fuhr 51 Rennen, Hamilton über 350. Innerhalb
+ * einer Ära vergleicht man Gleiches mit Gleichem, und die Frage „wer war in
+ * den 1980ern der Beste“ bekommt eine eigene Antwort.
+ *
+ * Gezählt wird, was im Zeitraum geschah, nicht die Karrieresumme derer, die
+ * darin fuhren.
+ */
+const AEREN = [
+  { wert: 'alle', label: 'All time' },
+  { wert: '1950', label: '1950–1969', von: 1950, bis: 1969 },
+  { wert: '1970', label: '1970–1989', von: 1970, bis: 1989 },
+  { wert: '1990', label: '1990–2009', von: 1990, bis: 2009 },
+  { wert: '2010', label: 'Since 2010', von: 2010 },
+]
 
 /*
  * Jeder Block nennt seine eigene Einheit und, wo nötig, seine Einschränkung.
  * Eine Bestenliste ohne Angabe, worüber sie zählt, ist eine Zahlenwand.
  */
-const bloecke = [
-  {
-    titel: 'Most wins',
-    liste: meisteSiege(d, N),
-    format: ganz,
-  },
-  {
-    titel: 'Most podiums',
-    liste: meistePodien(d, N),
-    format: ganz,
-  },
+const bloecke = (z) => [
+  { titel: 'Most wins', liste: meisteSiege(d, N, z), format: ganz },
+  { titel: 'Most podiums', liste: meistePodien(d, N, z), format: ganz },
   {
     titel: 'Most pole positions',
-    liste: meistePoles(d, N),
+    liste: meistePoles(d, N, z),
     format: ganz,
     hinweis: 'Fastest time in qualifying – not the grid position, which penalties shift.',
   },
   {
     titel: 'Most starts',
-    liste: meisteStarts(d, N),
+    liste: meisteStarts(d, N, z),
     format: ganz,
     hinweis: 'Starts are counted, not entries: a driver who did not qualify was not in the race.',
   },
-  {
-    titel: 'Most fastest laps',
-    liste: meisteSchnellsteRunden(d, N),
-    format: ganz,
-  },
-  {
-    titel: 'Most World Championships',
-    liste: meisteTitel(d, N),
-    format: ganz,
-  },
+  { titel: 'Most fastest laps', liste: meisteSchnellsteRunden(d, N, z), format: ganz },
+  { titel: 'Most World Championships', liste: meisteTitel(d, N, z), format: ganz },
   {
     titel: 'Most points scored in races',
-    liste: meistePunkte(d, N),
-    format: (v) => zahl(Math.round(v)),
+    liste: meistePunkte(d, N, z),
+    format: ganz,
     hinweis:
-      'Comparable only up to a point: the points system has changed more than a dozen times since 1950, and until 1990 some of the points lapsed as dropped scores.',
+      'Comparable only up to a point: the race points scale has changed seven times since 1950, and until 1990 some of the points lapsed as dropped scores.',
   },
 ]
+const jeAera = AEREN.map((a) => ({ ...a, bloecke: bloecke({ von: a.von, bis: a.bis }) }))
 
 const serien = [
   { titel: 'Longest winning streak', liste: laengsteSerien(d, 'siege', N) },
@@ -80,7 +76,7 @@ const serien = [
   { titel: 'Longest finishing streak', liste: laengsteSerien(d, 'zielankuenfte', N) },
 ]
 
-const alter = [
+const altersListen = [
   { titel: 'Youngest winners', liste: altersrekord(d, 'sieg', 'jung', N) },
   { titel: 'Oldest winners', liste: altersrekord(d, 'sieg', 'alt', N) },
   { titel: 'Youngest pole-sitters', liste: altersrekord(d, 'pole', 'jung', N) },
@@ -96,6 +92,9 @@ const pausen = laengstePauseZwischenSiegen(d, N)
 const teamSiege = teamRekorde(d, 'siege', N)
 const teamTitel = teamRekorde(d, 'titel', N)
 
+/** Gleich ist beim Alter derselbe Tag, nicht derselbe Bruchteil eines Jahres. */
+const tage = (e) => e.alter.jahre * 400 + e.alter.tage
+
 const ziele = [
   { id: 'fahrer', label: 'Career totals' },
   { id: 'serien', label: 'Streaks' },
@@ -108,7 +107,7 @@ const ziele = [
 
 <Seite
   titel="Formula 1 records – the records set since 1950"
-  beschreibung="Most wins, podiums and pole positions, longest streaks, youngest and oldest record holders – every entry linked to the race."
+  beschreibung="Most wins, podiums and pole positions, all time or by era, longest streaks, youngest and oldest record holders – every entry linked to the race."
 >
   <header class="seitenkopf">
     <div>
@@ -117,6 +116,7 @@ const ziele = [
       <p class="lead">
         Every all-time mark since 1950, computed from the race results rather than copied out of
         a curated list. Each entry links to the driver and, where there is one, to the race.
+        Equal values share a rank: “=1” means joint first.
       </p>
     </div>
   </header>
@@ -124,23 +124,31 @@ const ziele = [
   <Sprung ziele={ziele} />
 
   <section class="abschnitt" id="fahrer">
-    <div class="abschnitt-kopf"><div><h2>Career totals</h2></div></div>
-    <div class="raster">
-      {bloecke.map((b) => (
-        <div class="rangkarte">
-          <h3>{b.titel}</h3>
-          {b.hinweis && <p class="unter">{b.hinweis}</p>}
-          <ol class="rangliste">
-            {b.liste.map((e) => (
-              <li>
-                <a href={pfad.fahrer(e.driverId)}>{e.name}</a>
-                <b>{b.format(e.wert)}</b>
-              </li>
-            ))}
-          </ol>
-        </div>
-      ))}
+    <div class="abschnitt-kopf">
+      <div>
+        <h2>Career totals</h2>
+        <p>All time, or only what happened within one era.</p>
+      </div>
     </div>
+    <Wahl name="aera" legende="Era" optionen={AEREN} vorwahl="alle" />
+    {jeAera.map((a) => (
+      <div class="raster" data-wahl="aera" data-wahl-wert={a.wert} hidden={a.wert !== 'alle'}>
+        {a.bloecke.map((b) => (
+          <div class="rangkarte">
+            <h3>{b.titel}{a.von && <span class="sr-only">, {a.label}</span>}</h3>
+            {b.hinweis && <p class="unter">{b.hinweis}</p>}
+            <ol class="rangliste">
+              {raenge(b.liste).map((e) => (
+                <li data-rang={e.rang} class={e.vorn ? 'vorn' : undefined}>
+                  <a href={pfad.fahrer(e.driverId)}>{e.name}</a>
+                  <b>{b.format(e.wert)}</b>
+                </li>
+              ))}
+            </ol>
+          </div>
+        ))}
+      </div>
+    ))}
   </section>
 
   <section class="abschnitt" id="serien">
@@ -155,8 +163,8 @@ const ziele = [
         <div class="rangkarte">
           <h3>{s.titel}</h3>
           <ol class="rangliste">
-            {s.liste.map((e) => (
-              <li>
+            {raenge(s.liste).map((e) => (
+              <li data-rang={e.rang} class={e.vorn ? 'vorn' : undefined}>
                 <span class="wer">
                   <a href={pfad.fahrer(e.driverId)}>{e.name}</a>
                   <i>{e.rennen}</i>
@@ -181,8 +189,8 @@ const ziele = [
       <div class="rangkarte">
         <h3>Closest finishes</h3>
         <ol class="rangliste">
-          {knapp.map((e) => (
-            <li>
+          {raenge(knapp).map((e) => (
+            <li data-rang={e.rang} class={e.vorn ? 'vorn' : undefined}>
               <span class="wer">
                 <a href={pfad.fahrer(e.driverId)}>{e.name}</a>
                 <i><a href={pfad.rennen(e.raceId)}>{e.rennen}</a></i>
@@ -196,8 +204,8 @@ const ziele = [
       <div class="rangkarte">
         <h3>Biggest winning margins</h3>
         <ol class="rangliste">
-          {weit.map((e) => (
-            <li>
+          {raenge(weit).map((e) => (
+            <li data-rang={e.rang} class={e.vorn ? 'vorn' : undefined}>
               <span class="wer">
                 <a href={pfad.fahrer(e.driverId)}>{e.name}</a>
                 <i><a href={pfad.rennen(e.raceId)}>{e.rennen}</a></i>
@@ -212,11 +220,11 @@ const ziele = [
         <h3>Grand Slams</h3>
         <p class="unter">Pole position, win, fastest lap and every lap led – all in one race.</p>
         <ol class="rangliste">
-          {slams.map((e) => (
-            <li>
+          {raenge(slams).map((e) => (
+            <li data-rang={e.rang} class={e.vorn ? 'vorn' : undefined}>
               <span class="wer">
                 <a href={pfad.fahrer(e.driverId)}>{e.name}</a>
-                <i><a href={pfad.rennen(e.raceId)}>most recently</a></i>
+                <i>Latest: <a href={pfad.rennen(e.raceId)}>{e.rennen}</a></i>
               </span>
               <b>{e.wert}</b>
             </li>
@@ -226,8 +234,8 @@ const ziele = [
     </div>
     <p class="fussnote">
       The Grand Slam is the one figure on this page that is not recalculated here: “led every
-      lap” appears in no result row, and the lap data that would settle it is not loaded. It is
-      taken from F1DB as it stands.
+      lap” appears in no result row, and lap data exists only for part of the races since 1996.
+      It is taken from F1DB as it stands.
     </p>
   </section>
 
@@ -235,27 +243,32 @@ const ziele = [
     <div class="abschnitt-kopf">
       <div>
         <h2>Age</h2>
-        <p>Drivers whose date of birth is not recorded are missing from these lists – a missing date is not an age of zero.</p>
+        <p>
+          Exact to the day: full years, then the days since the last birthday. Drivers whose date
+          of birth is not recorded are missing from these lists – a missing date is not an age of
+          zero.
+        </p>
       </div>
     </div>
     <div class="raster">
-      {alter.map((a) => (
+      {altersListen.map((a) => (
         <div class="rangkarte">
           <h3>{a.titel}</h3>
           <ol class="rangliste">
-            {a.liste.map((e) => (
-              <li>
+            {raenge(a.liste, tage).map((e) => (
+              <li data-rang={e.rang} class={e.vorn ? 'vorn' : undefined}>
                 <span class="wer">
                   <a href={pfad.fahrer(e.driverId)}>{e.name}</a>
                   <i>{e.raceId ? <a href={pfad.rennen(e.raceId)}>{e.rennen}</a> : e.rennen}</i>
                 </span>
-                <b>{jahreAlt(e.wert)}</b>
+                <b>{alter(e.alter)}</b>
               </li>
             ))}
           </ol>
         </div>
       ))}
     </div>
+    <p class="fussnote">“18y 228d” reads as 18 years and 228 days.</p>
   </section>
 
   <section class="abschnitt" id="aufholjagden">
@@ -273,8 +286,8 @@ const ziele = [
         <h3>Wins from the back of the grid</h3>
         <p class="unter">The grid position the race was won from.</p>
         <ol class="rangliste">
-          {aufholjagden.map((e) => (
-            <li>
+          {raenge(aufholjagden).map((e) => (
+            <li data-rang={e.rang} class={e.vorn ? 'vorn' : undefined}>
               <span class="wer">
                 <a href={pfad.fahrer(e.driverId)}>{e.name}</a>
                 <i><a href={pfad.rennen(e.raceId)}>{e.rennen}</a></i>
@@ -289,8 +302,8 @@ const ziele = [
         <h3>Most positions gained in a race</h3>
         <p class="unter">Grid position minus finishing position, classified races only.</p>
         <ol class="rangliste">
-          {plaetze.map((e) => (
-            <li>
+          {raenge(plaetze).map((e) => (
+            <li data-rang={e.rang} class={e.vorn ? 'vorn' : undefined}>
               <span class="wer">
                 <a href={pfad.fahrer(e.driverId)}>{e.name}</a>
                 <i><a href={pfad.rennen(e.raceId)}>{e.rennen}</a></i>
@@ -305,8 +318,8 @@ const ziele = [
         <h3>Longest careers</h3>
         <p class="unter">From the first start to the last, breaks included.</p>
         <ol class="rangliste">
-          {karrieren.map((e) => (
-            <li>
+          {raenge(karrieren).map((e) => (
+            <li data-rang={e.rang} class={e.vorn ? 'vorn' : undefined}>
               <span class="wer">
                 <a href={pfad.fahrer(e.driverId)}>{e.name}</a>
                 <i>{e.rennen}</i>
@@ -320,8 +333,8 @@ const ziele = [
       <div class="rangkarte">
         <h3>Longest gap between wins</h3>
         <ol class="rangliste">
-          {pausen.map((e) => (
-            <li>
+          {raenge(pausen).map((e) => (
+            <li data-rang={e.rang} class={e.vorn ? 'vorn' : undefined}>
               <span class="wer">
                 <a href={pfad.fahrer(e.driverId)}>{e.name}</a>
                 <i><a href={pfad.rennen(e.raceId)}>{e.rennen}</a></i>
@@ -340,16 +353,16 @@ const ziele = [
       <div class="rangkarte">
         <h3>Most wins</h3>
         <ol class="rangliste">
-          {teamSiege.map((t) => (
-            <li><a href={pfad.team(t.id)}>{t.name}</a><b>{t.wert}</b></li>
+          {raenge(teamSiege).map((t) => (
+            <li data-rang={t.rang} class={t.vorn ? 'vorn' : undefined}><a href={pfad.team(t.id)}>{t.name}</a><b>{t.wert}</b></li>
           ))}
         </ol>
       </div>
       <div class="rangkarte">
         <h3>Most constructors' titles</h3>
         <ol class="rangliste">
-          {teamTitel.map((t) => (
-            <li><a href={pfad.team(t.id)}>{t.name}</a><b>{t.wert}</b></li>
+          {raenge(teamTitel).map((t) => (
+            <li data-rang={t.rang} class={t.vorn ? 'vorn' : undefined}><a href={pfad.team(t.id)}>{t.name}</a><b>{t.wert}</b></li>
           ))}
         </ol>
       </div>
@@ -363,4 +376,6 @@ const ziele = [
     grid-template-columns: repeat(auto-fill, minmax(min(21rem, 100%), 1fr));
     gap: 1rem;
   }
+
+  .raster[hidden] { display: none; }
 </style>

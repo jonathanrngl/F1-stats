@@ -23,6 +23,15 @@ export const zahl = (n) => (n === null || n === undefined ? '–' : ZAHL.format(
  */
 export const ein = (n) => (n === null || n === undefined ? '–' : EINE_STELLE.format(n))
 
+const DREI_STELLEN = new Intl.NumberFormat('en-GB', { minimumFractionDigits: 3, maximumFractionDigits: 3 })
+
+/**
+ * Eine Streckenlänge: drei Nachkommastellen, wie sie die Formel 1 selbst
+ * angibt. Mit einer Stelle stand Baku als „6 km“ da – 6,003 km gerundet, und
+ * genau die drei Meter unterscheiden eine Streckenführung von der nächsten.
+ */
+export const km = (n) => (n === null || n === undefined ? '–' : `${DREI_STELLEN.format(n)} km`)
+
 /*
  * Zwei Datumsformen, und das ist Absicht: Im Fließtext liest sich der volle
  * Monat besser, in einer Tabelle mit tausend Zeilen kostet er Breite, ohne
@@ -55,6 +64,53 @@ export const datumKurz = (s) => (s ? KURZ.format(alsDatum(s)) : '–')
 export function prozent(x) {
   const v = x && typeof x === 'object' ? x.value : x
   return v === null || v === undefined ? '–' : `${Math.round(v * 100)}%`
+}
+
+/**
+ * Eine Zeit in Sekunden, mit Leerzeichen vor der Einheit – überall gleich.
+ * Unter zehn Sekunden auf Tausendstel, darüber auf Zehntel: Bei einem
+ * Zielabstand von 0,010 s ist jede Stelle die Geschichte, bei 312 s keine.
+ */
+export const sekunden = (s) =>
+  s === null || s === undefined ? '–' : `${s < 10 ? s.toFixed(3) : EINE_STELLE.format(Math.round(s * 10) / 10)} s`
+
+/**
+ * Millisekunden als Renn- oder Rundenzeit: „1:32:07.986“, „1:23.456“, „58.114“.
+ * Eine Stunde nur, wenn es eine gibt; unter einer Minute ohne Minuten.
+ */
+export function zeit(ms) {
+  if (ms === null || ms === undefined) return ''
+  const s = ms / 1000
+  const h = Math.floor(s / 3600)
+  const m = Math.floor((s % 3600) / 60)
+  const rest = (s % 60).toFixed(3)
+  if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${rest.padStart(6, '0')}`
+  if (m > 0) return `${m}:${rest.padStart(6, '0')}`
+  return rest
+}
+
+/** Ein Alter aus Jahren und Tagen: „18y 228d“. */
+export const alter = (a) => (!a ? '–' : `${a.jahre}y ${a.tage}d`)
+
+/**
+ * Ränge einer sortierten Liste, Gleichstand eingeschlossen.
+ *
+ * Vorher zählte ein CSS-Zähler durch: Schumacher und Hamilton, beide mit
+ * sieben Titeln, standen als 1 und 2 da, und nur der Erste bekam Gold. Jetzt
+ * teilen sich Gleiche den Rang und sagen es: [7, 7, 4] → „=1“, „=1“, „3“.
+ * `vorn` markiert alle auf Rang eins.
+ *
+ * Wer am Ende einer gekürzten Liste mit jemandem gleichauf liegt, der nicht
+ * mehr darin steht, bekommt kein „=“ – das lässt sich aus der Liste nicht sehen.
+ */
+export function raenge(liste, wert = (x) => x.wert) {
+  return liste.map((x, i) => {
+    let erster = i
+    while (erster > 0 && wert(liste[erster - 1]) === wert(x)) erster--
+    const geteilt =
+      (i > 0 && wert(liste[i - 1]) === wert(x)) || (i < liste.length - 1 && wert(liste[i + 1]) === wert(x))
+    return { ...x, rang: `${geteilt ? '=' : ''}${erster + 1}`, vorn: erster === 0 }
+  })
 }
 
 /**

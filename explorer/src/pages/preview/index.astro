@@ -2,24 +2,29 @@
 /**
  * Vorschau auf das nächste Rennen.
  *
- * Die Seite ist statisch. Was hier „das nächste Rennen“ heißt, war es zum
- * Zeitpunkt des Bauens – deshalb steht das Datum des Datenstands sichtbar
- * darunter, statt den Eindruck von Echtzeit zu erwecken.
+ * Die Seite ist statisch und hängt allein an den Daten: „Das nächste Rennen“
+ * ist das erste ohne Ergebnis in der gepinnten F1DB-Fassung. Wie viele Tage
+ * es noch sind, rechnet der Browser beim Ansehen (Countdown.astro); welche
+ * Fassung dahintersteht, steht sichtbar darunter.
  */
-import { datum, ein, plakette, prozent as proz, zahl } from '../../lib/format.js'
+import { datum, ein, km, plakette, prozent as proz, raenge, zahl } from '../../lib/format.js'
 import Seite from '../../layouts/Seite.astro'
 import Sprung from '../../components/Sprung.astro'
-import { db, pfad } from '../../lib/db.js'
+import Countdown from '../../components/Countdown.astro'
+import { db, herkunft, pfad } from '../../lib/db.js'
 import { land } from '../../lib/laender.js'
 import {
   circuitLeaders, circuitRaces, circuitSpecialists, circuitStats, circuitTeamLeaders,
 } from '../../engine/circuit.js'
 import {
-  feld, naechstesRennen, rekordeInReichweite, standVorRennen, streckenHistorie,
+  feld, naechstesRennen, rekordeInReichweite, standVorRennen, streckenHistorie, titelKannFallen, zeitplan,
 } from '../../engine/vorschau.js'
 
-const heute = new Date().toISOString().slice(0, 10)
-const rennen = naechstesRennen(db(), heute)
+const rennen = naechstesRennen(db())
+const quelle = herkunft()
+const sessions = rennen ? zeitplan(db(), rennen.id) : []
+/** Mit Uhrzeit als ISO-Zeitpunkt, sonst nur das Datum. */
+const zeitpunkt = (s) => (s.zeit ? `${s.datum}T${s.zeit.slice(0, 5)}Z` : s.datum)
 
 // Alles Weitere hängt am Rennen. Gibt es keines, bleibt die Seite eine
 // ehrliche Leermeldung statt einer Halde aus Platzhaltern.
@@ -41,26 +46,14 @@ const letzteHier = rennen
 
 const heimat = rennen ? land(rennen.demonym, rennen.land, rennen.ioc) : null
 
-/** Ganze Tage bis zum Rennen, gerechnet auf dem Datenstand. */
-const tageBis = rennen
-  ? Math.round((Date.parse(`${rennen.datum}T12:00:00Z`) - Date.parse(`${heute}T12:00:00Z`)) / 86400000)
-  : null
-
 const ART = { RACE: 'Permanent circuit', STREET: 'Street circuit', ROAD: 'Road course' }
 const RICHTUNG = { CLOCKWISE: 'clockwise', ANTI_CLOCKWISE: 'anti-clockwise' }
 
-/*
- * Kann der Fahrertitel hier schon fallen? Nur wenn der Vorsprung auf Platz 2
- * größer ist als alles, was nach diesem Rennen noch zu holen ist. Das ist die
- * notwendige Bedingung, nicht die hinreichende – die tatsächliche Rechnung
- * hängt an Streichresultaten und Gleichstandsregeln. Die Seite sagt deshalb
- * „kann“, nicht „wird“.
- */
+/* Kann der Fahrertitel hier fallen? Die Rechnung und ihre Grenzen: vorschau.js. */
 const fuehrender = stand?.fahrer?.[0] ?? null
 const zweiter = stand?.fahrer?.[1] ?? null
 const vorsprung = fuehrender && zweiter ? fuehrender.punkte - zweiter.punkte : null
-const titelMoeglich =
-  stand && !stand.vorsaison && vorsprung !== null && vorsprung > stand.maxDanach
+const titelMoeglich = titelKannFallen(stand)
 
 const rekordeNachFahrer = rekorde.reduce((karte, r) => {
   if (!karte.has(r.fahrer)) karte.set(r.fahrer, { name: r.name, punkte: [] })
@@ -68,10 +61,12 @@ const rekordeNachFahrer = rekorde.reduce((karte, r) => {
   return karte
 }, new Map())
 
-const titel = rennen ? `${rennen.grandPrix} ${rennen.jahr} – preview` : 'Race preview'
+const gpName = rennen ? (rennen.grandPrixVoll ?? `${rennen.grandPrix} Grand Prix`) : null
+const titel = rennen ? `${gpName} ${rennen.jahr} – preview` : 'Race preview'
 
 const ziele = rennen
   ? [
+      sessions.length > 1 && { id: 'zeitplan', label: 'Schedule' },
       { id: 'strecke', label: 'The circuit' },
       historie?.rennen > 0 && { id: 'stark', label: 'Strong here' },
       stand && { id: 'wertung', label: 'Standings' },
@@ -84,7 +79,7 @@ const ziele = rennen
   titel={titel}
   beschreibung={
     rennen
-      ? `Preview of the ${rennen.grandPrix} ${rennen.jahr} at ${rennen.ort}: the circuit, the championship standings and the marks within reach.`
+      ? `Preview of the ${rennen.jahr} ${gpName} in ${rennen.ort ?? rennen.strecke}: schedule, circuit, championship standings and the marks within reach.`
       : 'Preview of the next Formula 1 race.'
   }
 >
@@ -95,9 +90,9 @@ const ziele = rennen
           <p class="oberzeile">Next race</p>
           <h1>No preview</h1>
           <p class="lead">
-            No race is still outstanding in the data. Either the season is over and next year’s
-            calendar has not been published yet, or the data, as at
-            {' '}{datum(heute)}, is older than the most recent race.
+            No race is still outstanding in the data. The season is over and next year’s
+            calendar is not in the data yet
+            {quelle.stand && <> – the most recent result is the {quelle.stand.grandPrix} on {datum(quelle.stand.datum)}</>}.
           </p>
         </div>
       </header>
@@ -115,7 +110,7 @@ const ziele = rennen
             <span class="trenner">/</span>
             <span class="still">Round {rennen.runde} of {rennen.rennenImJahr}</span>
           </p>
-          <h1>{rennen.grandPrix} {rennen.jahr}</h1>
+          <h1>{gpName} {rennen.jahr}</h1>
           <ul class="eckdaten">
             <li><a href={pfad.strecke(rennen.streckeId)}>{rennen.strecke}</a></li>
             {rennen.ort && rennen.ort !== rennen.strecke && <li>{rennen.ort}</li>}
@@ -128,19 +123,11 @@ const ziele = rennen
       {/* Der Countdown: groß, weil er die Frage ist, mit der man hierher kommt. */}
       <div class="countdown">
         <div class="tage">
-          {tageBis > 1 ? (
-            <><b>{tageBis}</b><span>days to go</span></>
-          ) : tageBis === 1 ? (
-            <><b>Tomorrow</b></>
-          ) : tageBis === 0 ? (
-            <><b>Today</b></>
-          ) : (
-            <><b>{Math.abs(tageBis)}</b><span>days ago – no result yet</span></>
-          )}
+          <Countdown datum={rennen.datum} zeit={rennen.zeit} />
         </div>
         <p>
-          Every number on this page stands on the data as at {datum(heute)}
-          {stand && !stand.vorsaison && `, that is after round ${stand.bezug.runde} (${stand.bezug.grandPrix})`}.
+          The numbers on this page come from F1DB {quelle.version}
+          {stand && !stand.vorsaison && `, up to round ${stand.bezug.runde} (${stand.bezug.grandPrix})`}.
           {rennen.offiziell && <> Officially: <i>{rennen.offiziell}</i>.</>}
         </p>
       </div>
@@ -148,13 +135,40 @@ const ziele = rennen
       {titelMoeglich && (
         <p class="hinweis akzent">
           <b>The drivers’ title can be settled here.</b>{' '}
-          {fuehrender.name} leads by {ein(vorsprung)} points, and after this race only
-          {' '}{stand.maxDanach} remain to be won. Whether that actually settles it depends on
-          the result – the number says only that it is arithmetically possible.
+          {fuehrender.name} leads {zweiter.name} by {ein(vorsprung)} points. This weekend offers
+          {' '}up to {stand.maxDiesesRennen}, and after it at most {stand.maxDanach} remain to be won.
+          Whether that actually settles it depends on the result – the number says only that it
+          is arithmetically possible.
         </p>
       )}
 
       <Sprung ziele={ziele} />
+
+      {sessions.length > 1 && (
+        <section class="abschnitt" id="zeitplan">
+          <div class="abschnitt-kopf">
+            <div>
+              <h2>Weekend schedule</h2>
+              <p>
+                <span data-ortszeit-hinweis hidden>Times in your time zone.</span>
+                <noscript>Times in UTC.</noscript>
+              </p>
+            </div>
+          </div>
+          <ol class="zeitplan">
+            {sessions.map((s) => (
+              <li class={s.rennen ? 'rennen' : undefined}>
+                <span class="session">{s.name}</span>
+                {s.zeit ? (
+                  <time datetime={zeitpunkt(s)} data-ortszeit>{datum(s.datum)}, {s.zeit.slice(0, 5)} UTC</time>
+                ) : (
+                  <time datetime={s.datum}>{datum(s.datum)}</time>
+                )}
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
 
       <section class="abschnitt" id="strecke">
         <div class="abschnitt-kopf">
@@ -174,7 +188,7 @@ const ziele = rennen
           <a class="mehr" href={pfad.strecke(rennen.streckeId)}>Circuit page →</a>
         </div>
         <ul class="kacheln">
-          <li><span>Lap length</span><b>{ein(rennen.streckenlaenge ?? rennen.laenge)} km</b></li>
+          <li><span>Lap length</span><b>{km(rennen.streckenlaenge ?? rennen.laenge)}</b></li>
           <li><span>Corners</span><b>{rennen.streckenkurven ?? rennen.kurven ?? '–'}</b></li>
           <li><span>Scheduled laps</span><b>{rennen.runden ?? '–'}</b></li>
           <li><span>Race distance</span><b>{rennen.distanz ? `${ein(rennen.distanz)} km` : '–'}</b></li>
@@ -205,24 +219,24 @@ const ziele = rennen
             <div class="rangkarte">
               <h3>Most wins</h3>
               <ol class="rangliste">
-                {sieger.map((s) => (
-                  <li><a href={pfad.fahrer(s.id)}>{s.name}</a><b>{s.anzahl}</b></li>
+                {raenge(sieger, (s) => s.anzahl).map((s) => (
+                  <li data-rang={s.rang} class={s.vorn ? 'vorn' : undefined}><a href={pfad.fahrer(s.id)}>{s.name}</a><b>{s.anzahl}</b></li>
                 ))}
               </ol>
             </div>
             <div class="rangkarte">
               <h3>Most pole positions</h3>
               <ol class="rangliste">
-                {polesetter.map((s) => (
-                  <li><a href={pfad.fahrer(s.id)}>{s.name}</a><b>{s.anzahl}</b></li>
+                {raenge(polesetter, (s) => s.anzahl).map((s) => (
+                  <li data-rang={s.rang} class={s.vorn ? 'vorn' : undefined}><a href={pfad.fahrer(s.id)}>{s.name}</a><b>{s.anzahl}</b></li>
                 ))}
               </ol>
             </div>
             <div class="rangkarte">
               <h3>Most successful teams</h3>
               <ol class="rangliste">
-                {teamsHier.map((t) => (
-                  <li><a href={pfad.team(t.id)}>{t.name}</a><b>{t.anzahl}</b></li>
+                {raenge(teamsHier, (t) => t.anzahl).map((t) => (
+                  <li data-rang={t.rang} class={t.vorn ? 'vorn' : undefined}><a href={pfad.team(t.id)}>{t.name}</a><b>{t.anzahl}</b></li>
                 ))}
               </ol>
             </div>
@@ -394,10 +408,40 @@ const ziele = rennen
     border-radius: var(--radius);
   }
 
-  .countdown .tage { display: flex; align-items: baseline; gap: 0.5rem; flex: none; }
-  .countdown b { font-size: 2.6rem; font-weight: 800; line-height: 1; letter-spacing: -0.04em; color: var(--kopf-ink); }
-  .countdown span { font-size: 0.95rem; font-weight: 600; color: var(--kopf-ink); }
+  /*
+   * :global, weil Zahl und Beschriftung aus Countdown.astro kommen – teils erst
+   * vom Skript im Browser geschrieben, also ohne die Kennung dieser Seite.
+   */
+  .countdown .tage { flex: none; }
+  .countdown .tage :global(.countdown-wert) { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem; }
+  .countdown .tage :global(b) { font-size: 2.6rem; font-weight: 800; line-height: 1; letter-spacing: -0.04em; color: var(--kopf-ink); }
+  .countdown .tage :global(span span) { font-size: 0.95rem; font-weight: 600; color: var(--kopf-ink); }
   .countdown p { flex: 1 1 22rem; margin: 0; font-size: 0.86rem; text-wrap: pretty; }
+
+  /* Der Zeitplan: eine Zeile je Session, das Rennen hervorgehoben. */
+  .zeitplan {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(15rem, 100%), 1fr));
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .zeitplan li {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    padding: 0.7rem 0.9rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+
+  .zeitplan .session { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+  .zeitplan time { font-weight: 650; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .zeitplan .rennen { border-left: 4px solid var(--accent); }
+  .zeitplan .rennen .session { color: var(--accent-strong); }
 
   .unten { margin-top: 1.25rem; }
 

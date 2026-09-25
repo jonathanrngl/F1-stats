@@ -1,18 +1,26 @@
 ---
 import { datum, zahl } from '../lib/format.js'
 import Seite from '../layouts/Seite.astro'
+import Countdown from '../components/Countdown.astro'
 import { db, eine, saisonListe, pfad } from '../lib/db.js'
 import { naechstesRennen, standVorRennen } from '../engine/vorschau.js'
 import { datenstand, juengsteAenderungen, rekordVerlaeufe, zahlwort } from '../engine/aenderungen.js'
 
+/*
+ * Gezählt wird, was eine eigene Seite hat. Die Tabellen führen mehr: 57
+ * Fahrer, die gemeldet, aber nie in einer Ergebnisliste standen, einen
+ * Konstrukteur ohne Rennen, und die noch ausstehenden Rennen der Saison.
+ * „917 Drivers“ neben einer Liste mit 860 Einträgen war eine Zahl, die man
+ * nicht nachzählen konnte.
+ */
 const zahlen = eine(`
-  SELECT (SELECT COUNT(*) FROM race)        AS rennen,
-         (SELECT COUNT(*) FROM driver)      AS fahrer,
-         (SELECT COUNT(*) FROM constructor) AS teams,
-         (SELECT COUNT(*) FROM circuit)     AS strecken,
-         (SELECT COUNT(*) FROM race_result) AS ergebnisse,
-         (SELECT MIN(year) FROM season)     AS von,
-         (SELECT MAX(year) FROM season)     AS bis`)
+  SELECT (SELECT COUNT(DISTINCT race_id) FROM race_result)        AS rennen,
+         (SELECT COUNT(DISTINCT driver_id) FROM race_result)      AS fahrer,
+         (SELECT COUNT(DISTINCT constructor_id) FROM race_result) AS teams,
+         (SELECT COUNT(DISTINCT circuit_id) FROM race)            AS strecken,
+         (SELECT COUNT(*) FROM race_result)                       AS ergebnisse,
+         (SELECT MIN(year) FROM season)                           AS von,
+         (SELECT MAX(year) FROM season)                           AS bis`)
 
 const saisons = saisonListe().slice(0, 6)
 
@@ -25,18 +33,14 @@ const saisons = saisonListe().slice(0, 6)
  * Jedes Stück steht für sich: Fehlt eines, fällt nur dieses weg. Am
  * Saisonende gibt es kein nächstes Rennen, und die Seite soll dann nicht
  * mit einer leeren Kachel dastehen.
+ *
+ * Nichts davon hängt am Tag des Bauens: Das nächste Rennen ist das erste
+ * ohne Ergebnis, und die Tage bis dahin rechnet der Browser.
  */
-const heute = new Date().toISOString().slice(0, 10)
-const naechstes = naechstesRennen(db(), heute)
+const naechstes = naechstesRennen(db())
 const stand = naechstes ? standVorRennen(db(), naechstes) : null
-const fuehrend = stand?.fahrer?.[0] ?? null
-const zweiter = stand?.fahrer?.[1] ?? null
-
-const tageBis = naechstes
-  ? Math.round(
-      (Date.parse(`${naechstes.datum}T12:00:00Z`) - Date.parse(`${heute}T12:00:00Z`)) / 86400000,
-    )
-  : null
+const fuehrend = stand && !stand.vorsaison ? (stand.fahrer?.[0] ?? null) : null
+const zweiter = stand && !stand.vorsaison ? (stand.fahrer?.[1] ?? null) : null
 
 /*
  * Die jüngste Rekordbewegung. Der Verlauf über alle Bestmarken kostet beim
@@ -55,7 +59,7 @@ const letzteMarke = datenStand
  */
 const EINSTIEGE = [
   { weg: '/seasons/', titel: 'Seasons', text: 'Standings, calendar and points progression for every year', symbol: 'M4 5h16v15H4zM4 10h16M9 3v4M15 3v4' },
-  { weg: '/races/', titel: 'Races', text: `All ${zahl(zahlen.rennen)} races, result by result`, symbol: 'M5 21V4M5 4h11l-2 4 2 4H5' },
+  { weg: '/races/', titel: 'Races', text: `All ${zahl(zahlen.rennen)} races so far, result by result`, symbol: 'M5 21V4M5 4h11l-2 4 2 4H5' },
   { weg: '/drivers/', titel: 'Drivers', text: `${zahl(zahlen.fahrer)} profiles with career, streaks and team-mates`, symbol: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0' },
   { weg: '/teams/', titel: 'Teams', text: `${zahlen.teams} constructors and the names they raced under`, symbol: 'M3 17h18M5 17l2-6h10l2 6M8 11V8h8v3M7 20a1.5 1.5 0 1 0 0-3M17 20a1.5 1.5 0 1 0 0-3' },
   { weg: '/circuits/', titel: 'Circuits', text: `${zahlen.strecken} circuits on a map, and who has gone well at each`, symbol: 'M12 21s-6-5.5-6-11a6 6 0 0 1 12 0c0 5.5-6 11-6 11zM12 12a2 2 0 1 0 0-4 2 2 0 0 0 0 4' },
@@ -94,19 +98,15 @@ const EINSTIEGE = [
         {naechstes && (
           <a class="karte jetzt-rennen" href={pfad.seite('/preview/')}>
             <span class="etikett-klein">Next race · Round {naechstes.runde}</span>
-            <b class="gross">{naechstes.grandPrix} {naechstes.jahr}</b>
+            <b class="gross">{naechstes.grandPrixVoll ?? naechstes.grandPrix} {naechstes.jahr}</b>
             <span class="dazu">{naechstes.strecke} · {datum(naechstes.datum)}</span>
-            {tageBis !== null && tageBis >= 0 && (
-              <span class="countdown">
-                {tageBis === 0 ? <b>Today</b> : tageBis === 1 ? <b>Tomorrow</b> : <><b>{tageBis}</b> days to go</>}
-              </span>
-            )}
+            <span class="countdown"><Countdown datum={naechstes.datum} zeit={naechstes.zeit} /></span>
             <span class="weiter">Read the preview →</span>
           </a>
         )}
         {fuehrend && (
           <a class="karte" href={pfad.fahrer(fuehrend.id)}>
-            <span class="etikett-klein">Championship leader</span>
+            <span class="etikett-klein">Championship leader · after round {stand.bezug.runde}</span>
             <b class="gross">{fuehrend.name}</b>
             <span class="dazu">{fuehrend.team}</span>
             <span class="zahlreihe">
@@ -251,8 +251,9 @@ const EINSTIEGE = [
 
   .jetzt-rennen .gross { color: var(--kopf-ink); }
   .jetzt-rennen .dazu { color: var(--kopf-muted); }
+  /* :global – Zahl und Beschriftung schreibt Countdown.astro, teils erst im Browser. */
   .countdown { margin-top: 0.8rem; font-size: 0.9rem; color: var(--kopf-muted); }
-  .countdown b { font-size: 2rem; font-weight: 800; color: var(--kopf-ink); letter-spacing: -0.03em; }
+  .countdown :global(b) { font-size: 2rem; font-weight: 800; color: var(--kopf-ink); letter-spacing: -0.03em; }
   .weiter { margin-top: auto; padding-top: 0.6rem; font-size: 0.85rem; font-weight: 650; color: var(--accent); }
 
   /* Einstiege: Symbol, Name, ein Satz. */

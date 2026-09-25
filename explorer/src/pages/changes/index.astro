@@ -16,7 +16,7 @@ import Sprung from '../../components/Sprung.astro'
 import { db, pfad } from '../../lib/db.js'
 import {
   datenstand, inReichweite, juengsteAenderungen, laufendeSerien, rekordVerlaeufe,
-  saisonMarken, zahlwort,
+  saisonMarken, zahlwort, beschreibeAenderung,
 } from '../../engine/aenderungen.js'
 
 const stand = datenstand(db())
@@ -51,22 +51,7 @@ const { rennen: rennenGesamt } = db()
   .prepare('SELECT COUNT(*) AS rennen FROM race WHERE EXISTS (SELECT 1 FROM race_result rr WHERE rr.race_id = race.id)')
   .get()
 
-/** Ein Ereignis in einen Satz – die Formulierung trägt die Unterscheidung. */
-function satz(e) {
-  const wer = e.halter.map((h) => h.name).join(' and ')
-  /** Wer die Marke bisher hielt und sie nun nicht mehr allein hat. */
-  const alt = e.vorher.halter
-    .filter((h) => !e.halter.some((n) => n.id === h.id))
-    .map((h) => h.name)
-    .join(' and ')
-
-  if (e.art === 'eingestellt') {
-    return `${wer} reaches ${zahlwort(e.wert, e.kategorie)} and now shares the record${alt ? ` with ${alt}` : ''}.`
-  }
-  return `${wer} moves clear with ${zahlwort(e.wert, e.kategorie)}${
-    alt ? ` – ${alt} no longer shares it` : ''
-  }.`
-}
+const satz = beschreibeAenderung
 
 const ziele = [
   gefallen.length > 0 && { id: 'gefallen', label: 'Recently fallen' },

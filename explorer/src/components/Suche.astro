@@ -1,0 +1,212 @@
+---
+/**
+ * Suche in der Kopfleiste über Fahrer, Teams, Strecken, Motoren, Saisons und Rennen.
+ *
+ * Vorher war sie eine React-Insel – und zog damit React auf jede der rund 2.500
+ * Seiten, gut 70 KB gepackt für ein einziges Feld. Jetzt ist sie ein Skript von
+ * wenigen Kilobyte; React lädt nur noch dort, wo es wirklich rechnet (Vergleich,
+ * Explorer, Quiz).
+ *
+ * Das Feld ist eine Combobox nach ARIA 1.2: Pfeiltasten bewegen die Auswahl,
+ * und ein Vorleser hört, welcher Treffer gewählt ist und wie viele es gibt.
+ * Vorher bewegten die Pfeiltasten nur die Farbe.
+ *
+ * Der Index wird erst geladen, wenn jemand das Feld benutzt: Die meisten
+ * Besucher tippen nie etwas ein. Schlägt das Laden fehl, steht das da – nicht
+ * „nichts gefunden“, was eine andere Aussage wäre.
+ *
+ * Ohne JavaScript bleibt das Feld verborgen (`nur-mit-js`): Ein Suchfeld, das
+ * nichts tut, ist schlimmer als keines.
+ */
+---
+
+<div class="suche nur-mit-js" data-suche>
+  <button type="button" class="suche-knopf" aria-expanded="false" aria-controls="suche-feld" aria-label="Search">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+  </button>
+  <div class="suche-feld" id="suche-feld">
+    <input
+      type="search"
+      role="combobox"
+      aria-expanded="false"
+      aria-autocomplete="list"
+      aria-controls="suche-liste"
+      aria-label="Search drivers, teams, circuits, engines, seasons and races"
+      autocomplete="off"
+      spellcheck="false"
+      enterkeyhint="go"
+      placeholder="Search drivers, teams, races…"
+    />
+    <kbd aria-hidden="true">/</kbd>
+    <div class="ergebnisse" id="suche-liste" role="listbox" aria-label="Search results" hidden></div>
+    <p class="sr-only" role="status" aria-live="polite" data-suche-status></p>
+  </div>
+</div>
+
+<script>
+  import { ARTEN, treffer } from '../lib/suche.js'
+
+  const BASIS = import.meta.env.BASE_URL.replace(/\/$/, '')
+
+  type Eintrag = { i: string | number; n: string; a: keyof typeof ARTEN; l?: string; v: number; b: number; g: number; k?: string }
+
+  const huelle = document.querySelector<HTMLElement>('[data-suche]')
+  const feld = huelle?.querySelector<HTMLInputElement>('input')
+  const liste = huelle?.querySelector<HTMLElement>('#suche-liste')
+  const status = huelle?.querySelector<HTMLElement>('[data-suche-status]')
+  const knopf = huelle?.querySelector<HTMLButtonElement>('.suche-knopf')
+
+  if (huelle && feld && liste && status && knopf) {
+    let index: Eintrag[] | null = null
+    let laden: Promise<void> | null = null
+    let fehler = false
+    let aktuell: Eintrag[] = []
+    let aktiv = -1
+
+    const ziel = (e: Eintrag) => `${BASIS}/${ARTEN[e.a].pfad}/${e.i}/`
+
+    const holeIndex = () => {
+      laden ??= fetch(`${BASIS}/data/suche.json`)
+        .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+        .then((d: Eintrag[]) => {
+          index = d
+        })
+        .catch(() => {
+          fehler = true
+          laden = null
+        })
+      return laden
+    }
+
+    const setzeAktiv = (i: number) => {
+      aktiv = i
+      const optionen = liste.querySelectorAll<HTMLElement>('[role=option]')
+      optionen.forEach((o, j) => o.setAttribute('aria-selected', String(j === i)))
+      if (i >= 0 && optionen[i]) {
+        feld.setAttribute('aria-activedescendant', optionen[i].id)
+        optionen[i].scrollIntoView({ block: 'nearest' })
+      } else feld.removeAttribute('aria-activedescendant')
+    }
+
+    const schliesse = () => {
+      liste.hidden = true
+      feld.setAttribute('aria-expanded', 'false')
+      feld.removeAttribute('aria-activedescendant')
+      aktiv = -1
+    }
+
+    const meldung = (text: string) => {
+      liste.replaceChildren(Object.assign(document.createElement('p'), { className: 'leer', textContent: text }))
+      liste.hidden = false
+      feld.setAttribute('aria-expanded', 'true')
+      status.textContent = text
+    }
+
+    const zeige = async () => {
+      const q = feld.value.trim()
+      if (q.length < 2) {
+        schliesse()
+        status.textContent = ''
+        return
+      }
+      if (!index) {
+        meldung('Loading…')
+        await holeIndex()
+        if (feld.value.trim() !== q) return
+        if (!index) {
+          meldung('The search index could not be loaded. Check the connection and try again.')
+          return
+        }
+      }
+      aktuell = treffer(index, q)
+      if (aktuell.length === 0) {
+        meldung(`Nothing found for “${q}”.`)
+        return
+      }
+      liste.replaceChildren(
+        ...aktuell.map((e, i) => {
+          const a = document.createElement('a')
+          a.id = `suche-o-${i}`
+          a.href = ziel(e)
+          a.setAttribute('role', 'option')
+          a.setAttribute('aria-selected', 'false')
+          a.tabIndex = -1
+          const kuerzel = document.createElement('span')
+          kuerzel.className = 'kuerzel'
+          kuerzel.textContent = e.l ?? '—'
+          kuerzel.setAttribute('aria-hidden', 'true')
+          const name = document.createElement('b')
+          name.textContent = e.n
+          const dazu = document.createElement('i')
+          const zeit = e.v === e.b ? String(e.v) : `${e.v}–${e.b}`
+          dazu.textContent = e.a === 'r' || e.a === 'j' ? ARTEN[e.a].label : `${ARTEN[e.a].label} · ${zeit}`
+          a.append(kuerzel, name, dazu)
+          a.addEventListener('pointerenter', () => setzeAktiv(i))
+          return a
+        }),
+      )
+      liste.hidden = false
+      feld.setAttribute('aria-expanded', 'true')
+      setzeAktiv(0)
+      status.textContent = `${aktuell.length} result${aktuell.length === 1 ? '' : 's'}. Arrow keys to choose, Enter to open.`
+    }
+
+    feld.addEventListener('input', zeige)
+    feld.addEventListener('focus', () => {
+      holeIndex()
+      if (feld.value.trim().length >= 2) zeige()
+    })
+    feld.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        if (liste.hidden) zeige()
+        if (!aktuell.length) return
+        e.preventDefault()
+        const schritt = e.key === 'ArrowDown' ? 1 : -1
+        setzeAktiv((aktiv + schritt + aktuell.length) % aktuell.length)
+      } else if (e.key === 'Enter') {
+        const e0 = aktuell[aktiv >= 0 ? aktiv : 0]
+        if (e0 && !liste.hidden) {
+          e.preventDefault()
+          window.location.href = ziel(e0)
+        }
+      } else if (e.key === 'Escape') {
+        // Erst die Liste zu, beim zweiten Mal das Feld leeren – wie jede Suche.
+        if (!liste.hidden) schliesse()
+        else if (feld.value) feld.value = ''
+        else if (huelle.classList.contains('offen')) {
+          huelle.classList.remove('offen')
+          knopf.setAttribute('aria-expanded', 'false')
+          knopf.focus()
+        }
+      }
+    })
+
+    /* Am schmalen Schirm ist die Suche ein Knopf, der das Feld aufklappt. */
+    knopf.addEventListener('click', () => {
+      const auf = !huelle.classList.contains('offen')
+      huelle.classList.toggle('offen', auf)
+      knopf.setAttribute('aria-expanded', String(auf))
+      if (auf) feld.focus()
+    })
+
+    /* „/" öffnet die Suche, wie in jedem Werkzeug, das eine hat. */
+    window.addEventListener('keydown', (e) => {
+      const imFeld = e.target instanceof HTMLElement && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)
+      if (e.key === '/' && !imFeld && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        e.preventDefault()
+        if (getComputedStyle(knopf).display !== 'none' && !huelle.classList.contains('offen')) knopf.click()
+        else feld.focus()
+      }
+    })
+
+    /* Klick daneben schließt die Liste – und am schmalen Schirm das Feld. */
+    document.addEventListener('pointerdown', (e) => {
+      if (huelle.contains(e.target as Node)) return
+      schliesse()
+      if (huelle.classList.contains('offen')) {
+        huelle.classList.remove('offen')
+        knopf.setAttribute('aria-expanded', 'false')
+      }
+    })
+  }
+</script>

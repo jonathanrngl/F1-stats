@@ -1,0 +1,22 @@
+# Haelt die per Commit gepinnten Aktionen und die npm-Abhaengigkeiten aktuell.
+#
+# Einmal die Woche, gebuendelt: Ein Pull Request je Woche und Oekosystem statt
+# einer fuer jedes Paket. Die klassische Anwendung im Wurzelverzeichnis ist
+# eingefroren und steht deshalb nicht darin.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      aktionen:
+        patterns: ['*']
+
+  - package-ecosystem: npm
+    directory: /explorer
+    schedule:
+      interval: weekly
+    groups:
+      explorer:
+        patterns: ['*']

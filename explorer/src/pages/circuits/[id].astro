@@ -1,5 +1,5 @@
 ---
-import { ein, plakette, prozent as proz, zahl } from '../../lib/format.js'
+import { ein, plakette, prozent as proz, raenge, zahl } from '../../lib/format.js'
 import Seite from '../../layouts/Seite.astro'
 import Sprung from '../../components/Sprung.astro'
 import { eine, streckenListe, pfad, db } from '../../lib/db.js'
@@ -85,8 +85,8 @@ const ziele = [
       <div class="rangkarte">
         <h3>Most wins</h3>
         <ol class="rangliste">
-          {sieger.map((s) => (
-            <li><a href={pfad.fahrer(s.id)}>{s.name}</a><b>{s.anzahl}</b></li>
+          {raenge(sieger, (s) => s.anzahl).map((s) => (
+            <li data-rang={s.rang} class={s.vorn ? 'vorn' : undefined}><a href={pfad.fahrer(s.id)}>{s.name}</a><b>{s.anzahl}</b></li>
           ))}
         </ol>
       </div>
@@ -95,8 +95,8 @@ const ziele = [
         <div class="rangkarte">
           <h3>Most pole positions</h3>
           <ol class="rangliste">
-            {polesetter.map((s) => (
-              <li><a href={pfad.fahrer(s.id)}>{s.name}</a><b>{s.anzahl}</b></li>
+            {raenge(polesetter, (s) => s.anzahl).map((s) => (
+              <li data-rang={s.rang} class={s.vorn ? 'vorn' : undefined}><a href={pfad.fahrer(s.id)}>{s.name}</a><b>{s.anzahl}</b></li>
             ))}
           </ol>
         </div>
@@ -105,8 +105,8 @@ const ziele = [
       <div class="rangkarte">
         <h3>Most successful teams</h3>
         <ol class="rangliste">
-          {teams.map((t) => (
-            <li><a href={pfad.team(t.id)}>{t.name}</a><b>{t.anzahl}</b></li>
+          {raenge(teams, (t) => t.anzahl).map((t) => (
+            <li data-rang={t.rang} class={t.vorn ? 'vorn' : undefined}><a href={pfad.team(t.id)}>{t.name}</a><b>{t.anzahl}</b></li>
           ))}
         </ol>
       </div>

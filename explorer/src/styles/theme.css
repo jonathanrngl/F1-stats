@@ -25,6 +25,10 @@
   --muted: light-dark(#6b6a66, #8f8e88);
   --border: light-dark(#e4e4e0, #2a2a2d);
   --border-strong: light-dark(#d2d2cd, #3a3a3e);
+  /* Der Rand eines Bedienelements muss sich abheben, nicht nur andeuten:
+     mindestens 3:1 zur Fläche (WCAG 1.4.11). --border-strong erreicht 1,5:1
+     und bleibt für Trennlinien. */
+  --border-input: light-dark(#8f8e88, #6b6a66);
   --grid: light-dark(#ebebe8, #242426); /* Gitternetz, haarfein */
   --axis: light-dark(#c9c9c4, #3a3a37);
 
@@ -163,6 +167,13 @@ input {
   border-radius: 0.35rem;
 }
 
+/*
+ * Mit und ohne JavaScript. Die Klasse `js` setzt das Skript im Kopf jeder
+ * Seite (lib/modus.js), bevor gezeichnet wird – ohne Skript fehlt sie.
+ */
+html:not(.js) .nur-mit-js { display: none !important; }
+html.js .nur-ohne-js { display: none !important; }
+
 /* Nur für Hilfsmittel: erklärt, was ein Platzhalter gerade tut. */
 .sr-only {
   position: absolute;
@@ -259,26 +270,32 @@ input {
   letter-spacing: -0.01em;
 }
 
-.hauptnav {
+/*
+ * Drei Breiten, drei Formen der Kopfleiste:
+ *
+ *   ab 72rem     alles in einer Zeile, das Suchfeld offen
+ *   64–72rem     die Suche als Knopf, der ihr Feld aufklappt – dort lief die
+ *                Leiste vorher über, und „Circuits“ fiel heraus
+ *   unter 64rem  ein Menü mit allen Zielen; die Leiste selbst verschwindet
+ *
+ * Vorher scrollte die Leiste am Telefon waagerecht, mit verborgenem Balken.
+ * Man sah drei von sieben Punkten und nicht, dass es mehr gab.
+ */
+.hauptnav { flex: 1; min-width: 0; }
+
+.hauptnav > ul {
   display: flex;
   align-items: center;
   gap: 0.1rem;
-  flex: 1;
-  min-width: 0;
-  overflow-x: auto;
-  scrollbar-width: none;
-  /* Ein weicher Auslauf rechts statt einer harten Kante: Wird es eng, sieht
-     man, dass die Leiste weitergeht. */
-  mask-image: linear-gradient(to right, #000 calc(100% - 1.5rem), transparent);
-}
-
-.hauptnav::-webkit-scrollbar {
-  display: none;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .hauptnav a,
-.werkzeuge summary {
+.klappe > summary {
   position: relative;
+  display: block;
   padding: 0.5rem 0.7rem;
   font-size: 0.9rem;
   font-weight: 600;
@@ -289,7 +306,7 @@ input {
 }
 
 .hauptnav a:hover,
-.werkzeuge summary:hover {
+.klappe > summary:hover {
   color: var(--kopf-ink);
   background: var(--kopf-hover);
 }
@@ -299,7 +316,7 @@ input {
   color: var(--kopf-ink);
 }
 
-.hauptnav a[aria-current='page']::after {
+.hauptnav > ul > li > a[aria-current='page']::after {
   content: '';
   position: absolute;
   left: 0.7rem;
@@ -311,12 +328,14 @@ input {
 }
 
 /* Hell / dunkel / System. Ein Knopf, der reihum schaltet. */
-.modus {
+.modus,
+.suche-knopf,
+.menue > summary {
   display: grid;
   place-items: center;
   flex: none;
-  width: 2.2rem;
-  height: 2.2rem;
+  min-width: 2.5rem;
+  height: 2.5rem;
   padding: 0;
   color: var(--kopf-muted);
   background: none;
@@ -325,8 +344,11 @@ input {
   cursor: pointer;
 }
 
-.modus:hover { color: var(--kopf-ink); background: var(--kopf-hover); }
-.modus svg { width: 1.05rem; height: 1.05rem; }
+.modus:hover,
+.suche-knopf:hover { color: var(--kopf-ink); background: var(--kopf-hover); }
+.modus svg,
+.suche-knopf svg,
+.menue > summary svg { width: 1.15rem; height: 1.15rem; }
 .modus [data-zeigt] { display: none; }
 :root:not([data-theme]) .modus [data-zeigt='system'],
 :root[data-theme='light'] .modus [data-zeigt='light'],
@@ -335,37 +357,40 @@ input {
 /* ------------------------------------------------------------------ Suche */
 
 /*
- * Die Suche sitzt rechts in der Kopfleiste. Sie darf der Navigation keinen
- * Platz nehmen, wenn es eng wird: Die Navigation scrollt bereits waagerecht,
- * und ein zusätzlich schrumpfendes Feld machte beides unbrauchbar. Deshalb
- * eine feste Grundbreite und `flex: none`.
+ * Die Suche sitzt rechts in der Kopfleiste, mit fester Breite: Sie darf der
+ * Navigation keinen Platz nehmen. Die Trefferliste ist breiter als das Feld
+ * und legt sich darüber.
  */
 .suche {
   position: relative;
   flex: none;
-  width: min(13rem, 30vw);
-  transition: width 0.15s ease;
 }
+
+.suche-knopf { display: none; }
+.suche-feld { position: relative; width: 14rem; }
 
 .suche input {
   width: 100%;
+  min-height: 2.5rem;
   padding: 0.45rem 2rem 0.45rem 2.1rem;
-  font-size: 0.86rem;
+  font-size: 0.88rem;
   color: var(--kopf-ink);
   background: rgba(255, 255, 255, 0.07)
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%23a9a8a2' stroke-width='2' stroke-linecap='round' viewBox='0 0 24 24'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E")
     no-repeat 0.65rem 50%;
-  border: 1px solid var(--kopf-linie);
+  border: 1px solid rgba(255, 255, 255, 0.28);
   border-radius: 0.45rem;
   appearance: none;
 }
 
-/* Beim Tippen darf das Feld der Navigation Platz nehmen – dann liest
-   niemand mehr die Reiter, sondern die Treffer. */
-.suche:focus-within { width: min(20rem, 46vw); }
-
 .suche input::placeholder { color: var(--kopf-muted); }
-.suche input:focus { border-color: var(--accent); outline: none; background-color: rgba(255, 255, 255, 0.11); }
+/* Fokus sichtbar wie überall: der rote Rahmen, nicht nur ein Farbwechsel des Randes. */
+.suche input:focus-visible {
+  border-color: var(--accent);
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  background-color: rgba(255, 255, 255, 0.11);
+}
 .suche input::-webkit-search-cancel-button { display: none; }
 
 /* Das Tastenkürzel, sichtbar, solange das Feld leer und nicht gewählt ist. */
@@ -375,13 +400,14 @@ input {
   top: 50%;
   translate: 0 -50%;
   padding: 0.05rem 0.35rem;
-  font: 600 0.7rem/1.4 var(--sans);
+  font: 600 0.75rem/1.4 var(--sans);
   color: var(--kopf-muted);
   border: 1px solid var(--kopf-linie);
   border-radius: 0.25rem;
   pointer-events: none;
 }
 
+.suche input:not(:placeholder-shown) ~ kbd,
 .suche:focus-within kbd { display: none; }
 
 .suche .ergebnisse {
@@ -389,13 +415,14 @@ input {
   top: calc(100% + 0.45rem);
   right: 0;
   z-index: 50;
-  width: min(24rem, 90vw);
+  width: min(26rem, calc(100vw - 2rem));
+  max-height: min(70vh, 32rem);
+  overflow-y: auto;
   margin: 0;
   padding: 0.3rem;
-  list-style: none;
   color-scheme: light dark;
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-strong);
   border-radius: 0.6rem;
   box-shadow: var(--shadow);
 }
@@ -408,47 +435,40 @@ input {
   grid-template-columns: auto minmax(0, 1fr);
   align-items: baseline;
   gap: 0.1rem 0.6rem;
+  min-height: 2.75rem;
   padding: 0.45rem 0.55rem;
   border-radius: 0.4rem;
   text-decoration: none;
 }
 
-.suche .ergebnisse a.an { background: var(--surface-3); }
-.suche .ergebnisse b { color: var(--ink); font-weight: 600; font-size: 0.9rem; }
+.suche .ergebnisse a[aria-selected='true'] { background: var(--surface-3); outline: 1px solid var(--border-input); }
+.suche .ergebnisse b { color: var(--ink); font-weight: 600; font-size: 0.92rem; }
 .suche .ergebnisse i {
   grid-column: 2;
   font-style: normal;
-  font-size: 0.76rem;
+  font-size: 0.8rem;
   color: var(--muted);
 }
 .suche .ergebnisse .kuerzel { grid-row: span 2; margin: 0; align-self: center; }
-.suche .leer { padding: 0.6rem 0.65rem; font-size: 0.85rem; color: var(--muted); }
+.suche .leer { margin: 0; padding: 0.6rem 0.65rem; font-size: 0.88rem; color: var(--muted); }
 
 /* ------------------------------------------------------- Werkzeug-Ausklapp */
 
 /*
- * Das Ausklappmenü der Analysewerkzeuge. Ein <details> reicht dafür: Es
- * braucht kein JavaScript, und es öffnet und schließt sich auch dann, wenn
- * nichts geladen hat.
- *
- * Es steht neben der Navigation, nicht darin: `.hauptnav` scrollt waagerecht
- * und hat deshalb `overflow-x: auto` – darin wäre das ausgeklappte Feld
- * beschnitten worden und blieb unsichtbar.
+ * Das Ausklappmenü der Analysewerkzeuge, und am Telefon das ganze Menü: beide
+ * ein <details>. Es braucht kein JavaScript, und es öffnet und schließt sich
+ * auch dann, wenn nichts geladen hat.
  */
-.werkzeuge {
-  position: relative;
-  flex: none;
-}
+.klappe { position: relative; }
 
-.werkzeuge summary {
-  display: block;
+.klappe > summary {
   cursor: pointer;
   list-style: none;
 }
 
-.werkzeuge summary::-webkit-details-marker { display: none; }
-.werkzeuge summary::after { content: ' ▾'; font-size: 0.75em; opacity: 0.7; }
-.werkzeuge[open] > summary { color: var(--kopf-ink); background: var(--kopf-hover); }
+.klappe > summary::-webkit-details-marker { display: none; }
+.werkzeuge > summary::after { content: ' ▾' / ''; font-size: 0.75em; opacity: 0.7; }
+.klappe[open] > summary { color: var(--kopf-ink); background: var(--kopf-hover); }
 .werkzeuge.aktiv > summary { color: var(--kopf-ink); }
 
 .werkzeuge ul {
@@ -462,7 +482,7 @@ input {
   list-style: none;
   color-scheme: light dark;
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-strong);
   border-radius: 0.6rem;
   box-shadow: var(--shadow);
 }
@@ -472,36 +492,147 @@ input {
 
 .werkzeuge a {
   display: grid;
-  text-decoration: none;
   gap: 0.05rem;
   padding: 0.5rem 0.65rem;
-  border-radius: 0.4rem;
   white-space: normal;
 }
 
 .werkzeuge a:hover { background: var(--surface-2); }
-.werkzeuge b { color: var(--ink); font-size: 0.9rem; font-weight: 650; }
-.werkzeuge span { color: var(--muted); font-size: 0.78rem; }
+.werkzeuge b { color: var(--ink); font-size: 0.92rem; font-weight: 650; }
+.werkzeuge span { color: var(--muted); font-size: 0.8rem; }
 .werkzeuge a[aria-current='page'] { background: var(--accent-wash); }
-.werkzeuge a[aria-current='page'] b { color: var(--accent); }
+.werkzeuge a[aria-current='page'] b { color: var(--accent-strong); }
 
-/* Am Telefon zwei Zeilen: Schriftzug, Umschalter und Suche oben, die
-   Navigation darunter, waagerecht zu wischen. */
-@media (max-width: 52rem) {
-  .kopf .wrap { flex-wrap: wrap; gap: 0.5rem; padding-block: 0.5rem 0; }
-  .logo { order: 1; margin-right: auto; }
-  .suche { order: 2; width: min(15rem, 52vw); }
-  .suche:focus-within { width: min(15rem, 52vw); }
-  .modus { order: 3; }
-  .hauptnav { order: 4; flex: 1 1 14rem; margin-left: -0.6rem; }
-  .werkzeuge { order: 5; }
-  .werkzeuge ul { width: min(19rem, 92vw); }
-  .hauptnav a[aria-current='page']::after { bottom: 0; }
+/* Das Menü am schmalen Schirm: verborgen, bis es gebraucht wird. */
+.menue { display: none; }
+
+.menue > summary {
+  display: flex;
+  gap: 0.4rem;
+  padding: 0 0.75rem;
+  font-size: 0.9rem;
+  font-weight: 650;
+  color: var(--kopf-ink);
+}
+
+.menue-feld {
+  position: fixed;
+  top: calc(var(--kopf-h) + 3px);
+  left: 0;
+  right: 0;
+  z-index: 45;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(14rem, 100%), 1fr));
+  gap: 1rem 1.5rem;
+  max-height: calc(100svh - var(--kopf-h) - 3px);
+  overflow-y: auto;
+  padding: 1rem 1.5rem 1.5rem;
+  background: var(--kopf-bg);
+  border-bottom: 3px solid var(--accent);
+  box-shadow: 0 16px 32px -16px rgba(0, 0, 0, 0.6);
+}
+
+.menue-feld h2 {
+  margin: 0 0 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--kopf-muted);
+}
+
+.menue-feld ul {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.menue-feld a {
+  display: flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0.45rem 0.7rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--kopf-ink);
+  text-decoration: none;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 0.45rem;
+}
+
+.menue-feld a:hover { background: var(--kopf-hover); }
+.menue-feld a[aria-current='page'] { box-shadow: inset 3px 0 0 var(--accent); background: var(--kopf-hover); }
+
+/* Mittlere Breite: die Suche als Knopf, ihr Feld klappt darunter auf. */
+@media (max-width: 72rem) {
+  .suche-knopf { display: grid; }
+  .suche-feld {
+    display: none;
+    position: absolute;
+    top: calc(100% + 0.6rem);
+    right: 0;
+    z-index: 50;
+    width: min(26rem, calc(100vw - 2rem));
+  }
+  .suche.offen .suche-feld { display: block; }
+  .suche.offen .suche-knopf { color: var(--kopf-ink); background: var(--kopf-hover); }
+  .suche .ergebnisse { width: 100%; }
+  .suche input { background-color: #1d1d20; }
+}
+
+/* Schmal: Menü statt Leiste, die Suche über die volle Breite. */
+@media (max-width: 64rem) {
+  .kopf .wrap { gap: 0.5rem; }
+  .logo { margin-right: auto; }
+  .hauptnav { display: none; }
+  .menue { display: block; }
+  .suche { position: static; }
+  .suche-feld {
+    position: fixed;
+    top: calc(var(--kopf-h) + 3px);
+    left: 0;
+    right: 0;
+    width: auto;
+    padding: 0.75rem 1rem;
+    background: var(--kopf-bg);
+    border-bottom: 3px solid var(--accent);
+  }
+  .suche .ergebnisse {
+    position: static;
+    width: 100%;
+    max-height: calc(100svh - var(--kopf-h) - 6rem);
+    margin-top: 0.5rem;
+  }
+  .suche kbd { display: none; }
 }
 
 @media (max-width: 30rem) {
   .logo-text b { display: none; }
+  .menue > summary span { display: none; }
+  .menue > summary { padding: 0; min-width: 2.5rem; justify-content: center; }
 }
+
+/* Ohne JavaScript gibt es keine Suche; das Menü bleibt, es ist ein <details>. */
+
+/* Der Sprunglink: unsichtbar, bis ihn die Tastatur erreicht. */
+.sprung-link {
+  position: absolute;
+  left: 1rem;
+  top: -4rem;
+  z-index: 60;
+  padding: 0.6rem 1rem;
+  font-weight: 700;
+  color: var(--accent-ink);
+  background: var(--accent);
+  border-radius: 0 0 0.45rem 0.45rem;
+  text-decoration: none;
+}
+
+.sprung-link:focus { top: 0; }
+main:focus { outline: none; }
 
 /* ------------------------------------------------------------ Inhalt */
 
@@ -999,6 +1130,21 @@ td {
 
 tbody tr:last-child td { border-bottom: none; }
 
+/* Zeilenköpfe im Rumpf sehen aus wie Zellen – für Vorleser sind sie der Name der Zeile. */
+tbody th {
+  padding: 0.6rem 0.8rem;
+  font-size: inherit;
+  font-weight: inherit;
+  letter-spacing: normal;
+  text-transform: none;
+  color: inherit;
+  background: none;
+  white-space: normal;
+  vertical-align: middle;
+}
+
+tbody tr:last-child th { border-bottom: none; }
+
 th.num,
 td.num {
   text-align: right;
@@ -1157,10 +1303,12 @@ thead button {
 }
 
 thead button:hover { color: var(--ink); }
-thead button::after { content: ' ↕'; opacity: 0.35; }
-thead button[data-aktiv='1'] { color: var(--accent); }
-thead button[data-aktiv='1']::after { content: ' ▾'; opacity: 1; font-size: 0.8em; }
-thead button[data-aktiv='1'][data-richtung='auf']::after { content: ' ▴'; }
+/* Die Pfeile mit leerem Alternativtext: Sie zeigen die Richtung, sind aber nicht
+   Teil des Knopfnamens – die sagt aria-sort am Spaltenkopf. */
+thead button::after { content: ' ↕' / ''; opacity: 0.35; }
+thead button[data-aktiv='1'] { color: var(--accent-strong); }
+thead button[data-aktiv='1']::after { content: ' ▾' / ''; opacity: 1; font-size: 0.8em; }
+thead button[data-aktiv='1'][data-richtung='auf']::after { content: ' ▴' / ''; }
 
 /* ---------------------------------------------------------- Filterleiste */
 
@@ -1220,6 +1368,34 @@ thead button[data-aktiv='1'][data-richtung='auf']::after { content: ' ▴'; }
   color: var(--muted);
 }
 
+/*
+ * Auswahl zwischen vorgerechneten Ansichten (Wahl.astro, What-if): echte
+ * Optionsfelder, unsichtbar über der Pille – Tastatur, Pfeiltasten und
+ * Vorleser bekommen sie so ohne eigenes Zutun.
+ */
+.wahl { display: grid; gap: 0.6rem; margin: 0 0 1rem; padding: 0; border: none; min-width: 0; }
+.wahl[hidden] { display: none; }
+.wahl-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.wahl-chip { position: relative; }
+.wahl-chip input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; margin: 0; cursor: pointer; }
+
+.wahl-chip span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.25rem;
+  padding: 0.35rem 0.85rem;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--ink-2);
+  background: var(--surface);
+  border: 1px solid var(--border-input);
+  border-radius: 999px;
+}
+
+.wahl-chip:hover span { border-color: var(--accent); color: var(--ink); }
+.wahl-chip input:checked + span { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
+.wahl-chip input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+
 /* ============================================================ Ranglisten */
 
 /*
@@ -1272,12 +1448,18 @@ thead button[data-aktiv='1'][data-richtung='auf']::after { content: ' ▴'; }
 }
 
 .rangliste li:last-child { border-bottom: none; }
+.rangliste li[data-rang]::before { content: attr(data-rang); }
 
+/*
+ * Der Rang steht im Attribut, gerechnet von `raenge()` in format.js – ein
+ * Zähler kennt keinen Gleichstand. Der Zähler bleibt als Rückfall für Listen
+ * ohne Attribut.
+ */
 .rangliste li::before {
   counter-increment: rang;
   content: counter(rang);
   flex: none;
-  min-width: 1.3rem;
+  min-width: 1.7rem;
   font-size: 0.78rem;
   font-weight: 650;
   color: var(--muted);
@@ -1321,12 +1503,12 @@ thead button[data-aktiv='1'][data-richtung='auf']::after { content: ' ▴'; }
   font-variant-numeric: tabular-nums;
 }
 
-/* Der erste Eintrag: der Halter. Größer, mit Plakette statt Ziffer. */
-.rangkarte .rangliste li:first-child {
+/* Rang eins: der Halter – bei Gleichstand alle. Größer, mit Plakette statt Ziffer. */
+.rangkarte .rangliste li.vorn {
   padding: 0.55rem 0 0.7rem;
 }
 
-.rangkarte .rangliste li:first-child::before {
+.rangkarte .rangliste li.vorn::before {
   display: grid;
   place-items: center;
   min-width: 1.75rem;
@@ -1336,9 +1518,9 @@ thead button[data-aktiv='1'][data-richtung='auf']::after { content: ' ▴'; }
   border-radius: 0.4rem;
 }
 
-.rangkarte .rangliste li:first-child a { font-size: 1.02rem; font-weight: 700; }
+.rangkarte .rangliste li.vorn a { font-size: 1.02rem; font-weight: 700; }
 
-.rangkarte .rangliste li:first-child b {
+.rangkarte .rangliste li.vorn b {
   font-size: 1.5rem;
   font-weight: 800;
   letter-spacing: -0.02em;

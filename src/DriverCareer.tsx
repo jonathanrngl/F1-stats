@@ -64,7 +64,7 @@ export default function DriverCareer({
           </h2>
           <p>
             {n.name}
-            {driver.dateOfBirth && <> · born {new Date(driver.dateOfBirth).toLocaleDateString('en-GB')}</>}
+            {driver.dateOfBirth && <> · born {new Date(driver.dateOfBirth).toLocaleDateString('en-GB', { timeZone: 'UTC' })}</>}
             {t.seasonCount > 0 && (
               <>
                 {' · '}

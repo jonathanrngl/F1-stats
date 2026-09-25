@@ -1,0 +1,80 @@
+---
+/**
+ * Wie lange noch bis zu einem Rennen – gerechnet beim Ansehen, nicht beim Bauen.
+ *
+ * Vorher stand die Zahl fest im HTML, gerechnet am Tag des Bauens. Die Seite
+ * wurde einmal täglich neu gebaut; dazwischen lag sie bis zu einen Tag
+ * daneben, und fiel ein Bau aus, blieb sie ohne jeden Hinweis stehen. Jetzt
+ * steht im HTML nur das Datum, und der Browser rechnet daraus die Tage – im
+ * Kalender des Betrachters, denn „morgen“ heißt in Tokio etwas anderes als in
+ * São Paulo.
+ *
+ * Ohne JavaScript bleibt das Datum stehen. Das ist keine Zahl, aber es ist
+ * richtig.
+ */
+import { datum as datumLang } from '../lib/format.js'
+
+interface Props {
+  /** ISO-Datum des Rennens, JJJJ-MM-TT. */
+  datum: string
+  /** Startzeit in UTC, HH:MM:SS, falls bekannt. */
+  zeit?: string | null
+}
+
+const { datum, zeit = null } = Astro.props
+---
+
+<span class="countdown-wert" data-countdown={datum} data-zeit={zeit ?? undefined}>
+  <b>{datumLang(datum)}</b>
+</span>
+
+<script>
+  /*
+   * Das Rennen in lokaler Zeit: Mit Uhrzeit ist das der Startmoment in UTC,
+   * ohne sie das Kalenderdatum selbst. Verglichen werden Kalendertage, nicht
+   * Stunden – „in 2 Tagen“ soll am Freitagabend vor einem Sonntagsrennen
+   * stehen, auch wenn es nur 40 Stunden sind.
+   */
+  const tag = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+
+  function tageBis(datum: string, zeit: string | undefined) {
+    const [j, m, t] = datum.split('-').map(Number)
+    const rennen = zeit ? new Date(`${datum}T${zeit}Z`) : new Date(j, m - 1, t)
+    return Math.round((tag(rennen) - tag(new Date())) / 86400000)
+  }
+
+  function beschrifte(el: HTMLElement) {
+    const n = tageBis(el.dataset.countdown!, el.dataset.zeit)
+    const b = document.createElement('b')
+    const s = document.createElement('span')
+    if (n > 1) {
+      b.textContent = String(n)
+      s.textContent = 'days to go'
+    } else if (n === 1) {
+      b.textContent = 'Tomorrow'
+    } else if (n === 0) {
+      b.textContent = 'Today'
+    } else {
+      /*
+       * Gefahren, aber noch ohne Ergebnis in den Daten: Das F1DB-Release kommt
+       * meist ein, zwei Tage nach dem Rennen. Das steht hier, statt dass die
+       * Seite so tut, als stünde das Rennen noch bevor.
+       */
+      b.textContent = String(Math.abs(n))
+      s.textContent = Math.abs(n) === 1 ? 'day ago – result not yet in the data' : 'days ago – result not yet in the data'
+    }
+    el.replaceChildren(b, ...(s.textContent ? [document.createTextNode(' '), s] : []))
+  }
+
+  /* Sessions in der Ortszeit des Betrachters, mit Wochentag – so plant man. */
+  const ORTSZEIT = new Intl.DateTimeFormat('en-GB', {
+    weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
+  })
+
+  for (const el of document.querySelectorAll<HTMLElement>('[data-countdown]')) beschrifte(el)
+  for (const el of document.querySelectorAll<HTMLTimeElement>('time[data-ortszeit]')) {
+    const d = new Date(el.dateTime)
+    if (!Number.isNaN(d.getTime())) el.textContent = ORTSZEIT.format(d)
+  }
+  for (const el of document.querySelectorAll<HTMLElement>('[data-ortszeit-hinweis]')) el.hidden = false
+</script>

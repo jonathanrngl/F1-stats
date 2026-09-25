@@ -1,0 +1,50 @@
+---
+/**
+ * Die JSON-API, beschrieben für Menschen.
+ *
+ * Die Dateien entstehen beim Bauen und liegen statisch neben den Seiten:
+ * cachebar, ohne Schlüssel, von jedem Client nutzbar. Diese Seite sagt, welche
+ * es gibt und woraus sie bestehen.
+ */
+import Seite from '../../../layouts/Seite.astro'
+import { herkunft, pfad } from '../../../lib/db.js'
+
+const { version } = herkunft()
+const ENDPUNKTE = [
+  { weg: '/api/v1/drivers.json', text: 'Every driver with at least one race: id, name, code, nationality, starts, wins, first and last season.' },
+  { weg: '/api/v1/drivers/lewis-hamilton.json', text: 'One driver: totals for every season (entries, starts, wins, podiums, poles, points, grid and finishing sums), titles, streaks and team-mate records.' },
+  { weg: '/data/version.json', text: 'Which F1DB release the data comes from, and the most recent race with a result.' },
+]
+---
+
+<Seite
+  titel="JSON API – Formula 1 statistics as data"
+  beschreibung="Static JSON files with every driver's season-by-season record, built from F1DB with each release."
+  brotkrumen={[]}
+>
+  <header class="seitenkopf">
+    <div>
+      <p class="oberzeile">Data</p>
+      <h1>JSON API</h1>
+      <p class="lead">
+        The numbers on this site are also available as static JSON files, rebuilt with every
+        F1DB release (currently {version}). No key, no rate limit – they are plain files.
+        Data licensed CC BY 4.0 by F1DB.
+      </p>
+    </div>
+  </header>
+
+  <div class="tabelle">
+    <table>
+      <thead><tr><th scope="col">Address</th><th scope="col">Contents</th></tr></thead>
+      <tbody>
+        {ENDPUNKTE.map((e) => (
+          <tr>
+            <th scope="row"><a class="zeile" href={pfad.seite(e.weg)}><code>{e.weg}</code></a></th>
+            <td>{e.text}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+</Seite>

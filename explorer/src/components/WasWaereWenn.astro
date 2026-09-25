@@ -1,0 +1,222 @@
+---
+/**
+ * Was wäre wenn: die Saison unter jedem anderen Punktesystem.
+ *
+ * Vorher gab es genau eine Variante – „nach heutigem System“ – und eine
+ * Option „ohne Ausfälle“, die nichts bewirkte. Jetzt lässt sich jedes System
+ * seit 1950 wählen, und in Saisons mit Streichresultaten auch, ob die
+ * Streichregel der Epoche auf das neue System angewandt wird. Das ist die
+ * eigentliche Frage von 1988: Prost fuhr mehr Punkte ein, Senna wurde
+ * Weltmeister, und der Unterschied lag nicht am Punktesystem, sondern an
+ * den gestrichenen Ergebnissen.
+ *
+ * Alle Varianten sind beim Bauen gerechnet und stehen im HTML. Das kleine
+ * Skript unten schaltet nur zwischen ihnen um. Ohne JavaScript bleibt die
+ * Auswahl verborgen, und es steht die Standardvariante da – so, wie die Seite
+ * vorher aussah.
+ */
+import { ein, plakette } from '../lib/format.js'
+import { db, pfad } from '../lib/db.js'
+import { PUNKTESYSTEME, streichregel, systemFuer } from '../engine/punkte.js'
+import { saisonNeuRechnen } from '../engine/whatif.js'
+
+interface Props {
+  jahr: number
+  /** Der amtliche Endstand, wie ihn die Saisonseite ohnehin lädt. */
+  amtlich: { id: string; name: string; position: number | null; points: number; meister: number }[]
+}
+
+const { jahr, amtlich } = Astro.props
+const eigenes = systemFuer(jahr)
+const mitStreichung = streichregel(jahr) !== null
+const meister = amtlich.find((f) => f.meister)
+
+/*
+ * Welche Varianten es gibt. Das eigene System nur dort, wo es mit einer
+ * anderen Frage kommt – „was, wenn jedes Ergebnis gezählt hätte“. Sonst
+ * wäre es schlicht der amtliche Stand.
+ */
+const systeme = PUNKTESYSTEME.filter((s) => s.id !== eigenes.id || mitStreichung)
+const varianten = systeme.flatMap((s) =>
+  (mitStreichung ? [false, true] : [false])
+    // Eigenes System mit eigener Streichregel ist der amtliche Stand.
+    .filter((streich) => !(s.id === eigenes.id && streich))
+    .map((streich) => ({
+      schluessel: `${s.id}|${streich ? 1 : 0}`,
+      system: s,
+      streich,
+      ergebnis: saisonNeuRechnen(db(), jahr, s.id, { streichresultate: streich }),
+    })),
+)
+  .filter((v) => v.ergebnis.tabelle.length > 0)
+
+/* Vorgewählt: heute, ohne Streichung – die Frage, mit der man kommt. */
+const heute = PUNKTESYSTEME.at(-1).id
+const vorwahl =
+  varianten.find((v) => v.system.id === heute && !v.streich) ??
+  varianten.find((v) => !v.streich) ??
+  varianten[0]
+
+const amtlichNach = new Map(amtlich.map((f) => [f.id, f]))
+---
+
+{vorwahl && (
+  <div class="whatif" data-whatif data-vorwahl={vorwahl.schluessel}>
+    <fieldset class="whatif-wahl" hidden>
+      <legend class="sr-only">Points system</legend>
+      <div class="chips">
+        {systeme.map((s) => (
+          <label class="chip">
+            <input type="radio" name={`system-${jahr}`} value={s.id} checked={s.id === vorwahl.system.id} />
+            <span>{s.id === eigenes.id ? `${s.name} (in force)` : s.name}</span>
+          </label>
+        ))}
+      </div>
+      {mitStreichung && (
+        <label class="schalter">
+          <input type="checkbox" name={`streich-${jahr}`} checked={vorwahl.streich} />
+          <span>Apply this season's dropped-scores rule</span>
+        </label>
+      )}
+    </fieldset>
+
+    {varianten.map((v) => {
+      const neu = v.ergebnis
+      const anderer = meister && neu.tabelle[0] && neu.tabelle[0].driverId !== meister.id
+      return (
+        <div class="whatif-variante" data-variante={v.schluessel} hidden={v !== vorwahl}>
+          <p class="whatif-text">
+            {v.system.id === eigenes.id
+              ? <>The system in force at the time, but <b>every result counts</b> – nothing dropped.</>
+              : <>Scored <b>{v.system.beschreibung.replace(/\.$/, '')}</b>{v.streich ? ', with the dropped-scores rule of the time.' : ', every result counted.'}</>}
+          </p>
+
+          {anderer ? (
+            <p class="hinweis akzent">
+              <span>
+                The title would have changed hands:{' '}
+                <a href={pfad.fahrer(neu.tabelle[0].driverId)}>{neu.tabelle[0].name}</a>
+                {' '}instead of {meister.name}.
+              </span>
+            </p>
+          ) : meister ? (
+            <p class="hinweis gut">The World Champion would be the same.</p>
+          ) : null}
+
+          <div class="tabelle">
+            <table>
+              <thead>
+                <tr>
+                  <th class="num">Pos</th><th>Driver</th><th class="num">Points</th>
+                  {v.streich && <th class="num">Dropped</th>}
+                  <th class="num">Official points</th><th class="num">Official position</th>
+                </tr>
+              </thead>
+              <tbody>
+                {neu.tabelle.slice(0, 12).map((t) => {
+                  const a = amtlichNach.get(t.driverId)
+                  const verschoben = a?.position && a.position !== t.platz
+                  return (
+                    <tr>
+                      <td class="num"><span class={plakette(t.platz)}>{t.platz}</span></td>
+                      <td><a class="zeile" href={pfad.fahrer(t.driverId)}>{t.name}</a></td>
+                      <td class="num fett">{ein(t.punkte)}</td>
+                      {v.streich && <td class="num leise">{t.gestrichen ? `−${ein(t.gestrichen)}` : ''}</td>}
+                      <td class="num leise">{a ? ein(a.points) : '–'}</td>
+                      <td class={`num ${verschoben ? 'verschoben' : 'leise'}`}>
+                        {a?.position ? 'P' + a.position : '–'}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <p class="fussnote">
+            Amber: the position differs from the official result.{' '}
+            {neu.mitGeteiltenFahrten > 0 && (
+              <>
+                In this season drivers shared a car. The points for a shared position are split,
+                just as the era itself split them – {neu.mitGeteiltenFahrten}
+                {' '}drivers are affected.{' '}
+              </>
+            )}
+            {neu.sprintPunkte > 0 && (
+              <>Sprint points are left unchanged: a race points system does not apply to them. </>
+            )}
+            {neu.ausgeschlossen.length > 0 && (
+              <>
+                {neu.ausgeschlossen.map((a) => a.name).join(' and ')} stays excluded from the
+                championship, as decided at the time.{' '}
+              </>
+            )}
+            A calculation, not a rewriting of history – drivers would have raced differently if
+            different points had been at stake.
+          </p>
+        </div>
+      )
+    })}
+  </div>
+)}
+
+<script>
+  /*
+   * Zwischen den vorgerechneten Varianten umschalten. Jede steht schon im
+   * HTML; hier wird nur `hidden` gesetzt. Die Auswahl selbst erscheint erst,
+   * wenn dieses Skript läuft – ohne es wäre sie ein Bedienelement ohne Wirkung.
+   */
+  for (const box of document.querySelectorAll<HTMLElement>('[data-whatif]')) {
+    const wahl = box.querySelector<HTMLFieldSetElement>('.whatif-wahl')
+    if (!wahl) continue
+    wahl.hidden = false
+
+    const zeige = () => {
+      const system = wahl.querySelector<HTMLInputElement>('input[type=radio]:checked')?.value
+      const streich = wahl.querySelector<HTMLInputElement>('input[type=checkbox]')
+      let schluessel = `${system}|${streich?.checked ? 1 : 0}`
+      // Gibt es die Kombination nicht (eigenes System mit Streichung), ohne sie.
+      if (!box.querySelector(`[data-variante="${schluessel}"]`)) schluessel = `${system}|0`
+      for (const v of box.querySelectorAll<HTMLElement>('[data-variante]')) {
+        v.hidden = v.dataset.variante !== schluessel
+      }
+    }
+    wahl.addEventListener('change', zeige)
+  }
+</script>
+
+<style>
+  .whatif-wahl {
+    display: grid;
+    gap: 0.6rem;
+    margin: 0 0 1rem;
+    padding: 0;
+    border: none;
+  }
+
+  .whatif-wahl[hidden] { display: none; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+
+  /* Echte Optionsfelder unter der Pille: Tastatur und Vorleser bekommen sie umsonst. */
+  .chip { position: relative; }
+  .chip input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+  .chip span {
+    display: inline-block;
+    min-height: 2.25rem;
+    padding: 0.45rem 0.85rem;
+    font-size: 0.86rem;
+    font-weight: 600;
+    color: var(--ink-2);
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: 999px;
+  }
+  .chip input:checked + span { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
+  .chip input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .schalter { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; cursor: pointer; }
+  .schalter input { width: 1.15rem; height: 1.15rem; accent-color: var(--accent); }
+
+  .whatif-text { margin: 0 0 0.75rem; }
+</style>

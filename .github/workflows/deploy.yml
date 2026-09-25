@@ -1,31 +1,38 @@
-# Baut beide Anwendungen bei jedem Push auf main und veroeffentlicht sie
-# gemeinsam auf GitHub Pages:
+# Baut die Seite bei jedem Push auf main und veroeffentlicht sie auf GitHub Pages:
 #
 #   /F1-stats/            der Explorer (Astro, aus der importierten Datenbank)
-#   /F1-stats/classic/    die bisherige React-Anwendung
+#   /F1-stats/classic/    die fruehere React-Anwendung, eingefroren unter
+#                         explorer/public/classic/ und unveraendert mitkopiert
+#
+# Die Daten kommen aus der F1DB-Fassung in explorer/f1db-version.txt. Dieser
+# Workflow holt nie selbst "das neueste" Release. Vorher tat er das, jeden Tag
+# um 4 Uhr, und hatte damit zwei Schwaechen: Derselbe Commit ergab an zwei
+# Tagen zwei verschiedene Seiten, und ein fehlerhaftes Release hielt jeden
+# Deploy an - auch einen, der nur einen Tippfehler behob. Die Seite blieb dann
+# still auf dem alten Stand stehen.
+#
+# Neue Daten bringt jetzt f1db-update.yml herein: importiert, geprueft und
+# gebaut, bevor die Fassung hier festgeschrieben wird. Bis dahin baut jeder
+# Deploy den letzten guten Stand.
+#
+# Einen taeglichen Neubau braucht es nicht mehr. Nichts auf der Seite haengt
+# mehr am Tag des Bauens: Das naechste Rennen ist das erste ohne Ergebnis, und
+# die Tage bis dahin rechnet der Browser (Countdown.astro).
 name: Deploy
 
 on:
   push:
     branches: [main]
-  # Die Rennvorschau zeigt das naechste Rennen und den Stand der WM. Beides
-  # veraltet ohne Neubau, denn die Seite ist statisch. Einmal taeglich reicht:
-  # Das F1DB-Release kommt nach jedem Rennwochenende, nicht haeufiger.
-  #
-  # Der Lauf holt bewusst das neueste Release, damit die Seite von selbst
-  # stimmt. Der Import prueft es gegen die Pruefsummendatei des Releases und
-  # jede Kennung darin, bevor daraus Adressen werden - siehe scripts/import.mjs.
-  schedule:
-    - cron: '0 4 * * *'
+  # Auch aus f1db-update.yml: Ein Push mit dem GITHUB_TOKEN startet keinen
+  # weiteren Workflow, ein workflow_dispatch schon.
   workflow_dispatch:
 
 # Voreinstellung fuer jeden Job: nur lesen. Die Rechte zum Veroeffentlichen
 # bekommt allein der deploy-Job weiter unten.
 #
-# Der Grund steht im build-Job: Der fuehrt fremden Code aus - die Lebenszyklus-
-# Skripte der Abhaengigkeiten und alles, was vite und astro beim Bauen tun. Ein
-# Job, der fremden Code ausfuehrt, soll nichts veroeffentlichen und kein
-# OIDC-Token praegen koennen.
+# Der Grund steht im build-Job: Der fuehrt fremden Code aus - alles, was
+# Abhaengigkeiten und astro beim Bauen tun. Ein Job, der fremden Code
+# ausfuehrt, soll nichts veroeffentlichen und kein OIDC-Token praegen koennen.
 permissions:
   contents: read
 
@@ -38,70 +45,90 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # Ein normaler Lauf dauert rund drei Minuten. Ohne Grenze liefe ein
+    # haengender Schritt bis zum Standard von sechs Stunden.
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      # Aktionen per Commit gepinnt, nicht per Tag: Ein Tag laesst sich
+      # nachtraeglich auf anderen Code setzen, ein Commit nicht. Dependabot
+      # (.github/dependabot.yml) haelt die Pins aktuell.
+      #
+      # persist-credentials: false - der Token bleibt nicht in .git/config
+      # liegen, wo ihn jeder folgende Schritt lesen koennte.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       # node:sqlite braucht Node 22 oder neuer - der Import und die
-      # Statistik-Engine benutzen es ohne native Abhaengigkeit.
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-
-      # ------------------------------------------------ klassische Anwendung
+      # Statistik-Engine benutzen es ohne native Abhaengigkeit. Die Fassung
+      # steht als "engines" in explorer/package.json, an einer Stelle.
       #
-      # --ignore-scripts: Ein Paket darf beim Installieren keinen eigenen Code
-      # ausfuehren. Beide Anwendungen bauen ohne solche Skripte - nachgemessen,
-      # nicht vermutet. Es ist kein vollstaendiger Schutz, denn vite und astro
-      # fuehren beim Bauen ohnehin Paketcode aus; es nimmt aber den bequemsten
-      # Weg weg, auf dem eine untergeschobene Abhaengigkeit zuschlaegt.
-      - name: Klassische Anwendung bauen
-        run: |
-          npm ci --ignore-scripts
-          npm run lint
-          npm run build
+      # Kein npm-Cache: Ein Cache, den ein anderer Lauf geschrieben hat, ist
+      # eine Eingabe, die dieser Lauf nicht geprueft hat - und dieser Job baut,
+      # was veroeffentlicht wird. npm ci dauert ohne ihn gut zehn Sekunden.
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: explorer/package.json
 
-      # ------------------------------------------------------------ Explorer
-      - name: Explorer-Abhaengigkeiten
+      # --ignore-scripts: Ein Paket darf beim Installieren keinen eigenen Code
+      # ausfuehren. Der Bau braucht keine solchen Skripte - nachgemessen, nicht
+      # vermutet. Es ist kein vollstaendiger Schutz, denn astro fuehrt beim
+      # Bauen ohnehin Paketcode aus; es nimmt aber den bequemsten Weg weg, auf
+      # dem eine untergeschobene Abhaengigkeit zuschlaegt.
+      - name: Abhaengigkeiten
         working-directory: explorer
         run: npm ci --ignore-scripts
 
-      # Die Datenbank ist nicht eingecheckt; sie entsteht aus dem neuesten
-      # F1DB-Release, geprueft gegen dessen Pruefsummendatei. Der Import
-      # schreibt nichts, wenn eine Pruefung fehlschlaegt.
+      - name: Lint
+        working-directory: explorer
+        run: npm run lint
+
+      # Die Datenbank ist nicht eingecheckt; sie entsteht aus der gepinnten
+      # F1DB-Fassung, geprueft gegen deren Pruefsummendatei. Die Rundendaten
+      # liegen im Repo (explorer/runden/) und kommen im selben Lauf hinzu.
       - name: Datenbank importieren
         working-directory: explorer
         run: npm run import
 
-      # 89 Pruefungen gegen die importierte Datenbank. Lieber kein Deploy als
-      # einer mit falschen Zahlen.
+      # Lieber kein Deploy als einer mit falschen Zahlen.
       - name: Statistik-Engine pruefen
         working-directory: explorer
         run: npm test
 
+      # Der Bau prueft seine Ausgabe selbst: zusammengeklebter Text und
+      # Verweise, die ins Leere zeigen (scripts/pruefe-ausgabe.mjs).
       - name: Explorer bauen
         working-directory: explorer
         run: npm run build
 
-      # --------------------------------------------------- zusammenlegen
+      # Einmal durch die fertige Seite, in einem echten Browser: Laden die
+      # Inseln, stimmt die Navigation am Telefon, geht die Suche.
+      # Chrome ist auf den Runnern vorinstalliert.
+      - name: Oberflaeche pruefen
+        working-directory: explorer
+        run: npm run test:oberflaeche
+
       - name: Seite zusammenlegen
         run: |
           mkdir -p site
           cp -r explorer/dist/. site/
-          mkdir -p site/classic
-          cp -r dist/. site/classic/
           # Astro legt seine Bundles nach _astro/. Der Pages-Deploy laeuft ohne
           # Jekyll, das Verzeichnisse mit Unterstrich verschluckt - die Datei
           # stellt das auch dann sicher, wenn sich das einmal aendert.
           touch site/.nojekyll
 
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: site
+          # Seit v4 laesst die Aktion Dateien mit Punkt vorn weg - darunter
+          # die .nojekyll von eben.
+          include-hidden-files: true
 
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     # Nur dieser Job darf veroeffentlichen. Er fuehrt keinen fremden Code aus,
     # sondern nimmt allein das fertige Artefakt des build-Jobs entgegen.
     permissions:
@@ -112,4 +139,4 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
