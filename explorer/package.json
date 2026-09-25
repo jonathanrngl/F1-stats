@@ -19,8 +19,8 @@
     "vorschau": "node scripts/pruefe-oberflaeche.mjs --nur-server"
   },
   "devDependencies": {
-    "@astrojs/react": "^6.0.5",
-    "astro": "^7.3.2",
+    "@astrojs/react": "^6.0.6",
+    "astro": "^7.3.3",
     "oxlint": "^1.85.0",
     "playwright-core": "^1.63.0",
     "react": "^19.3.0",
