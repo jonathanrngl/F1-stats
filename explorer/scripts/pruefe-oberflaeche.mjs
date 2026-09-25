@@ -144,10 +144,10 @@ async function pruefeAlles() {
 
   // Die Suche in der Kopfleiste: tippen, Treffer, Enter führt hin.
   await schritt('Suche', '/', {}, async (p) => {
-    const feld = p.locator('.suche input').first()
+    const feld = p.getByRole('combobox', { name: /search/i })
     await feld.click()
     await feld.fill('senna')
-    const treffer = p.locator('.suche li', { hasText: 'Ayrton Senna' })
+    const treffer = p.getByRole('option', { name: /Ayrton Senna/ })
     await treffer.first().waitFor({ timeout: 5000 })
     pruefe('Suche findet Senna', (await treffer.count()) > 0)
     await feld.press('Enter')

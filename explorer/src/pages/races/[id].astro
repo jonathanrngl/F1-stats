@@ -1,69 +1,27 @@
 ---
-import { datum, ein, plakette, zahl } from '../../lib/format.js'
+import { datum, ein, km, plakette, zahl, zeit } from '../../lib/format.js'
 import Seite from '../../layouts/Seite.astro'
-import { alle, eine, rennenListe, pfad } from '../../lib/db.js'
+import Sprung from '../../components/Sprung.astro'
+import Countdown from '../../components/Countdown.astro'
+import { db, rennenListe, pfad } from '../../lib/db.js'
+import { rennDaten } from '../../lib/rennen.js'
+import { naechstesRennen, zeitplan } from '../../engine/vorschau.js'
 
 export async function getStaticPaths() {
   return rennenListe().map((r) => ({ params: { id: r.id } }))
 }
 
 const { id } = Astro.params
-
-const rennen = eine(
-  `SELECT r.*, g.name AS gpName, g.full_name AS gpVoll,
-          z.name AS strecke, z.place_name AS ort, c.name AS land, c.ioc AS ioc, c.demonym AS demonym
-     FROM race r
-     JOIN grand_prix g ON g.id = r.grand_prix_id
-     JOIN circuit z ON z.id = r.circuit_id
-     LEFT JOIN country c ON c.id = z.country_id
-    WHERE r.id = ?`,
-  id,
-)
-
-/*
- * Ergebnisse in der Reihenfolge der Anzeige: Erst die Gewerteten nach Platz,
- * danach Ausfälle und Nichtstarter. display_order aus F1DB trägt genau das.
- */
-const ergebnisse = alle(
-  `SELECT rr.*, d.display_name AS fahrer, d.id AS fahrerId, k.name AS team, k.id AS teamId
-     FROM race_result rr
-     JOIN driver d ON d.id = rr.driver_id
-     JOIN constructor k ON k.id = rr.constructor_id
-    WHERE rr.race_id = ?
-    ORDER BY rr.display_order`,
-  id,
-)
-
-const boxenstopps = alle(
-  `SELECT p.driver_id AS fahrerId, d.display_name AS fahrer, COUNT(*) AS stopps,
-          MIN(p.duration_ms) AS schnellster
-     FROM pit_stop p JOIN driver d ON d.id = p.driver_id
-    WHERE p.race_id = ? GROUP BY p.driver_id ORDER BY stopps, schnellster`,
-  id,
-)
-
-const nachbarn = alle(
-  `SELECT id, round, (SELECT name FROM grand_prix WHERE id = grand_prix_id) AS name
-     FROM race WHERE year = ? AND round IN (?, ?)`,
-  rennen.year, rennen.round - 1, rennen.round + 1,
-)
-const vorher = nachbarn.find((n) => n.round === rennen.round - 1)
-const nachher = nachbarn.find((n) => n.round === rennen.round + 1)
-
-
-/** Millisekunden als Rennzeit oder Abstand. */
-function zeit(ms) {
-  if (ms === null || ms === undefined) return ''
-  const s = ms / 1000
-  const h = Math.floor(s / 3600)
-  const m = Math.floor((s % 3600) / 60)
-  const rest = (s % 60).toFixed(3).padStart(6, '0')
-  return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${rest}` : `${m}:${rest}`
-}
+const d = rennDaten(id)
+const { rennen, ergebnisse, qualifying, sprint, stoppsJeFahrer, stopps, schnellsteRunden, strafen } = d
 
 const sieger = ergebnisse.find((e) => e.position === 1)
 const pole = ergebnisse.find((e) => e.qualifying_position === 1)
-const schnellste = ergebnisse.find((e) => e.fastest_lap)
+const poleZeit = qualifying.find((q) => q.position === 1)
+const schnellste = schnellsteRunden.find((f) => f.position === 1)
+const schnellsteZeile = ergebnisse.find((e) => e.fastest_lap)
+const istNaechstes = !d.gefahren && naechstesRennen(db())?.id === id
+const sessions = d.gefahren ? [] : zeitplan(db(), id)
 
 /*
  * Das Podium steht über der Ergebnisliste: Wer die Seite eines Rennens
@@ -79,11 +37,49 @@ const zeitVon = (e) =>
       : e.gap_laps
         ? `+${e.gap_laps} ${e.gap_laps === 1 ? 'lap' : 'laps'}`
         : (e.reason_retired ?? '')
+
+/* Q1–Q3 gibt es seit 2006; davor eine Zeit je Fahrer. */
+const mitSegmenten = qualifying.some((q) => q.q1 || q.q2 || q.q3)
+const mitQualiZeit = qualifying.some((q) => q.zeit || q.q1)
+
+/** Bewegung in der Wertung: ▲2 heißt zwei Plätze gewonnen. */
+const bewegung = (s) => {
+  if (!s.vorher || !s.position || s.vorher === s.position) return ''
+  return s.vorher > s.position ? `▲${s.vorher - s.position}` : `▼${s.position - s.vorher}`
+}
+
+const ziele = [
+  d.gefahren && { id: 'ergebnis', label: 'Result' },
+  sprint.length > 0 && { id: 'sprint', label: 'Sprint' },
+  qualifying.length > 0 && { id: 'qualifying', label: 'Qualifying' },
+  strafen.length > 0 && { id: 'strafen', label: 'Grid penalties' },
+  stopps.length > 0 && { id: 'stopps', label: 'Pit stops' },
+  schnellsteRunden.length > 0 && { id: 'runden', label: 'Fastest laps' },
+  d.fahrerStand.length > 0 && { id: 'wertung', label: 'Standings' },
+].filter(Boolean)
+
+const name = `${rennen.gpVoll} ${rennen.year}`
+const SEITE = 'https://jonathanrngl.github.io'
+const ereignis = {
+  '@context': 'https://schema.org',
+  '@type': 'SportsEvent',
+  name,
+  sport: 'Formula One',
+  startDate: rennen.time ? `${rennen.date}T${rennen.time}Z` : rennen.date,
+  eventStatus: 'https://schema.org/EventScheduled',
+  location: { '@type': 'Place', name: rennen.strecke, address: [rennen.ort, rennen.land].filter(Boolean).join(', ') },
+  url: `${SEITE}${pfad.rennen(id)}`,
+  ...(sieger ? { winner: { '@type': 'Person', name: sieger.fahrer, url: `${SEITE}${pfad.fahrer(sieger.fahrerId)}` } } : {}),
+}
 ---
 
 <Seite
-  titel={`${rennen.gpName} Grand Prix ${rennen.year} – Result`}
-  beschreibung={`Round ${rennen.round} of the ${rennen.year} season in ${rennen.ort}${sieger ? `. Winner: ${sieger.fahrer}` : ''}.`}
+  titel={`${name} – ${d.gefahren ? 'result' : 'upcoming'}`}
+  beschreibung={d.gefahren
+    ? `Round ${rennen.round} of the ${rennen.year} season in ${rennen.ort ?? rennen.strecke}${sieger ? `, won by ${sieger.fahrer}` : ''}: result, qualifying, grid, pit stops and the championship after the race.`
+    : `Round ${rennen.round} of the ${rennen.year} season in ${rennen.ort ?? rennen.strecke}, on ${datum(rennen.date)}.`}
+  strukturiert={[ereignis]}
+  brotkrumen={[{ name: 'Seasons', pfad: '/seasons/' }, { name: `${rennen.year} season`, pfad: `/seasons/${rennen.year}/` }]}
 >
   <header class="seitenkopf">
     <span class="wappen" title={rennen.land ?? ''}>{rennen.ioc ?? '—'}</span>
@@ -93,17 +89,46 @@ const zeitVon = (e) =>
         <span class="trenner">/</span>
         <span class="still">Round {rennen.round}</span>
       </p>
-      <h1>{rennen.gpName} Grand Prix {rennen.year}</h1>
+      <h1>{name}</h1>
       <ul class="eckdaten">
         <li><a href={pfad.strecke(rennen.circuit_id)}>{rennen.strecke}</a></li>
         {rennen.ort && rennen.ort !== rennen.strecke && <li>{rennen.ort}</li>}
         <li>{datum(rennen.date)}</li>
         {rennen.laps > 0 && <li>{rennen.laps} laps</li>}
         {rennen.distance_km > 0 && <li>{ein(rennen.distance_km)} km</li>}
+        {(rennen.layoutLaenge ?? rennen.course_length_km) > 0 && <li>{km(rennen.layoutLaenge ?? rennen.course_length_km)} a lap</li>}
+        {rennen.had_sprint === 1 && <li class="stark">Sprint weekend</li>}
         {rennen.drivers_title_decider === 1 && <li class="stark">Title decided here</li>}
+        {rennen.formula_one === 0 && <li>Indianapolis 500 – counted for the championship, not a Formula 1 race</li>}
       </ul>
     </div>
   </header>
+
+  {!d.gefahren && (
+    <section class="abschnitt">
+      <div class="bevorstehend">
+        <div class="tage"><Countdown datum={rennen.date} zeit={rennen.time} /></div>
+        <p>
+          This race has not been run yet – there is no result in the data.
+          {istNaechstes
+            ? <> It is the next race of the season: <a href={pfad.seite('/preview/')}>read the preview</a> for the circuit, the standings and the marks within reach.</>
+            : <> See how the <a href={pfad.strecke(rennen.circuit_id)}>circuit</a> has gone in earlier years.</>}
+        </p>
+      </div>
+      {sessions.length > 1 && (
+        <ol class="zeitplan-kurz">
+          {sessions.map((s) => (
+            <li>
+              <span>{s.name}</span>
+              {s.zeit
+                ? <time datetime={`${s.datum}T${s.zeit.slice(0, 5)}Z`} data-ortszeit>{datum(s.datum)}, {s.zeit.slice(0, 5)} UTC</time>
+                : <time datetime={s.datum}>{datum(s.datum)}</time>}
+            </li>
+          ))}
+        </ol>
+      )}
+    </section>
+  )}
 
   {podium.length > 0 && (
     <ol class="podium" aria-label="Podium">
@@ -111,75 +136,104 @@ const zeitVon = (e) =>
         <li class={`p${e.position}`}>
           <span class={plakette(e.position)}>P{e.position}</span>
           <a class="name" href={pfad.fahrer(e.fahrerId)}>{e.fahrer}</a>
-          <span class="team">{e.team}</span>
+          <a class="team" href={pfad.team(e.teamId)}>{e.team}</a>
           <span class="zeit">{zeitVon(e)}</span>
         </li>
       ))}
     </ol>
   )}
 
-  <ul class="kacheln namen">
-    {pole && (
-      <li><span>Pole position</span><b><a href={pfad.fahrer(pole.fahrerId)}>{pole.fahrer}</a></b><i>{pole.team}</i></li>
-    )}
-    {schnellste && (
-      <li><span>Fastest lap</span><b><a href={pfad.fahrer(schnellste.fahrerId)}>{schnellste.fahrer}</a></b>
-        <i>{schnellste.team}</i></li>
-    )}
-    {sieger?.grid_position && (
-      <li><span>Winner started from</span><b>P{sieger.grid_position}</b><i>on the grid</i></li>
-    )}
-  </ul>
+  {d.gefahren && (
+    <ul class="kacheln namen">
+      {pole && (
+        <li>
+          <span>Pole position</span>
+          <b><a href={pfad.fahrer(pole.fahrerId)}>{pole.fahrer}</a></b>
+          <i>{[pole.team, poleZeit && zeit(poleZeit.q3 ?? poleZeit.q2 ?? poleZeit.q1 ?? poleZeit.zeit)].filter(Boolean).join(' · ')}</i>
+        </li>
+      )}
+      {(schnellste ?? schnellsteZeile) && (
+        <li>
+          <span>Fastest lap</span>
+          <b><a href={pfad.fahrer((schnellste ?? schnellsteZeile).fahrerId)}>{(schnellste ?? schnellsteZeile).fahrer}</a></b>
+          <i>{schnellste ? [zeit(schnellste.zeit), schnellste.runde && `lap ${schnellste.runde}`].filter(Boolean).join(' · ') : schnellsteZeile.team}</i>
+        </li>
+      )}
+      {sieger?.grid_position && (
+        <li><span>Winner started from</span><b>P{sieger.grid_position}</b><i>on the grid</i></li>
+      )}
+      {d.fahrerDesTages && (
+        <li>
+          <span>Driver of the Day</span>
+          <b><a href={pfad.fahrer(d.fahrerDesTages.fahrerId)}>{d.fahrerDesTages.fahrer}</a></b>
+          <i>{d.fahrerDesTages.anteil ? `${ein(d.fahrerDesTages.anteil)}% of the fan vote` : 'fan vote'}</i>
+        </li>
+      )}
+    </ul>
+  )}
 
-  <section class="abschnitt">
-    <div class="abschnitt-kopf"><div><h2>Result</h2></div></div>
-    <div class="tabelle">
-      <table>
-        <thead>
-          <tr>
-            <th class="num">Pos</th><th>Driver</th><th>Team</th>
-            <th class="num">Grid</th><th class="num">Laps</th>
-            <th>Time / Reason</th><th class="num">Points</th>
-          </tr>
-        </thead>
-        <tbody>
-          {ergebnisse.map((e) => (
-            <tr class={e.classified ? '' : 'raus'}>
-              <td class="num"><span class={plakette(e.position)}>{e.position ?? e.position_text}</span></td>
-              <td>
-                <a class="zeile" href={pfad.fahrer(e.fahrerId)}>{e.fahrer}</a>
-                {e.shared_car === 1 && <span class="etikett" title="Shared car">shared</span>}
-                {e.fastest_lap === 1 && <span class="etikett akzent" title="Fastest lap">fastest lap</span>}
-              </td>
-              <td class="leise"><a class="leise" href={pfad.team(e.teamId)}>{e.team}</a></td>
-              <td class="num">{e.grid_position ?? '–'}</td>
-              <td class="num">{e.laps ?? ''}</td>
-              <td class="leise">{zeitVon(e)}</td>
-              <td class="num fett">{e.points ? ein(e.points) : ''}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-    <p class="fussnote">
-      A number in the first column means classified. DNF, DNQ and DNS stand for retirement,
-      did not qualify and did not start. ‘shared’ marks a car that two drivers shared
-      between them – permitted in the 1950s, and both were classified.
-    </p>
-  </section>
+  {ziele.length > 1 && <Sprung ziele={ziele} />}
 
-  {boxenstopps.length > 0 && (
-    <section class="abschnitt">
-      <div class="abschnitt-kopf"><div><h2>Pit stops</h2></div></div>
-      <div class="tabelle boxen">
+  {d.gefahren && (
+    <section class="abschnitt" id="ergebnis">
+      <div class="abschnitt-kopf"><div><h2>Result</h2></div></div>
+      <div class="tabelle mit-erster-spalte">
         <table>
-          <thead><tr><th>Driver</th><th class="num">Stops</th><th class="num">Fastest</th></tr></thead>
+          <thead>
+            <tr>
+              <th class="num" scope="col">Pos</th><th scope="col">Driver</th><th class="num" scope="col"><abbr title="Car number">No.</abbr></th>
+              <th scope="col">Team · engine</th>
+              <th class="num" scope="col">Grid</th><th class="num" scope="col">Laps</th>
+              <th scope="col">Time / reason</th><th class="num" scope="col">Points</th>
+            </tr>
+          </thead>
           <tbody>
-            {boxenstopps.map((b) => (
-              <tr>
-                <td><a class="zeile" href={pfad.fahrer(b.fahrerId)}>{b.fahrer}</a></td>
-                <td class="num">{b.stopps}</td>
-                <td class="num">{b.schnellster ? `${(b.schnellster / 1000).toFixed(3)} s` : '–'}</td>
+            {ergebnisse.map((e) => (
+              <tr class={e.classified ? '' : 'raus'}>
+                <td class="num"><span class={plakette(e.position)}>{e.position ?? e.position_text}</span></td>
+                <th scope="row">
+                  <a class="zeile" href={pfad.fahrer(e.fahrerId)}>{e.fahrer}</a>
+                  {e.shared_car === 1 && <span class="etikett" title="Shared car">shared</span>}
+                  {e.fastest_lap === 1 && <span class="etikett akzent" title="Fastest lap">fastest lap</span>}
+                </th>
+                <td class="num leise">{e.car_number ?? ''}</td>
+                <td class="leise">
+                  <a class="leise" href={pfad.team(e.teamId)}>{e.team}</a>
+                  {e.motorId && e.motor !== e.team && <> · <a class="leise" href={pfad.seite(`/engines/${e.motorId}/`)}>{e.motor}</a></>}
+                </td>
+                <td class="num">{e.grid_position ?? '–'}</td>
+                <td class="num">{e.laps ?? ''}</td>
+                <td class="leise">{zeitVon(e)}{e.time_penalty_ms ? <span class="etikett warn" title="Time penalty, already included">+{zeit(e.time_penalty_ms)} penalty</span> : ''}</td>
+                <td class="num fett">{e.points ? ein(e.points) : ''}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p class="fussnote">
+        A number in the first column means classified. DNF, DNQ and DNS stand for retirement,
+        did not qualify and did not start. ‘shared’ marks a car that two drivers shared between
+        them – permitted in the 1950s, and both were classified.
+      </p>
+    </section>
+  )}
+
+  {sprint.length > 0 && (
+    <section class="abschnitt" id="sprint">
+      <div class="abschnitt-kopf">
+        <div><h2>Sprint</h2><p>The short race on Saturday, with points of its own.</p></div>
+      </div>
+      <div class="tabelle mit-erster-spalte schmal">
+        <table>
+          <thead><tr><th class="num" scope="col">Pos</th><th scope="col">Driver</th><th scope="col">Team</th><th class="num" scope="col">Grid</th><th class="num" scope="col">Points</th></tr></thead>
+          <tbody>
+            {sprint.map((s) => (
+              <tr class={s.gewertet ? '' : 'raus'}>
+                <td class="num"><span class={plakette(s.position)}>{s.position ?? s.text}</span></td>
+                <th scope="row"><a class="zeile" href={pfad.fahrer(s.fahrerId)}>{s.fahrer}</a></th>
+                <td class="leise"><a class="leise" href={pfad.team(s.teamId)}>{s.team}</a></td>
+                <td class="num">{s.start ?? '–'}</td>
+                <td class="num fett">{s.punkte ? ein(s.punkte) : ''}</td>
               </tr>
             ))}
           </tbody>
@@ -188,11 +242,178 @@ const zeitVon = (e) =>
     </section>
   )}
 
+  {qualifying.length > 0 && (
+    <section class="abschnitt" id="qualifying">
+      <div class="abschnitt-kopf">
+        <div>
+          <h2>Qualifying</h2>
+          {mitSegmenten && <p>Knock-out in three parts since 2006: the slowest drop out after Q1 and Q2.</p>}
+        </div>
+      </div>
+      <div class="tabelle mit-erster-spalte schmal">
+        <table>
+          <thead>
+            <tr>
+              <th class="num" scope="col">Pos</th><th scope="col">Driver</th><th scope="col">Team</th>
+              {mitSegmenten
+                ? <><th class="num" scope="col">Q1</th><th class="num" scope="col">Q2</th><th class="num" scope="col">Q3</th></>
+                : mitQualiZeit && <><th class="num" scope="col">Time</th><th class="num" scope="col">Gap</th></>}
+            </tr>
+          </thead>
+          <tbody>
+            {qualifying.map((q) => (
+              <tr>
+                <td class="num"><span class={plakette(q.position)}>{q.position ?? q.text ?? '–'}</span></td>
+                <th scope="row"><a class="zeile" href={pfad.fahrer(q.fahrerId)}>{q.fahrer}</a></th>
+                <td class="leise"><a class="leise" href={pfad.team(q.teamId)}>{q.team}</a></td>
+                {mitSegmenten
+                  ? <><td class="num">{zeit(q.q1)}</td><td class="num">{zeit(q.q2)}</td><td class="num fett">{zeit(q.q3)}</td></>
+                  : mitQualiZeit && <><td class="num">{zeit(q.zeit)}</td><td class="num leise">{q.abstand ? `+${zeit(q.abstand)}` : ''}</td></>}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  )}
+
+  {strafen.length > 0 && (
+    <section class="abschnitt" id="strafen">
+      <div class="abschnitt-kopf">
+        <div><h2>Grid penalties</h2><p>Why the starting grid differs from the qualifying order.</p></div>
+      </div>
+      <div class="tabelle schmal">
+        <table>
+          <thead><tr><th scope="col">Driver</th><th class="num" scope="col">Qualified</th><th class="num" scope="col">Started</th><th scope="col">Penalty</th></tr></thead>
+          <tbody>
+            {strafen.map((g) => (
+              <tr>
+                <th scope="row"><a class="zeile" href={pfad.fahrer(g.fahrerId)}>{g.fahrer}</a></th>
+                <td class="num">{g.quali ? `P${g.quali}` : '–'}</td>
+                <td class="num fett">{g.position ? `P${g.position}` : (g.text ?? '–')}</td>
+                <td class="leise">{[g.strafPlaetze && `${g.strafPlaetze} places`, g.strafe].filter(Boolean).join(' – ')}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  )}
+
+  {stopps.length > 0 && (
+    <section class="abschnitt" id="stopps">
+      <div class="abschnitt-kopf"><div><h2>Pit stops</h2><p>Time from entering to leaving the pit lane, not the stationary time.</p></div></div>
+      <div class="tabelle schmal">
+        <table>
+          <thead><tr><th scope="col">Driver</th><th class="num" scope="col">Stops</th><th scope="col">On laps</th><th class="num" scope="col">Fastest</th></tr></thead>
+          <tbody>
+            {stoppsJeFahrer.map((b) => (
+              <tr>
+                <th scope="row"><a class="zeile" href={pfad.fahrer(b.fahrerId)}>{b.fahrer}</a></th>
+                <td class="num">{b.stopps}</td>
+                <td class="leise">{b.runden.join(', ')}</td>
+                <td class="num">{b.schnellster ? `${zeit(b.schnellster)} s` : '–'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <details class="mehr-details">
+        <summary>Every stop, lap by lap ({stopps.length})</summary>
+        <div class="tabelle schmal">
+          <table>
+            <thead><tr><th class="num" scope="col">Lap</th><th scope="col">Driver</th><th class="num" scope="col">Stop</th><th class="num" scope="col">Time</th></tr></thead>
+            <tbody>
+              {stopps.map((s) => (
+                <tr>
+                  <td class="num">{s.runde}</td>
+                  <th scope="row"><a class="zeile" href={pfad.fahrer(s.fahrerId)}>{s.fahrer}</a></th>
+                  <td class="num">{s.stopp}</td>
+                  <td class="num">{s.dauer ? `${zeit(s.dauer)} s` : '–'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </details>
+    </section>
+  )}
+
+  {schnellsteRunden.length > 0 && (
+    <section class="abschnitt" id="runden">
+      <div class="abschnitt-kopf"><div><h2>Fastest laps</h2><p>Each driver's quickest lap of the race.</p></div></div>
+      <div class="tabelle schmal">
+        <table>
+          <thead><tr><th class="num" scope="col">Pos</th><th scope="col">Driver</th><th class="num" scope="col">Lap</th><th class="num" scope="col">Time</th><th class="num" scope="col">Gap</th></tr></thead>
+          <tbody>
+            {schnellsteRunden.slice(0, 10).map((f) => (
+              <tr>
+                <td class="num"><span class={plakette(f.position)}>{f.position ?? '–'}</span></td>
+                <th scope="row"><a class="zeile" href={pfad.fahrer(f.fahrerId)}>{f.fahrer}</a></th>
+                <td class="num">{f.runde ?? '–'}</td>
+                <td class="num fett">{zeit(f.zeit)}</td>
+                <td class="num leise">{f.abstand ? `+${zeit(f.abstand)}` : ''}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  )}
+
+  {d.fahrerStand.length > 0 && (
+    <section class="abschnitt" id="wertung">
+      <div class="abschnitt-kopf">
+        <div>
+          <h2>Championship after this race</h2>
+          <p>The official standings after round {rennen.round}. Arrows show the change against the round before.</p>
+        </div>
+        <a class="mehr" href={pfad.saison(rennen.year)}>The whole season →</a>
+      </div>
+      <div class="wertungen">
+        <div class="tabelle">
+          <table>
+            <caption class="sr-only">Drivers' championship after round {rennen.round}</caption>
+            <thead><tr><th class="num" scope="col">Pos</th><th scope="col">Driver</th><th class="num" scope="col">Points</th><th class="num" scope="col"><span class="sr-only">Change</span></th></tr></thead>
+            <tbody>
+              {d.fahrerStand.map((s) => (
+                <tr>
+                  <td class="num"><span class={plakette(s.position)}>{s.position ?? '–'}</span></td>
+                  <th scope="row"><a class="zeile" href={pfad.fahrer(s.id)}>{s.name}</a></th>
+                  <td class="num fett">{ein(s.punkte)}</td>
+                  <td class={`num ${bewegung(s).startsWith('▲') ? 'gut' : 'leise'}`}>{bewegung(s)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {d.teamStand.length > 0 && (
+          <div class="tabelle">
+            <table>
+              <caption class="sr-only">Constructors' championship after round {rennen.round}</caption>
+              <thead><tr><th class="num" scope="col">Pos</th><th scope="col">Team</th><th class="num" scope="col">Points</th><th class="num" scope="col"><span class="sr-only">Change</span></th></tr></thead>
+              <tbody>
+                {d.teamStand.map((s) => (
+                  <tr>
+                    <td class="num"><span class={plakette(s.position)}>{s.position ?? '–'}</span></td>
+                    <th scope="row"><a class="zeile" href={pfad.team(s.id)}>{s.name}</a></th>
+                    <td class="num fett">{ein(s.punkte)}</td>
+                    <td class={`num ${bewegung(s).startsWith('▲') ? 'gut' : 'leise'}`}>{bewegung(s)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </section>
+  )}
+
   <nav class="nachbarn" aria-label="Neighbouring races">
-    {vorher
-      ? <a class="karte" href={pfad.rennen(vorher.id)}><span>‹ Previous round</span><b>{vorher.name}</b></a>
+    {d.vorher
+      ? <a class="karte" href={pfad.rennen(d.vorher.id)}><span>‹ Previous round</span><b>{d.vorher.name}</b></a>
       : <span></span>}
-    {nachher && <a class="karte rechts" href={pfad.rennen(nachher.id)}><span>Next round ›</span><b>{nachher.name}</b></a>}
+    {d.nachher && <a class="karte rechts" href={pfad.rennen(d.nachher.id)}><span>Next round ›</span><b>{d.nachher.name}</b></a>}
   </nav>
 </Seite>
 
@@ -240,8 +461,9 @@ const zeitVon = (e) =>
   }
   .podium > .p1 .name { font-size: 1.35rem; }
   .podium .name:hover { color: var(--accent); }
-  .podium .team { font-size: 0.85rem; color: var(--muted); }
-  .podium .zeit { font-size: 0.85rem; font-weight: 600; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+  .podium .team { font-size: 0.86rem; color: var(--muted); text-decoration: none; }
+  .podium .team:hover { color: var(--accent); text-decoration: underline; }
+  .podium .zeit { font-size: 0.86rem; font-weight: 600; color: var(--ink-2); font-variant-numeric: tabular-nums; }
 
   @media (max-width: 40rem) {
     .podium { grid-template-columns: minmax(0, 1fr); }
@@ -249,7 +471,47 @@ const zeitVon = (e) =>
   }
 
   .kacheln.namen { grid-template-columns: repeat(auto-fit, minmax(min(14rem, 100%), 1fr)); }
-  .boxen { max-width: 36rem; }
+  .schmal { max-width: 46rem; }
+  .mehr-details { margin-top: 0.75rem; }
+  .mehr-details summary { cursor: pointer; font-size: 0.9rem; font-weight: 600; color: var(--ink); min-height: 2.25rem; }
+
+  .wertungen {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(22rem, 100%), 1fr));
+    align-items: start;
+    gap: 1.25rem;
+  }
+
+  .bevorstehend {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1.75rem;
+    padding: 1.1rem 1.35rem;
+    color: var(--kopf-muted);
+    background: var(--kopf-bg);
+    border-left: 4px solid var(--accent);
+    border-radius: var(--radius);
+  }
+
+  .bevorstehend p { flex: 1 1 22rem; margin: 0; font-size: 0.92rem; text-wrap: pretty; }
+  .bevorstehend a { color: #ff5c52; }
+  .bevorstehend .tage :global(.countdown-wert) { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem; }
+  .bevorstehend .tage :global(b) { font-size: 2.4rem; font-weight: 800; line-height: 1; color: var(--kopf-ink); }
+  .bevorstehend .tage :global(span span) { font-size: 0.95rem; font-weight: 600; color: var(--kopf-ink); }
+
+  .zeitplan-kurz {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(14rem, 100%), 1fr));
+    gap: 0.5rem;
+    margin: 0.85rem 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .zeitplan-kurz li { display: grid; padding: 0.6rem 0.85rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-s); }
+  .zeitplan-kurz span { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+  .zeitplan-kurz time { font-weight: 650; color: var(--ink); }
 
   .nachbarn {
     display: grid;
@@ -260,6 +522,6 @@ const zeitVon = (e) =>
 
   .nachbarn .karte { display: grid; gap: 0.1rem; }
   .nachbarn .rechts { text-align: right; grid-column: 2; }
-  .nachbarn span { font-size: 0.78rem; font-weight: 650; color: var(--muted); }
+  .nachbarn span { font-size: 0.8rem; font-weight: 650; color: var(--muted); }
   .nachbarn b { color: var(--ink); font-size: 1rem; }
 </style>

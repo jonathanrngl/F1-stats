@@ -74,6 +74,21 @@ export function prozent(x) {
 export const sekunden = (s) =>
   s === null || s === undefined ? '–' : `${s < 10 ? s.toFixed(3) : EINE_STELLE.format(Math.round(s * 10) / 10)} s`
 
+/**
+ * Millisekunden als Renn- oder Rundenzeit: „1:32:07.986“, „1:23.456“, „58.114“.
+ * Eine Stunde nur, wenn es eine gibt; unter einer Minute ohne Minuten.
+ */
+export function zeit(ms) {
+  if (ms === null || ms === undefined) return ''
+  const s = ms / 1000
+  const h = Math.floor(s / 3600)
+  const m = Math.floor((s % 3600) / 60)
+  const rest = (s % 60).toFixed(3)
+  if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${rest.padStart(6, '0')}`
+  if (m > 0) return `${m}:${rest.padStart(6, '0')}`
+  return rest
+}
+
 /** Ein Alter aus Jahren und Tagen: „18y 228d“. */
 export const alter = (a) => (!a ? '–' : `${a.jahre}y ${a.tage}d`)
 

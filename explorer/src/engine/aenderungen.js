@@ -733,3 +733,20 @@ export function laufendeSerien(db, stand, { minLaenge = 3, jeArt = 3 } = {}) {
 
   return ergebnis.sort((a, b) => a.fehlt - b.fehlt || b.laenge - a.laenge)
 }
+
+/** Ein Ereignis in einen Satz – die Formulierung trägt die Unterscheidung. */
+export function beschreibeAenderung(e) {
+  const wer = e.halter.map((h) => h.name).join(' and ')
+  /** Wer die Marke bisher hielt und sie nun nicht mehr allein hat. */
+  const alt = e.vorher.halter
+    .filter((h) => !e.halter.some((n) => n.id === h.id))
+    .map((h) => h.name)
+    .join(' and ')
+
+  if (e.art === 'eingestellt') {
+    return `${wer} reaches ${zahlwort(e.wert, e.kategorie)} and now shares the record${alt ? ` with ${alt}` : ''}.`
+  }
+  return `${wer} moves clear with ${zahlwort(e.wert, e.kategorie)}${
+    alt ? ` – ${alt} no longer shares it` : ''
+  }.`
+}

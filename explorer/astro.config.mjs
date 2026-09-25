@@ -45,11 +45,50 @@ const ALTE_ADRESSEN = {
   '/klassisch': '/classic',
 }
 
+/*
+ * Die Sitemap: jede gebaute Seite, nach dem Bau aus dem geschrieben, was
+ * tatsächlich entstanden ist – nicht aus einer Liste, die neben den Seiten
+ * gepflegt werden müsste. Die Weiterleitungen der alten deutschen Adressen
+ * und die 404-Seite stehen nicht darin; sie sind keine Seiten, die jemand
+ * finden soll.
+ *
+ * Eine eigene Integration statt @astrojs/sitemap: Es sind zwanzig Zeilen, und
+ * jede Abhängigkeit weniger ist eine, die beim Bauen keinen Code ausführt.
+ *
+ * GitHub Pages erlaubt keine robots.txt in der Wurzel einer Projektseite –
+ * die läge unter /robots.txt, und das gehört dem Konto. Die Sitemap wird
+ * deshalb über die Search Console angemeldet und im Kopf jeder Seite verlinkt.
+ */
+const sitemap = () => ({
+  name: 'sitemap',
+  hooks: {
+    'astro:build:done': async ({ pages, dir }) => {
+      const { writeFile } = await import('node:fs/promises')
+      const alt = Object.keys(ALTE_ADRESSEN).map((a) => a.slice(1))
+      const wege = pages
+        .map((p) => p.pathname)
+        .filter((p) => p !== '404/' && !alt.some((a) => p === `${a}/`))
+        .sort()
+      const xml =
+        '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
+        wege.map((p) => `  <url><loc>https://jonathanrngl.github.io${BASIS}/${p}</loc></url>`).join('\n') +
+        '\n</urlset>\n'
+      await writeFile(new URL('sitemap.xml', dir), xml)
+    },
+  },
+})
+
 export default defineConfig({
   site: 'https://jonathanrngl.github.io',
   base: '/F1-stats/',
   output: 'static',
-  integrations: [react()],
+  /*
+   * Jede Adresse endet auf einen Schrägstrich, wie es die Verzeichnisausgabe
+   * ohnehin schreibt. So gibt es je Seite genau eine Adresse, und die Links
+   * darauf sind überall dieselben.
+   */
+  trailingSlash: 'always',
+  integrations: [react(), sitemap()],
   build: { format: 'directory' },
   server: { port: 4321 },
   /*
