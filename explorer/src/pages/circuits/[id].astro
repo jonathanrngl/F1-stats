@@ -1,5 +1,5 @@
 ---
-import { ein, plakette, prozent as proz, raenge, zahl } from '../../lib/format.js'
+import { ein, km, plakette, prozent as proz, raenge, zahl } from '../../lib/format.js'
 import Seite from '../../layouts/Seite.astro'
 import Sprung from '../../components/Sprung.astro'
 import { eine, streckenListe, pfad, db } from '../../lib/db.js'
@@ -54,7 +54,7 @@ const ziele = [
       <ul class="eckdaten">
         {strecke.place_name && strecke.place_name !== strecke.name && <li>{strecke.place_name}</li>}
         <li>{zeitraum}</li>
-        {strecke.length_km > 0 && <li>{ein(strecke.length_km)} km</li>}
+        {strecke.length_km > 0 && <li>{km(strecke.length_km)}</li>}
         {strecke.turns > 0 && <li>{strecke.turns} corners</li>}
       </ul>
     </div>
@@ -168,7 +168,7 @@ const ziele = [
                   {l.von ? (l.von === l.bis ? l.von : `${l.von}–${l.bis}`) : 'never raced'}
                   {l.aktuell === 1 && <span class="etikett akzent">today</span>}
                 </td>
-                <td class="num">{l.laenge ? `${ein(l.laenge)} km` : '–'}</td>
+                <td class="num">{l.laenge ? km(l.laenge) : '–'}</td>
                 <td class="num">{l.kurven ?? '–'}</td>
                 <td class="num">{l.rennen}</td>
               </tr>

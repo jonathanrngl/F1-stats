@@ -155,7 +155,11 @@ export default function Vergleich({ index }) {
     window.history.replaceState(null, '', neu)
   }, [ids, bereit])
 
-  const beide = ids.map((id) => profile[id]).filter(Boolean)
+  /*
+   * Als Memo, nicht als Ausdruck: Ein neues Array bei jedem Render machte die
+   * drei useMemo darunter wirkungslos – sie rechneten jedes Mal neu.
+   */
+  const beide = useMemo(() => ids.map((id) => profile[id]).filter(Boolean), [ids, profile])
   const vollstaendig = beide.length === 2 && ids.every(Boolean)
 
   /** Gemeinsamer Zeitraum als Vorschlag – dort ist der Vergleich am fairsten. */
@@ -168,7 +172,7 @@ export default function Vergleich({ index }) {
     return { von, bis, gemeinsamVon, gemeinsamBis, gibtUeberschneidung: gemeinsamVon <= gemeinsamBis }
   }, [vollstaendig, beide])
 
-  const spanne = zeitraum ?? (grenzen ? [grenzen.von, grenzen.bis] : null)
+  const spanne = useMemo(() => zeitraum ?? (grenzen ? [grenzen.von, grenzen.bis] : null), [zeitraum, grenzen])
 
   const werte = useMemo(
     () => (vollstaendig && spanne ? beide.map((p) => summe(p, spanne[0], spanne[1])) : null),

@@ -1,5 +1,5 @@
 ---
-import { datumKurz as datum, ein, plakette, zahl } from '../../lib/format.js'
+import { datumKurz as datum, ein, plakette, tagMonat, zahl } from '../../lib/format.js'
 import Seite from '../../layouts/Seite.astro'
 import { alle, eine, saisonListe, rennenListe, pfad } from '../../lib/db.js'
 import Verlauf from '../../components/Verlauf.astro'
@@ -267,7 +267,7 @@ const ziele = [
     <div class="abschnitt-kopf"><div><h2>Race calendar</h2></div></div>
     <div class="tabelle">
       <table>
-        <thead><tr><th class="num">Rd</th><th>Race</th><th>Circuit</th><th>Date</th><th>Winner</th></tr></thead>
+        <thead><tr><th class="num">Rd</th><th>Race</th><th class="strecke">Circuit</th><th>Date</th><th>Winner</th></tr></thead>
         <tbody>
           {rennen.map((r) => (
             <tr class={r.siegerId ? undefined : 'raus'}>
@@ -276,8 +276,8 @@ const ziele = [
                 <a class="zeile" href={pfad.rennen(r.id)}>{r.name}</a>
                 {r.titelentscheidung === 1 && <span class="etikett akzent">Title decided</span>}
               </td>
-              <td class="leise">{r.strecke}</td>
-              <td class="leise">{datum(r.datum)}</td>
+              <td class="leise strecke">{r.strecke}</td>
+              <td class="leise datum">{tagMonat(r.datum)}<span class="sr-only"> {r.jahr}</span></td>
               <td>
                 {r.siegerId
                   ? <a class="zeile" href={pfad.fahrer(r.siegerId)}>{r.sieger}</a>
@@ -307,6 +307,13 @@ const ziele = [
 </Seite>
 
 <style>
+  /* Kalender wie auf /races/: Datum ohne Jahr, das die Seite schon trägt, am Telefon ohne Strecke. */
+  .datum { white-space: nowrap; }
+
+  @media (max-width: 34rem) {
+    .strecke { display: none; }
+  }
+
   /* Fahrer- und Teamwertung nebeneinander: Man liest sie zusammen. */
   .wertungen {
     display: grid;

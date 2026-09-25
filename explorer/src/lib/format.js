@@ -55,6 +55,11 @@ export const datum = (s) => (s ? LANG.format(alsDatum(s)) : '–')
 /** „13 Sep 2026" – für Tabellen. */
 export const datumKurz = (s) => (s ? KURZ.format(alsDatum(s)) : '–')
 
+const TAG_MONAT = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' })
+
+/** „13 Sep" – für eine Tabelle, über der das Jahr schon steht. */
+export const tagMonat = (s) => (s ? TAG_MONAT.format(alsDatum(s)) : '–')
+
 /**
  * Anteil als Prozent, ohne Leerzeichen davor.
  *

@@ -1226,6 +1226,14 @@ td .neben {
 td .neben a { color: var(--muted); text-decoration: none; }
 td .neben a:hover { color: var(--accent); }
 
+/*
+ * Eine Zelle mit zweiter Zeile ist ein kleiner Absatz, keine Zahl. Am Telefon
+ * drückte der Browser sie auf Wortbreite zusammen – „440 · Fernando Alonso –
+ * still racing …“ stand auf acht Zeilen, und die Tabelle scrollte trotzdem.
+ * Mit einer Mindestbreite scrollt sie, statt zu quetschen.
+ */
+td:has(> .neben) { min-width: 9.5rem; }
+
 /* Zeile des Meisters, des Siegers, des gerade gezeigten Eintrags. */
 tr.meister td { background: var(--accent-wash); }
 tr.meister:hover td { background: color-mix(in srgb, var(--accent) 11%, transparent); }

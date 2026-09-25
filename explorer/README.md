@@ -30,10 +30,10 @@ Architektur und Begründungen: [`../docs/ARCHITEKTUR.md`](../docs/ARCHITEKTUR.md
 ```bash
 npm run import   # Datenbank bauen (einmalig, 8 s)
 npm run dev      # http://localhost:4321/F1-stats/
-npm run build    # 2465 statische Seiten in ~45 s nach dist/
+npm run build    # 2477 statische Seiten in ~45 s nach dist/
 ```
 
-Der Build erzeugt fertiges HTML: 2465 Seiten, sieben JavaScript-Dateien in der
+Der Build erzeugt fertiges HTML: 2477 Seiten, sieben JavaScript-Dateien in der
 gesamten Ausgabe. Eine Fahrerseite wiegt 18 KB und braucht kein JavaScript, um
 ihre Zahlen zu zeigen.
 
@@ -45,7 +45,7 @@ verlässlichere Weg.
 ## Tests
 
 ```bash
-npm test        # 141 Prüfungen gegen die importierte Datenbank
+npm test        # 231 Prüfungen gegen die importierte Datenbank
 ```
 
 Der Massenabgleich rechnet Nennungen, Starts, Siege, Podien, Pole-Positions,

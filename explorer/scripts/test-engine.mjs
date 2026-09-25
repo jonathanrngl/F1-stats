@@ -888,7 +888,6 @@ const frageStellen = (t) => {
   const a = uebersetze(t, verz)
   return { a, erg: rechne(daten, a) }
 }
-const spitze = (t) => frageStellen(t).erg.reihen[0]
 const einzelwert = (sql, ...p) => db.prepare(sql).get(...p)
 
 {
