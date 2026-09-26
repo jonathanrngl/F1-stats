@@ -72,7 +72,15 @@ const { vorsortiert, gleichstand } = Astro.props
       }
     }
 
+    /*
+     * Der Anfangszustand, bevor jemand klickt: Die Tabelle ist schon sortiert,
+     * und ein Vorleser soll das hören – vorher stand aria-sort erst nach dem
+     * ersten Klick da.
+     */
     for (const k of knoepfe) {
+      const an = Number(k.dataset.spalte) === sortiert.spalte
+      k.dataset.aktiv = an ? '1' : ''
+      k.closest('th').setAttribute('aria-sort', an ? 'descending' : 'none')
       k.addEventListener('click', () => sortiere(Number(k.dataset.spalte), k.dataset.art))
     }
   }

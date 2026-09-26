@@ -38,7 +38,12 @@ const { ziele } = Astro.props
       .filter(Boolean)
 
     const markiere = (id) => {
-      for (const a of verweise) a.classList.toggle('an', a.hash === `#${id}`)
+      for (const a of verweise) {
+        const an = a.hash === `#${id}`
+        a.classList.toggle('an', an)
+        if (an) a.setAttribute('aria-current', 'location')
+        else a.removeAttribute('aria-current')
+      }
     }
 
     const beobachter = new IntersectionObserver(

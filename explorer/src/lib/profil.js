@@ -1,4 +1,5 @@
 import { db, alle, eine } from './db.js'
+import { maxRennpunkte, maxSprintpunkte, rennFaktoren } from '../engine/punkte.js'
 import { land } from './laender.js'
 import {
   calculateChampionships, calculateStreaks, calculateTeamMateComparison, driverRaces,
@@ -33,6 +34,22 @@ export function fahrerProfil(id) {
 
   const wmProJahr = new Map(titel.seasons.map((s) => [s.year, s]))
   const teamNamen = new Map(alle('SELECT id, name FROM constructor').map((t) => [t.id, t.name]))
+  const faktoren = rennFaktoren(db())
+
+  /*
+   * Sprints stehen nicht in den Rennergebnissen. Sie zählen hier getrennt –
+   * ein Sprintsieg ist kein Grand-Prix-Sieg –, gehen aber in die möglichen
+   * und die geholten Punkte ein, denn um die ging es an dem Wochenende.
+   */
+  const sprints = alle(
+    `SELECT r.year AS jahr, COUNT(*) AS starts, SUM(sr.points) AS punkte,
+            SUM(CASE WHEN sr.position = 1 THEN 1 ELSE 0 END) AS siege
+       FROM sprint_result sr JOIN race r ON r.id = sr.race_id
+      WHERE sr.driver_id = ? AND sr.position_text NOT IN ('DNS', 'DNQ', 'WD', 'DNP', 'EX')
+      GROUP BY r.year`,
+    id,
+  )
+  const sprintJeJahr = new Map(sprints.map((x) => [x.jahr, x]))
 
   const proJahr = new Map()
   for (const r of rennen) {
@@ -43,11 +60,16 @@ export function fahrerProfil(id) {
       punkte: 0,
       gridSumme: 0, gridRennen: 0,
       zielSumme: 0, zielRennen: 0,
+      /** Was die Starts dieser Saison höchstens gebracht hätten – je Epoche mit ihrem System. */
+      moeglich: 0,
       teams: [],
     }
     s.nennungen++
     s.punkte += r.points ?? 0
-    if (r.started) s.starts++
+    if (r.started) {
+      s.starts++
+      s.moeglich += maxRennpunkte(r.year) * (faktoren.get(r.raceId) ?? 1)
+    }
     if (r.qualifying === 1) {
       s.poles++
       // Exakt, nicht geschätzt: Ob aus dieser Pole ein Sieg wurde, steht nur
@@ -77,8 +99,13 @@ export function fahrerProfil(id) {
     .sort((a, b) => a.jahr - b.jahr)
     .map((s) => {
       const wm = wmProJahr.get(s.jahr)
+      const sp = sprintJeJahr.get(s.jahr)
       return {
         ...s,
+        sprintStarts: sp?.starts ?? 0,
+        sprintSiege: sp?.siege ?? 0,
+        sprintPunkte: sp?.punkte ?? 0,
+        moeglich: s.moeglich + (sp?.starts ?? 0) * maxSprintpunkte(s.jahr),
         wmPlatz: wm?.position ?? null,
         wmPunkte: wm?.points ?? null,
         meister: wm?.won === 1,
@@ -136,4 +163,79 @@ export function teamkollegen(id) {
     punkteSelbst: d.pointsSelf,
     punkteAndere: d.pointsOther,
   }))
+}
+
+/** Wie eine Verwandtschaft heißt, aus Sicht des Fahrers, dessen Seite es ist. */
+const VERWANDT = {
+  CHILD: 'child', PARENT: 'parent', SIBLING: 'sibling', HALF_SIBLING: 'half-sibling',
+  GRANDPARENT: 'grandparent', GRANDCHILD: 'grandchild', PARENTS_SIBLING: 'uncle or aunt',
+  SIBLINGS_CHILD: 'nephew or niece', PARENTS_SIBLINGS_CHILD: 'cousin',
+  GRANDPARENTS_SIBLING: 'great-uncle or great-aunt', SIBLINGS_GRANDCHILD: 'great-nephew or great-niece',
+  CHILD_IN_LAW: 'child-in-law', PARENT_IN_LAW: 'parent-in-law', SIBLING_IN_LAW: 'sibling-in-law',
+  SIBLINGS_CHILD_IN_LAW: 'nephew- or niece-in-law',
+}
+
+/**
+ * Was die Fahrerseite über die Engine-Zahlen hinaus zeigt: Sprints, Fahrer
+ * des Tages, Grand Slams, Familie, Geburtsort – und jedes einzelne Rennen.
+ *
+ * Die Rennliste fehlte bisher ganz. Von einem Fahrer führte kein Weg zu
+ * seinem ersten Sieg oder seinem letzten Rennen, und wer nie startete, sah
+ * sechs Nullen und keinen einzigen Verweis.
+ */
+export function fahrerZusatz(id) {
+  const sprint = eine(
+    `SELECT COUNT(*) AS starts, SUM(CASE WHEN position = 1 THEN 1 ELSE 0 END) AS siege,
+            SUM(CASE WHEN classified = 1 AND position <= 3 THEN 1 ELSE 0 END) AS podien,
+            SUM(points) AS punkte
+       FROM sprint_result WHERE driver_id = ? AND position_text NOT IN ('DNS', 'DNQ', 'WD', 'DNP', 'EX')`,
+    id,
+  )
+  const besondere = eine(
+    `SELECT SUM(driver_of_the_day) AS dotd, SUM(grand_slam) AS slams,
+            MIN(CASE WHEN r.year >= 2016 THEN 1 END) AS dotdMoeglich
+       FROM race_result rr JOIN race r ON r.id = rr.race_id WHERE rr.driver_id = ?`,
+    id,
+  )
+  const geburt = eine(
+    `SELECT d.place_of_birth AS ort, c.name AS land, d.permanent_number AS nummer
+       FROM driver d LEFT JOIN country c ON c.id = d.country_of_birth_id WHERE d.id = ?`,
+    id,
+  )
+  const familie = alle(
+    `SELECT f.relative_id AS id, d.display_name AS name, f.type AS art,
+            EXISTS (SELECT 1 FROM race_result rr WHERE rr.driver_id = f.relative_id) AS mitSeite
+       FROM driver_family f JOIN driver d ON d.id = f.relative_id
+      WHERE f.driver_id = ? ORDER BY f.sort_order`,
+    id,
+  ).map((f) => ({ ...f, wort: VERWANDT[f.art] ?? f.art.toLowerCase().replace(/_/g, ' ') }))
+
+  /* Jede Nennung, auch die ohne Start – bei zwei Zeilen (geteiltes Auto) beide. */
+  const rennen = alle(
+    `SELECT r.id, r.year AS jahr, r.round AS runde, r.date AS datum,
+            COALESCE(g.full_name, g.name || ' Grand Prix') AS name,
+            rr.constructor_id AS teamId, k.name AS team, rr.grid_position AS start,
+            rr.position AS platz, rr.position_text AS text, rr.classified AS gewertet,
+            rr.started AS gestartet, rr.points AS punkte, rr.fastest_lap AS schnellste,
+            rr.qualifying_position = 1 AS pole, rr.shared_car AS geteilt
+       FROM race_result rr
+       JOIN race r ON r.id = rr.race_id
+       JOIN grand_prix g ON g.id = r.grand_prix_id
+       JOIN constructor k ON k.id = rr.constructor_id
+      WHERE rr.driver_id = ?
+      ORDER BY r.date, r.round, rr.entry_index`,
+    id,
+  )
+
+  const gestartet = rennen.filter((r) => r.gestartet)
+  const siege = rennen.filter((r) => r.platz === 1)
+  const meilensteine = [
+    rennen[0] && { was: 'First entry', r: rennen[0] },
+    gestartet[0] && gestartet[0] !== rennen[0] && { was: 'First start', r: gestartet[0] },
+    siege[0] && { was: 'First win', r: siege[0] },
+    siege.length > 1 && { was: 'Last win', r: siege.at(-1) },
+    gestartet.length > 1 && { was: 'Last start', r: gestartet.at(-1) },
+  ].filter(Boolean)
+
+  return { sprint, besondere, geburt, familie, rennen, meilensteine }
 }

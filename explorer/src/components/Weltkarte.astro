@@ -124,8 +124,9 @@ const engePaare = inEuropa.reduce((n, a, i) => {
 
       {
         gezeichnet.map((s) => (
-          <a href={pfadZu(s.id)}>
+          <a href={pfadZu(s.id)} tabindex="-1">
             <title>{beschriftet(s)}</title>
+            <circle class="treffer" cx={ortX(s.laenge_grad)} cy={ortY(s.breite)} r={Math.max(radius(s.rennen), 9)} />
             <circle
               class={s.bis >= aktuellAb ? 'strecke aktuell' : 'strecke'}
               cx={ortX(s.laenge_grad)}
@@ -137,8 +138,8 @@ const engePaare = inEuropa.reduce((n, a, i) => {
       }
     </svg>
     <figcaption>
-      <span class="schluessel"><i class="aktuell"></i>On the current calendar</span>
-      <span class="schluessel"><i></i>No longer used</span>
+      <span class="schluessel"><i class="aktuell"></i>Used since {aktuellAb}</span>
+      <span class="schluessel"><i></i>Not used since</span>
       <span class="notiz">
         Circle area is the number of races held. {heute} of {verortet.length} circuits have been
         used since {aktuellAb}.
@@ -156,8 +157,9 @@ const engePaare = inEuropa.reduce((n, a, i) => {
       {LAND.map((d) => <path class="land" d={d} />)}
       {
         inEuropa.map((s) => (
-          <a href={pfadZu(s.id)}>
+          <a href={pfadZu(s.id)} tabindex="-1">
             <title>{beschriftet(s)}</title>
+            <circle class="treffer" cx={ortX(s.laenge_grad)} cy={ortY(s.breite)} r={Math.max(radius(s.rennen, 1.6 / zoom), 7 / zoom)} />
             <circle
               class={s.bis >= aktuellAb ? 'strecke aktuell' : 'strecke'}
               cx={ortX(s.laenge_grad)}
@@ -219,6 +221,15 @@ const engePaare = inEuropa.reduce((n, a, i) => {
 
   .strecke.aktuell { fill: var(--accent); fill-opacity: 0.85; }
   a:hover .strecke { fill-opacity: 1; stroke: var(--ink); }
+
+  /*
+   * Die Punkte sind nur für Zeiger und Finger da. Aus der Tabulatorfolge
+   * genommen (tabindex -1): 118 Stopps, die ein Vorleser in einem Bild mit
+   * role="img" gar nicht ansagt, waren ein Umweg ohne Ziel. Die Liste unter
+   * der Karte führt zu denselben Seiten. Die unsichtbare Trefferfläche ist
+   * größer als der Punkt – ein Kreis von drei Pixeln trifft kein Finger.
+   */
+  .treffer { fill: transparent; }
 
   figcaption {
     display: flex;

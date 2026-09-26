@@ -67,7 +67,7 @@ const sitemap = () => ({
       const alt = Object.keys(ALTE_ADRESSEN).map((a) => a.slice(1))
       const wege = pages
         .map((p) => p.pathname)
-        .filter((p) => p !== '404/' && !alt.some((a) => p === `${a}/`))
+        .filter((p) => !/^404\/?$/.test(p) && !alt.some((a) => p === `${a}/`))
         .sort()
       const xml =
         '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +

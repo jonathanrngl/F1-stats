@@ -12,7 +12,10 @@
  * sitzt als Färbung darin – Siege unten in der Akzentfarbe, weitere Podien
  * darüber blasser, der Rest grau.
  *
- * Gezeichnet beim Bauen. Die Seite braucht dafür kein JavaScript.
+ * Gezeichnet beim Bauen, in zwei Breiten wie der Punkteverlauf (Verlauf.astro):
+ * eine feste Breite von 900 ergab am Telefon Jahreszahlen von drei Pixeln.
+ * Die Werte stehen als Tabelle darunter – im Bild gab es sie nur beim
+ * Überfahren mit der Maus, und ein Finger überfährt nichts.
  */
 interface Saison {
   jahr: number
@@ -27,15 +30,14 @@ interface Props {
   saisons: Saison[]
   /** Für die Beschriftung unter dem Bild. */
   name: string
+  /**
+   * Die Wertetabelle. Auf der Fahrerseite steht darunter ohnehin die
+   * Saisontabelle mit allen Zahlen; dort ist sie überflüssig.
+   */
+  tabelle?: boolean
 }
 
-const { saisons, name } = Astro.props
-
-const W = 900
-const H = 200
-const PAD = { oben: 12, rechts: 10, unten: 30, links: 30 }
-const PLOT_B = W - PAD.links - PAD.rechts
-const PLOT_H = H - PAD.oben - PAD.unten
+const { saisons, name, tabelle = true } = Astro.props
 
 const maxStarts = Math.max(1, ...saisons.map((s) => s.starts))
 
@@ -51,45 +53,44 @@ const vonJahr = saisons[0]?.jahr ?? 0
 const bisJahr = saisons.at(-1)?.jahr ?? 0
 const spanne = bisJahr - vonJahr + 1
 
-const schritt = PLOT_B / Math.max(spanne, 1)
-const breite = Math.min(schritt * 0.72, 34)
+function zeichnung({ W, H, beschriftungen }) {
+  const PAD = { oben: 14, rechts: 10, unten: 30, links: 30 }
+  const PLOT_B = W - PAD.links - PAD.rechts
+  const PLOT_H = H - PAD.oben - PAD.unten
+  const schritt = PLOT_B / Math.max(spanne, 1)
+  const breite = Math.min(schritt * 0.72, 34)
+  const x = (jahr) => PAD.links + schritt * (jahr - vonJahr) + (schritt - breite) / 2
+  const hoehe = (n) => (n / maxStarts) * PLOT_H
+  const y = (n) => PAD.oben + PLOT_H - hoehe(n)
+  /*
+   * Nur jede k-te Jahreszahl, sonst kleben sie. Vier Stellen, nicht zwei: Die
+   * Seite reicht von 1950 bis 2026, und „05" wäre nicht von „50" zu
+   * unterscheiden.
+   */
+  const jede = Math.max(1, Math.ceil(spanne / beschriftungen))
+  const beschriftet = saisons.filter((s, i) => (s.jahr - vonJahr) % jede === 0 || i === saisons.length - 1)
+  return { W, H, PAD, breite, x, hoehe, y, beschriftet }
+}
 
-const x = (jahr: number) => PAD.links + schritt * (jahr - vonJahr) + (schritt - breite) / 2
-const hoehe = (n: number) => (n / maxStarts) * PLOT_H
-const y = (n: number) => PAD.oben + PLOT_H - hoehe(n)
-
-/*
- * Nur jede k-te Jahreszahl, sonst kleben sie. Vier Stellen, nicht zwei: Die
- * Seite reicht von 1950 bis 2026, und „05" wäre nicht von „50" zu
- * unterscheiden.
- */
-const jede = Math.max(1, Math.ceil(spanne / 8))
-const beschriftet = saisons.filter(
-  (s, i) => (s.jahr - vonJahr) % jede === 0 || i === saisons.length - 1,
-)
-
-/** Eine Achsenmarke oben, damit die Höhe lesbar ist. */
-const achse = [maxStarts]
+const FASSUNGEN = [
+  { klasse: 'breit', ...zeichnung({ W: 900, H: 200, beschriftungen: 8 }) },
+  { klasse: 'schmal', ...zeichnung({ W: 380, H: 170, beschriftungen: 4 }) },
+]
 ---
 
 <figure class="karriere">
-  <svg
-    viewBox={`0 0 ${W} ${H}`}
-    role="img"
-    aria-label={`${name}: starts, podiums and wins per season from ${saisons[0]?.jahr} to ${saisons.at(-1)?.jahr}. The figures are in the table below.`}
-  >
-    {achse.map((v) => (
-      <>
-        <line class="gitter" x1={PAD.links} x2={W - PAD.rechts} y1={y(v)} y2={y(v)} />
-        <text class="achse" x={PAD.links - 6} y={y(v)} text-anchor="end" dominant-baseline="middle">
-          {v}
-        </text>
-      </>
-    ))}
-    <line class="achslinie" x1={PAD.links} x2={W - PAD.rechts} y1={y(0)} y2={y(0)} />
+  {FASSUNGEN.map((z) => (
+    <svg
+      class={z.klasse}
+      viewBox={`0 0 ${z.W} ${z.H}`}
+      role="img"
+      aria-label={`${name}: starts, podiums and wins per season from ${vonJahr} to ${bisJahr}. The figures are in the table ${tabelle ? 'below the chart' : 'further down'}.`}
+    >
+      <line class="gitter" x1={z.PAD.links} x2={z.W - z.PAD.rechts} y1={z.y(maxStarts)} y2={z.y(maxStarts)} />
+      <text class="achse" x={z.PAD.links - 6} y={z.y(maxStarts)} text-anchor="end" dominant-baseline="middle">{maxStarts}</text>
+      <line class="achslinie" x1={z.PAD.links} x2={z.W - z.PAD.rechts} y1={z.y(0)} y2={z.y(0)} />
 
-    {
-      saisons.map((s) => {
+      {saisons.map((s) => {
         const andere = Math.max(0, s.starts - s.podien)
         const podienOhneSiege = Math.max(0, s.podien - s.siege)
         return (
@@ -99,47 +100,22 @@ const achse = [maxStarts]
               {s.wmPlatz ? `, championship P${s.wmPlatz}` : ''}
             </title>
             {/* Von unten: Siege, weitere Podien, alles Übrige. */}
-            {s.siege > 0 && (
-              <rect class="siege" x={x(s.jahr)} width={breite} y={y(s.siege)} height={hoehe(s.siege)} />
-            )}
+            {s.siege > 0 && <rect class="siege" x={z.x(s.jahr)} width={z.breite} y={z.y(s.siege)} height={z.hoehe(s.siege)} />}
             {podienOhneSiege > 0 && (
-              <rect
-                class="podien"
-                x={x(s.jahr)}
-                width={breite}
-                y={y(s.siege + podienOhneSiege)}
-                height={hoehe(podienOhneSiege)}
-              />
+              <rect class="podien" x={z.x(s.jahr)} width={z.breite} y={z.y(s.siege + podienOhneSiege)} height={z.hoehe(podienOhneSiege)} />
             )}
-            {andere > 0 && (
-              <rect
-                class="rest"
-                x={x(s.jahr)}
-                width={breite}
-                y={y(s.starts)}
-                height={hoehe(andere)}
-              />
-            )}
+            {andere > 0 && <rect class="rest" x={z.x(s.jahr)} width={z.breite} y={z.y(s.starts)} height={z.hoehe(andere)} />}
             {/* Ein Titel ist die Aussage des Bildes – er bekommt eine Marke. */}
-            {s.meister && <circle class="titel" cx={x(s.jahr) + breite / 2} cy={y(s.starts) - 7} r="3" />}
+            {s.meister && <circle class="titel" cx={z.x(s.jahr) + z.breite / 2} cy={z.y(s.starts) - 7} r="3.5" />}
           </g>
         )
-      })
-    }
+      })}
 
-    {
-      beschriftet.map((s) => (
-        <text
-          class="achse"
-          x={x(s.jahr) + breite / 2}
-          y={y(0) + 15}
-          text-anchor="middle"
-        >
-          {s.jahr}
-        </text>
-      ))
-    }
-  </svg>
+      {z.beschriftet.map((s) => (
+        <text class="achse" x={z.x(s.jahr) + z.breite / 2} y={z.y(0) + 16} text-anchor="middle">{s.jahr}</text>
+      ))}
+    </svg>
+  ))}
 
   <figcaption>
     <span class="schluessel"><i class="siege"></i>Wins</span>
@@ -148,6 +124,31 @@ const achse = [maxStarts]
     <span class="schluessel"><i class="titel"></i>Title</span>
     <span class="notiz">Bar height is the number of starts in that season.</span>
   </figcaption>
+
+  {tabelle && (
+    <details class="als-tabelle">
+      <summary>Show the figures as a table</summary>
+      <div class="tabelle">
+        <table>
+          <caption class="sr-only">{name}, season by season</caption>
+          <thead>
+            <tr><th scope="col">Season</th><th class="num" scope="col">Starts</th><th class="num" scope="col">Wins</th><th class="num" scope="col">Podiums</th><th class="num" scope="col">Championship</th></tr>
+          </thead>
+          <tbody>
+            {saisons.map((s) => (
+              <tr>
+                <th scope="row">{s.jahr}</th>
+                <td class="num">{s.starts}</td>
+                <td class="num">{s.siege || ''}</td>
+                <td class="num">{s.podien || ''}</td>
+                <td class="num">{s.meister ? 'Champion' : s.wmPlatz ? `P${s.wmPlatz}` : '–'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </details>
+  )}
 </figure>
 
 <style>
@@ -161,20 +162,28 @@ const achse = [maxStarts]
   }
 
   svg { display: block; width: 100%; height: auto; }
+  svg.schmal { display: none; }
+
+  @media (max-width: 40rem) {
+    svg.breit { display: none; }
+    svg.schmal { display: block; }
+  }
 
   .gitter { stroke: var(--grid); stroke-width: 1; shape-rendering: crispEdges; }
   .achslinie { stroke: var(--axis); stroke-width: 1; shape-rendering: crispEdges; }
-  .achse { fill: var(--muted); font-size: 10.5px; font-variant-numeric: tabular-nums; }
+  .achse { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
 
   /*
    * Drei Stufen einer Farbe statt drei Farben: Die Reihenfolge Sieg – Podium –
    * Rest ist eine Rangfolge, und eine Rangfolge zeichnet man mit Helligkeit,
-   * nicht mit verschiedenen Farbtönen.
+   * nicht mit verschiedenen Farbtönen. Der Rest volldeckend in --s-rest: mit
+   * halber Deckkraft kam er auf 1,4:1 und war genau die Form, um die es geht,
+   * kaum zu sehen.
    */
   rect.siege { fill: var(--accent); }
-  rect.podien { fill: var(--accent); opacity: 0.45; }
-  rect.rest { fill: var(--s-rest); opacity: 0.55; }
-  circle.titel { fill: var(--accent); }
+  rect.podien { fill: var(--accent); opacity: 0.5; }
+  rect.rest { fill: var(--s-rest); }
+  circle.titel { fill: var(--accent); stroke: var(--surface); stroke-width: 1.5; }
 
   figcaption {
     display: flex;
@@ -183,17 +192,21 @@ const achse = [maxStarts]
     margin-top: 0.7rem;
     padding-top: 0.7rem;
     border-top: 1px solid var(--border);
-    font-size: 0.76rem;
+    font-size: 0.8rem;
     color: var(--muted);
   }
 
   .schluessel { display: flex; align-items: center; gap: 0.35rem; }
-  .schluessel i { width: 0.7rem; height: 0.7rem; border-radius: 0.15rem; flex: none; }
+  .schluessel i { width: 0.75rem; height: 0.75rem; border-radius: 0.15rem; flex: none; }
   .schluessel i.siege { background: var(--accent); }
-  .schluessel i.podien { background: var(--accent); opacity: 0.45; }
-  .schluessel i.rest { background: var(--s-rest); opacity: 0.55; }
-  .schluessel i.titel { background: var(--accent); border-radius: 50%; width: 0.5rem; height: 0.5rem; }
+  .schluessel i.podien { background: var(--accent); opacity: 0.5; }
+  .schluessel i.rest { background: var(--s-rest); }
+  .schluessel i.titel { background: var(--accent); border-radius: 50%; width: 0.55rem; height: 0.55rem; }
   .notiz { margin-left: auto; text-wrap: pretty; }
+
+  .als-tabelle { margin-top: 0.75rem; }
+  .als-tabelle summary { cursor: pointer; min-height: 2.25rem; font-size: 0.86rem; font-weight: 600; color: var(--ink); }
+  .als-tabelle .tabelle { margin-top: 0.5rem; box-shadow: none; }
 
   @media (max-width: 34rem) {
     .notiz { margin-left: 0; }

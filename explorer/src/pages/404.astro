@@ -1,0 +1,58 @@
+---
+/**
+ * Die Seite für Adressen, die es nicht gibt.
+ *
+ * GitHub Pages liefert sie für jede unbekannte Adresse unter /F1-stats/ aus.
+ * Vorher stand dort GitHubs eigene Fehlerseite – ohne Kopfleiste, ohne Suche,
+ * ohne Weg zurück.
+ *
+ * Sie hat eine zweite Aufgabe: Die Adressen waren einmal deutsch. Für die
+ * Übersichten gibt es Weiterleitungen (astro.config.mjs), für die rund 2.300
+ * Einzelseiten nicht – eine statische Ausgabe müsste dafür jede als eigene
+ * Datei schreiben. Also fängt diese Seite sie ab: Beginnt der Pfad mit einem
+ * alten Wort, schickt das Skript unten zur neuen Adresse weiter. Die
+ * Kennungen selbst sind gleich geblieben, nur das erste Wort hat gewechselt.
+ */
+import Seite from '../layouts/Seite.astro'
+import { pfad } from '../lib/db.js'
+---
+
+<Seite titel="Page not found" beschreibung="There is no page at this address.">
+  <header class="seitenkopf">
+    <div>
+      <p class="oberzeile">404</p>
+      <h1>There is no page here</h1>
+      <p class="lead" data-weiterleitung hidden>This address has moved – taking you to its new place …</p>
+      <p class="lead">
+        The address may be mistyped, or the page may have moved. The search at the top finds every
+        driver, team, circuit, engine, season and race.
+      </p>
+    </div>
+  </header>
+
+  <ul class="einstiege-kurz">
+    <li><a class="knopf" href={pfad.seite('/')}>Home</a></li>
+    <li><a class="knopf leise" href={pfad.seite('/drivers/')}>All drivers</a></li>
+    <li><a class="knopf leise" href={pfad.seite('/races/')}>All races</a></li>
+    <li><a class="knopf leise" href={pfad.seite('/seasons/')}>All seasons</a></li>
+  </ul>
+</Seite>
+
+<script>
+  const BASIS = import.meta.env.BASE_URL.replace(/\/$/, '')
+  const ALT = {
+    fahrer: 'drivers', rennen: 'races', saisons: 'seasons', strecken: 'circuits', rekorde: 'records',
+    aenderungen: 'changes', vergleich: 'comparison', vorschau: 'preview', klassisch: 'classic',
+  }
+  const weg = window.location.pathname.slice(BASIS.length)
+  const m = /^\/([a-z]+)(\/.*)?$/.exec(weg)
+  if (m && ALT[m[1]]) {
+    document.querySelector<HTMLElement>('[data-weiterleitung]')?.removeAttribute('hidden')
+    // replace statt assign: Die tote Adresse soll nicht im Verlauf stehen bleiben.
+    window.location.replace(`${BASIS}/${ALT[m[1]]}${m[2] ?? '/'}${window.location.search}${window.location.hash}`)
+  }
+</script>
+
+<style>
+  .einstiege-kurz { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 1rem 0 0; padding: 0; list-style: none; }
+</style>
