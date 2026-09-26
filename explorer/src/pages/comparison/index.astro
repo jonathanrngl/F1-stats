@@ -1,22 +1,21 @@
 ---
 import Seite from '../../layouts/Seite.astro'
 import Vergleich from '../../components/Vergleich.jsx'
-import { fahrerIndex } from '../../lib/profil.js'
+import { pfad } from '../../lib/db.js'
 
 /*
- * Die einzige Seite mit echtem JavaScript. Grund: Ein Vergleich beliebiger
- * Paare lässt sich nicht vorrendern, und der Zeitraum soll sich einstellen
- * lassen, ohne bei jedem Schritt nachzuladen.
+ * Ein Vergleich beliebiger Paare lässt sich nicht vorrendern, und der Zeitraum
+ * soll sich einstellen lassen, ohne bei jedem Schritt nachzuladen. Die Insel
+ * holt die Fahrerliste und die beiden Profile aus der JSON-API.
  *
- * Der Suchindex kommt vorgerendert mit (rund 60 KB für 881 Fahrer), die
- * Profile lädt die Insel bei Bedarf aus der JSON-API.
+ * Die Liste stand vorher eingebettet in der Seite – 289 KB HTML, auch für
+ * jeden, der nur kurz hereinsah.
  */
-const index = fahrerIndex()
 ---
 
 <Seite
   titel="Driver comparison – two careers side by side"
-  beschreibung="Two Formula 1 drivers head to head: wins, podiums, rates and averages, across a full career or a period of your own choosing."
+  beschreibung="Two Formula 1 drivers head to head: wins, podiums, rates, averages and the share of possible points, across a full career or a period of your own choosing."
 >
   <header class="seitenkopf">
     <div>
@@ -24,12 +23,22 @@ const index = fahrerIndex()
       <h1>Compare two drivers</h1>
       <p class="lead">
         Two careers side by side – in full or over a period you choose. If they were ever
-        team-mates, the direct head-to-head sits below: same car, same races.
+        team-mates, the direct head-to-head sits below: same car, same races. Every comparison
+        has its own address, so it can be shared.
       </p>
     </div>
   </header>
 
-  <Vergleich index={index} client:load />
+  <p class="hinweis nur-ohne-js">
+    The comparison is worked out in your browser and needs JavaScript. Each driver's page has the
+    full career figures and the record against every team-mate –
+    {' '}<a href={pfad.seite('/drivers/')}>find a driver</a>, or see the
+    {' '}<a href={pfad.seite('/teammates/')}>team-mate ratings</a>.
+  </p>
+
+  <div class="nur-mit-js">
+    <Vergleich client:load />
+  </div>
 </Seite>
 
 <style is:global>
@@ -44,7 +53,7 @@ const index = fahrerIndex()
   .auswahl > label {
     display: block;
     margin-bottom: 0.35rem;
-    font-size: 0.68rem;
+    font-size: 0.75rem;
     font-weight: 700;
     letter-spacing: 0.1em;
     text-transform: uppercase;
@@ -64,8 +73,9 @@ const index = fahrerIndex()
     appearance: none;
   }
 
-  .auswahl input:hover,
-  .auswahl input:focus { border-color: var(--accent); }
+  .auswahl input { border-color: var(--border-input); }
+  .auswahl input:hover { border-color: var(--accent); }
+  .auswahl input:focus-visible { border-color: var(--accent); outline: 2px solid var(--accent); outline-offset: 1px; }
 
   .auswahl ul {
     position: absolute;
@@ -82,12 +92,13 @@ const index = fahrerIndex()
     box-shadow: var(--shadow);
   }
 
-  .auswahl ul button,
+  .auswahl li[role='option'],
   .auswahl .gewaehlt {
     display: flex;
     align-items: center;
     gap: 0.5rem;
     width: 100%;
+    min-height: 2.75rem;
     padding: 0.5rem 0.55rem;
     text-align: left;
     background: none;
@@ -103,19 +114,22 @@ const index = fahrerIndex()
     border: 1px solid var(--border);
   }
 
+  .auswahl .gewaehlt { border-color: var(--border-input); }
   .auswahl .gewaehlt:hover { border-color: var(--accent); }
-  .auswahl ul button:hover { background: var(--surface-2); }
+  .auswahl li[aria-selected='true'] { background: var(--surface-3); }
+  .auswahl .kein-treffer { padding: 0.6rem 0.65rem; font-size: 0.88rem; color: var(--muted); }
   .auswahl b { flex: 1; min-width: 0; color: var(--ink); font-weight: 600;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .auswahl i { font-style: normal; font-size: 0.78rem; color: var(--muted); flex: none; }
 
   .vgl .kuerzel {
     display: inline-block; min-width: 2.6rem; padding: 0.1rem 0.3rem; margin: 0;
-    font-size: 0.64rem; font-weight: 700; text-align: center;
+    font-size: 0.75rem; font-weight: 700; text-align: center;
     color: var(--muted); background: var(--surface-3); border-radius: 0.25rem; flex: none;
   }
 
   .zeitwahl {
+    min-width: 0;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -127,34 +141,37 @@ const index = fahrerIndex()
     border-radius: var(--radius);
   }
 
-  .zeitwahl > span {
-    font-size: 0.68rem; font-weight: 700; letter-spacing: 0.1em;
+  .zeitwahl > legend {
+    float: left;
+    margin-right: 0.5rem;
+    font-size: 0.75rem; font-weight: 700; letter-spacing: 0.1em;
     text-transform: uppercase; color: var(--muted);
   }
 
   .zeitwahl .knoepfe { display: flex; flex-wrap: wrap; gap: 0.35rem; }
 
   .zeitwahl button {
-    padding: 0.3rem 0.7rem;
+    min-height: 2.25rem;
+    padding: 0.3rem 0.8rem;
     font: inherit;
     font-size: 0.82rem;
     color: var(--ink-2);
     background: var(--surface);
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-input);
     border-radius: 999px;
     cursor: pointer;
   }
 
   .zeitwahl button:hover { border-color: var(--accent); }
-  .zeitwahl button.on { color: var(--accent); background: var(--accent-wash); border-color: var(--accent); }
+  .zeitwahl button[aria-pressed='true'] { color: var(--accent-strong); background: var(--accent-wash); border-color: var(--accent-strong); }
 
   .zeitwahl .regler { display: flex; gap: 0.75rem; margin-left: auto; }
   .zeitwahl .regler label { display: flex; align-items: center; gap: 0.35rem;
     font-size: 0.8rem; color: var(--muted); }
   .zeitwahl .regler input {
-    width: 4.5rem; padding: 0.25rem 0.4rem; font: inherit; font-size: 0.85rem;
+    width: 5rem; min-height: 2.25rem; padding: 0.25rem 0.4rem; font: inherit; font-size: 0.85rem;
     color: var(--ink); background: var(--surface);
-    border: 1px solid var(--border); border-radius: 0.35rem;
+    border: 1px solid var(--border-input); border-radius: 0.35rem;
     font-variant-numeric: tabular-nums;
   }
 
@@ -183,9 +200,9 @@ const index = fahrerIndex()
 
   table.gegen { width: 100%; border-collapse: collapse; margin-top: 1.25rem; }
 
-  table.gegen tr.gruppe td {
+  table.gegen tr.gruppe th {
     padding: 1rem 0 0.35rem;
-    font-size: 0.64rem;
+    font-size: 0.75rem;
     font-weight: 700;
     letter-spacing: 0.12em;
     text-transform: uppercase;
@@ -207,13 +224,17 @@ const index = fahrerIndex()
     white-space: normal;
   }
 
-  table.gegen th i {
-    display: inline-grid; place-items: center;
-    width: 0.95rem; height: 0.95rem; margin-left: 0.3rem;
-    font-style: normal; font-size: 0.62rem; font-weight: 700;
-    color: var(--muted); background: var(--surface-3); border-radius: 50%;
-    cursor: help; vertical-align: 0.05em;
+  /* Die Erklärung einer Zeile, sichtbar statt als Tooltip hinter einem „?“. */
+  table.gegen th small {
+    display: block;
+    margin-top: 0.15rem;
+    font-size: 0.75rem;
+    line-height: 1.35;
+    color: var(--muted);
+    text-wrap: pretty;
   }
+
+  table.gegen th[scope='row'] { color: var(--ink-2); font-weight: 600; font-size: 0.86rem; }
 
   /* Der Balken läuft von der Mitte nach außen: So zeigt die Länge sofort,
      wer bei welcher Zeile vorn liegt, ohne dass man Zahlen vergleichen muss. */
@@ -237,6 +258,28 @@ const index = fahrerIndex()
     background: var(--surface-3);
     border-radius: 0.2rem;
   }
+
+  td.wert .balken.b0 { width: 0%; }
+  td.wert .balken.b1 { width: 5%; }
+  td.wert .balken.b2 { width: 10%; }
+  td.wert .balken.b3 { width: 15%; }
+  td.wert .balken.b4 { width: 20%; }
+  td.wert .balken.b5 { width: 25%; }
+  td.wert .balken.b6 { width: 30%; }
+  td.wert .balken.b7 { width: 35%; }
+  td.wert .balken.b8 { width: 40%; }
+  td.wert .balken.b9 { width: 45%; }
+  td.wert .balken.b10 { width: 50%; }
+  td.wert .balken.b11 { width: 55%; }
+  td.wert .balken.b12 { width: 60%; }
+  td.wert .balken.b13 { width: 65%; }
+  td.wert .balken.b14 { width: 70%; }
+  td.wert .balken.b15 { width: 75%; }
+  td.wert .balken.b16 { width: 80%; }
+  td.wert .balken.b17 { width: 85%; }
+  td.wert .balken.b18 { width: 90%; }
+  td.wert .balken.b19 { width: 95%; }
+  td.wert .balken.b20 { width: 100%; }
 
   td.links .balken { right: 0.35rem; }
   td.rechts .balken { left: 0.35rem; }
@@ -277,7 +320,7 @@ const index = fahrerIndex()
     list-style: none;
   }
 
-  .vgl .paarungen button {
+  .vgl .paarungen a {
     display: block;
     width: 100%;
     padding: 0.8rem 0.95rem;
@@ -287,10 +330,10 @@ const index = fahrerIndex()
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    cursor: pointer;
+    text-decoration: none;
   }
 
-  .vgl .paarungen button:hover { border-color: var(--accent); }
+  .vgl .paarungen a:hover { border-color: var(--accent); }
   .vgl .paarungen b { display: block; color: var(--ink); font-weight: 650; }
   .vgl .paarungen span { font-size: 0.82rem; color: var(--muted); }
 
@@ -301,6 +344,6 @@ const index = fahrerIndex()
 
   @media (max-width: 40rem) {
     .zeitwahl .regler { margin-left: 0; }
-    table.gegen th[scope='row'] { width: 40%; font-size: 0.74rem; }
+    table.gegen th[scope='row'] { width: 40%; font-size: 0.75rem; }
   }
 </style>

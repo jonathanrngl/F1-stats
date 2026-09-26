@@ -54,17 +54,20 @@ export default function Explorer({ groesse = '' }) {
    * Vergleich schon einmal hatte.
    */
   useEffect(() => {
-    const aus = ausAdresse(window.location.search)
-    setAbfrage(aus.abfrage)
-    setFrage(aus.frage)
-    frageAusAdresse.current = aus.frage
-    gelesen.current = true
     fetch(`${BASIS}/data/wuerfel.json`)
       .then((r) => {
         if (!r.ok) throw new Error('The data cube could not be loaded.')
         return r.json()
       })
-      .then(setDaten)
+      .then((d) => {
+        // Die Adresse zusammen mit den Daten: Vorher zeigt die Insel ohnehin nichts davon.
+        const aus = ausAdresse(window.location.search)
+        setAbfrage(aus.abfrage)
+        setFrage(aus.frage)
+        frageAusAdresse.current = aus.frage
+        gelesen.current = true
+        setDaten(d)
+      })
       .catch((e) => setFehler(e.message))
   }, [])
 

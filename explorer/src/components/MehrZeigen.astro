@@ -1,0 +1,33 @@
+---
+/**
+ * „Alle zeigen“ unter einer Tabelle, die mehr Zeilen hat, als man zuerst sehen
+ * muss – etwa alle 30 Teamkollegen eines Fahrers statt der ersten acht.
+ *
+ * Die weiteren Zeilen tragen `data-weitere` und stehen fertig im HTML. Ohne
+ * JavaScript sind sie einfach sichtbar; mit ihm blendet theme.css sie aus, bis
+ * der Knopf den Abschnitt aufklappt. So fehlt ohne Skript nie etwas.
+ */
+interface Props {
+  anzahl: number
+  wort: string
+}
+
+const { anzahl, wort } = Astro.props
+---
+
+<button type="button" class="leise-knopf mehr-zeigen nur-mit-js" aria-expanded="false" data-mehr-zeigen>
+  Show {anzahl} more {wort}
+</button>
+
+<script>
+  for (const knopf of document.querySelectorAll<HTMLButtonElement>('[data-mehr-zeigen]')) {
+    const abschnitt = knopf.closest('section')
+    const text = knopf.textContent
+    knopf.addEventListener('click', () => {
+      const auf = !abschnitt?.classList.contains('alle-gezeigt')
+      abschnitt?.classList.toggle('alle-gezeigt', auf)
+      knopf.setAttribute('aria-expanded', String(auf))
+      knopf.textContent = auf ? 'Show fewer' : text
+    })
+  }
+</script>

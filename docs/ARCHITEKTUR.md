@@ -8,6 +8,32 @@ Dieses Dokument beantwortet die Schritte 1 bis 5 der Vorgabe: Analyse des
 Bestands, technische Architektur, Datenmodell, Datenquellen samt
 Importstrategie, API-Struktur. Implementiert wird erst danach.
 
+> **Nachtrag, 26. September 2026.** Das hier ist die Planung, nicht die
+> Beschreibung des Bestands – die steht in [`explorer/README.md`](../explorer/README.md).
+> Umgesetzt ist der Plan bis auf die Reifenstints und das Wetter (OpenF1).
+> Anders als hier beschrieben:
+>
+> - **Sprache und Werkzeuge:** Der Explorer ist JavaScript mit JSDoc, nicht
+>   striktes TypeScript; geprüft wird mit oxlint, eigenen Testskripten gegen die
+>   echte Datenbank und einer Browserprüfung in Chrome statt mit Vitest.
+>   SQLite läuft über `node:sqlite`, nicht `better-sqlite3`.
+> - **Explorer-Daten:** ein spaltenweiser JSON-Würfel statt Parquet und
+>   DuckDB-WASM – bei 28.000 Zeilen genügt das, und es lädt ohne WASM.
+> - **Punktesysteme:** nicht als Tabellen `points_system`/`points_award`, sondern
+>   als geprüfte Daten in `src/engine/punkte.js` (mit Streichresultaten je
+>   Saison); die Prüfung gegen die Geschichte steht in den Tests.
+> - **Adressen:** englisch (`/drivers/`, `/races/` …); die deutschen aus
+>   Abschnitt 6 werden umgeleitet.
+> - **Kein Nebenprojekt `/app`:** Der Neubau liegt in `explorer/`, die alte
+>   Anwendung ist eingefroren.
+> - **Natürlichsprachliche Suche:** Muster statt Sprachmodell, englisch und
+>   deutsch; die Schnittstelle (Frage → Abfrage, nie Antwort) ist die hier
+>   beschriebene.
+> - **Rundendaten** liegen als CSV je Rennen im Repo, nicht nur in der
+>   Datenbank, und kommen in Portionen herein (`runden.yml`).
+> - **Boxenstopps** gibt es seit 1994, nicht erst seit 2011; die Stellen unten
+>   sind korrigiert.
+
 ---
 
 ## 1. Analyse des Bestands
@@ -423,7 +449,7 @@ CREATE TABLE lap_position (
   PRIMARY KEY (race_id, driver_id, lap)
 );
 
-CREATE TABLE pit_stop (                 -- erst ab 2011
+CREATE TABLE pit_stop (                 -- ab 1994, lückenlos ab 2000
   race_id        TEXT NOT NULL REFERENCES race(id),
   driver_id      TEXT NOT NULL REFERENCES driver(id),
   stop           INTEGER NOT NULL,
@@ -621,7 +647,7 @@ Makulatur.
 | 7 | Rundendaten ab 1996 nachladen → Positionsverlauf, Führungsrunden | einmaliger Hintergrundlauf |
 | 8 | WM-Punkteverlauf, historische Normalisierung | Epochenvergleiche |
 | 9 | Data Explorer über DuckDB-WASM, Export | frei konfigurierbare Abfragen |
-| 10 | Boxenstopps (2011+), Stints/Wetter (2023+) | klar als zeitlich begrenzt gekennzeichnet |
+| 10 | Boxenstopps (1994+), Stints/Wetter (2023+) | klar als zeitlich begrenzt gekennzeichnet |
 | 11 | Natürlichsprachliche Suche als Abfrage-Übersetzer | Modell formuliert Filter, rechnet nicht |
 | 12 | What-if-Rechnungen auf `points_award` | anderes Punktesystem, ohne DNF, … |
 

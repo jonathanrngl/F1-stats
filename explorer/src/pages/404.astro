@@ -8,6 +8,11 @@
  * ein alter Link auf /drivers/hamilton/. Aus dem Pfad wird deshalb eine
  * Suchanfrage, und die Treffer stehen gleich da. Das geschieht im Browser,
  * denn die Seite ist für alle falschen Adressen dieselbe Datei.
+ *
+ * Dazu die alten deutschen Adressen: Für die Übersichten gibt es
+ * Weiterleitungen (astro.config.mjs), für die rund 2.300 Einzelseiten nicht.
+ * Beginnt der Pfad mit einem alten Wort, schickt das Skript zur neuen Adresse
+ * weiter – die Kennungen sind gleich geblieben, nur das erste Wort wechselte.
  */
 import Seite from '../layouts/Seite.astro'
 import { pfad } from '../lib/db.js'
@@ -30,6 +35,7 @@ const WEITER = [
       There is no page at <code data-pfad>this address</code>. It may have moved, or the link
       has a typo in it.
     </p>
+    <p class="lead" data-weiterleitung hidden>This address has moved – taking you to its new place …</p>
   </header>
 
   <section class="abschnitt" data-vorschlaege hidden>
@@ -59,8 +65,20 @@ const WEITER = [
   const abschnitt = document.querySelector<HTMLElement>('[data-vorschlaege]')
   const liste = document.querySelector<HTMLElement>('[data-liste]')
 
+  const ALT: Record<string, string> = {
+    fahrer: 'drivers', rennen: 'races', saisons: 'seasons', strecken: 'circuits', rekorde: 'records',
+    aenderungen: 'changes', vergleich: 'comparison', vorschau: 'preview', klassisch: 'classic',
+  }
+  const alt = /^\/([a-z]+)(\/.*)?$/.exec(window.location.pathname.slice(BASIS.length))
+  const umziehen = !!(alt && ALT[alt[1]])
+  if (alt && umziehen) {
+    document.querySelector<HTMLElement>('[data-weiterleitung]')?.removeAttribute('hidden')
+    // replace statt assign: Die tote Adresse soll nicht im Verlauf stehen bleiben.
+    window.location.replace(`${BASIS}/${ALT[alt[1]]}${alt[2] ?? '/'}${window.location.search}${window.location.hash}`)
+  }
+
   // Den Index nur holen, wenn im Pfad überhaupt etwas zu raten steht.
-  if (anfrageAusPfad(ohneBasis) && abschnitt && liste) {
+  if (!umziehen && anfrageAusPfad(ohneBasis) && abschnitt && liste) {
     fetch(`${BASIS}/data/suche.json`)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
       .then((index) => {

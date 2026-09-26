@@ -2,18 +2,20 @@
 /**
  * Fahrerprofil. Eine Seite je Fahrer, beim Bauen erzeugt.
  *
- * Alle Zahlen kommen aus der Engine, nicht aus SQL an dieser Stelle – damit
- * dieselbe Kennzahl hier, in der API und später im Explorer aus derselben
- * Quelle stammt. Wo eine Kennzahl nicht belegt ist, steht „nicht überliefert“
- * statt einer Null.
+ * Alle Zahlen kommen aus der Engine und aus lib/profil.js, nicht aus SQL an
+ * dieser Stelle – damit dieselbe Kennzahl hier, in der API und im Explorer aus
+ * derselben Quelle stammt. Wo eine Kennzahl nicht belegt ist, steht ein
+ * Gedankenstrich statt einer Null.
  */
 import { datum, ein, plakette, prozent as proz, zahl } from '../../lib/format.js'
 import Seite from '../../layouts/Seite.astro'
 import Karriere from '../../components/Karriere.astro'
 import Sprung from '../../components/Sprung.astro'
+import MehrZeigen from '../../components/MehrZeigen.astro'
 import { alle, eine, fahrerListe, pfad } from '../../lib/db.js'
 import { land } from '../../lib/laender.js'
 import { db } from '../../lib/db.js'
+import { fahrerZusatz } from '../../lib/profil.js'
 import {
   calculateAverageFinish, calculateAverageStart, calculateChampionships,
   calculateDNFRate, calculateEntries, calculateFastestLaps, calculatePodiumRate,
@@ -55,8 +57,14 @@ const inFormel1 =
 const rennen = driverRaces(db(), id)
 const titel = calculateChampionships(db(), id)
 const serien = calculateStreaks(rennen)
-const duelle = calculateTeamMateComparison(db(), id).slice(0, 8)
-const strecken = calculateTrackPerformance(db(), id, 2).slice(0, 10)
+/*
+ * Alle Teamkollegen und Strecken, nicht nur die ersten acht und zehn: Die
+ * ersten stehen offen, der Rest auf Knopfdruck darunter. Vorher fehlte, wer
+ * nicht vorn stand, einfach.
+ */
+const duelle = calculateTeamMateComparison(db(), id)
+const strecken = calculateTrackPerformance(db(), id, 2)
+const zusatz = fahrerZusatz(id)
 
 const namen = new Map(
   alle('SELECT id, display_name AS name FROM driver').map((d) => [d.id, d.name]),
@@ -144,12 +152,36 @@ const ziele = [
   { id: 'zahlen', label: 'Numbers' },
   karriere.length > 1 && { id: 'karriere', label: 'Career' },
   saisons.length > 0 && { id: 'saisons', label: 'Seasons' },
+  { id: 'rennen', label: 'Races' },
   duelle.length > 0 && { id: 'teamkollegen', label: 'Team-mates' },
   strecken.length > 0 && { id: 'strecken', label: 'Circuits' },
 ].filter(Boolean)
+
+const { sprint, besondere, geburt, familie, meilensteine } = zusatz
+const jeSaison = Map.groupBy(zusatz.rennen, (r) => r.jahr)
+const ergebnis = (r) => (r.gewertet ? `P${r.platz}` : r.text)
+
+const SEITE = 'https://jonathanrngl.github.io'
+const person = {
+  '@context': 'https://schema.org',
+  '@type': 'Person',
+  name: fahrer.display_name,
+  ...(fahrer.full_name !== fahrer.display_name ? { alternateName: fahrer.full_name } : {}),
+  ...(fahrer.date_of_birth ? { birthDate: fahrer.date_of_birth } : {}),
+  ...(fahrer.date_of_death ? { deathDate: fahrer.date_of_death } : {}),
+  ...(geburt?.ort ? { birthPlace: [geburt.ort, geburt.land].filter(Boolean).join(', ') } : {}),
+  nationality: heimat.name,
+  jobTitle: 'Racing driver',
+  url: `${SEITE}${pfad.fahrer(id)}`,
+}
 ---
 
-<Seite titel={`${fahrer.display_name} – statistics and career`} beschreibung={beschreibung}>
+<Seite
+  titel={`${fahrer.display_name} – statistics and career`}
+  beschreibung={beschreibung}
+  strukturiert={[person]}
+  brotkrumen={[{ name: 'Drivers', pfad: '/drivers/' }]}
+>
   <header class="seitenkopf">
     <span class="wappen" title={heimat.name}>{heimat.code}</span>
     <div>
@@ -170,10 +202,28 @@ const ziele = [
         )}
         <li>{zeitraum}</li>
         {fahrer.abbreviation && <li>{fahrer.abbreviation}</li>}
-        {fahrer.date_of_birth && <li>Born {datum(fahrer.date_of_birth)}</li>}
+        {geburt?.nummer && <li>Car number {geburt.nummer}</li>}
+        {fahrer.date_of_birth && (
+          <li>Born {datum(fahrer.date_of_birth)}{geburt?.ort && ` in ${geburt.ort}${geburt.land && geburt.land !== heimat.name ? `, ${geburt.land}` : ''}`}</li>
+        )}
         {fahrer.date_of_death && <li>Died {datum(fahrer.date_of_death)}</li>}
         {fahrer.full_name !== fahrer.display_name && <li>{fahrer.full_name}</li>}
       </ul>
+      {familie.length > 0 && (
+        <p class="familie">
+          Family in Formula 1:{' '}
+          {familie.map((v, i) => (
+            <>
+              {i > 0 && ', '}
+              {v.mitSeite ? <a href={pfad.fahrer(v.id)}>{v.name}</a> : v.name} ({v.wort})
+            </>
+          ))}
+        </p>
+      )}
+      <p class="aktionen">
+        <a class="knopf" href={`${pfad.seite('/comparison/')}?a=${fahrer.id}`}>Compare with another driver →</a>
+        <a class="knopf leise" href={`${pfad.seite('/explorer/')}?fahrer=${fahrer.id}&d=saison&s=punkte`}>Season by season in the Explorer</a>
+      </p>
     </div>
   </header>
 
@@ -198,6 +248,15 @@ const ziele = [
     <li><span>Pole positions</span><b>{wert(calculatePoles(rennen))}</b>
       <i>{wert(calculateStartsFromPole(rennen))}× started from P1</i></li>
     <li><span>Fastest laps</span><b>{wert(calculateFastestLaps(rennen))}</b></li>
+    {sprint.starts > 0 && (
+      <li><span>Sprint wins</span><b>{sprint.siege}</b><i>{sprint.starts} sprints · {ein(sprint.punkte)} points</i></li>
+    )}
+    {besondere.dotdMoeglich === 1 && (
+      <li><span>Driver of the Day</span><b>{besondere.dotd ?? 0}</b><i>fan vote, since 2016</i></li>
+    )}
+    {besondere.slams > 0 && (
+      <li><span>Grand Slams</span><b>{besondere.slams}</b><i>pole, win, fastest lap, every lap led</i></li>
+    )}
     <li class={titelZahl > 0 ? 'stark' : undefined}>
       <span>Titles</span><b>{wert(titel.titles)}</b>
       <i>{titelJahre.length > 0 ? titelJahre.join(', ') : `best finish ${wert(titel.best, (v) => 'P' + v)}`}</i>
@@ -220,7 +279,14 @@ const ziele = [
       <li><span>Longest points-scoring streak</span><b>{serien.points.length || '–'}</b></li>
       <li class="breit">
         <span>Teams</span>
-        <b>{teams.map((t) => `${teamNamen.get(t.id)} (${spannen(t.jahre)})`).join(' · ')}</b>
+        <b>
+          {teams.map((t, i) => (
+            <>
+              {i > 0 && ' · '}
+              <a href={pfad.team(t.id)}>{teamNamen.get(t.id)}</a> ({spannen(t.jahre)})
+            </>
+          ))}
+        </b>
       </li>
     </ul>
     <p class="fussnote">
@@ -233,7 +299,7 @@ const ziele = [
   {karriere.length > 1 && (
     <section class="abschnitt" id="karriere">
       <div class="abschnitt-kopf"><div><h2>The career at a glance</h2></div></div>
-      <Karriere saisons={karriere} name={fahrer.display_name} />
+      <Karriere saisons={karriere} name={fahrer.display_name} tabelle={false} />
     </section>
   )}
 
@@ -254,9 +320,11 @@ const ziele = [
               const jahrRennen = rennen.filter((r) => r.year === s.year)
               return (
                 <tr class={s.won ? 'meister' : undefined}>
-                  <td><a class="zeile" href={pfad.saison(s.year)}>{s.year}</a></td>
+                  <th scope="row"><a class="zeile" href={pfad.saison(s.year)}>{s.year}</a></th>
                   <td class="leise">
-                    {[...new Set(jahrRennen.map((r) => teamNamen.get(r.constructorId)))].join(', ')}
+                    {[...new Set(jahrRennen.map((r) => r.constructorId))].map((t, i) => (
+                      <>{i > 0 && ', '}<a class="leise" href={pfad.team(t)}>{teamNamen.get(t)}</a></>
+                    ))}
                   </td>
                   <td class="num">{jahrRennen.filter((r) => r.started).length}</td>
                   <td class="num">{jahrRennen.filter((r) => r.position === 1).length || ''}</td>
@@ -273,6 +341,62 @@ const ziele = [
       </div>
     </section>
   )}
+
+  <section class="abschnitt" id="rennen">
+    <div class="abschnitt-kopf">
+      <div>
+        <h2>Every race</h2>
+        <p>
+          {zusatz.rennen.length} {zusatz.rennen.length === 1 ? 'entry' : 'entries'}
+          {calculateStarts(rennen).value !== zusatz.rennen.length && `, ${calculateStarts(rennen).value} of them started`}.
+          DNQ: did not qualify; DNS: did not start; DNF: retired.
+        </p>
+      </div>
+    </div>
+    {meilensteine.length > 0 && (
+      <ul class="meilensteine">
+        {meilensteine.map((m) => (
+          <li>
+            <span>{m.was}</span>
+            <a href={pfad.rennen(m.r.id)}>{m.r.name} {m.r.jahr}</a>
+            <i>{ergebnis(m.r)} · {m.r.team}</i>
+          </li>
+        ))}
+      </ul>
+    )}
+    <details class="alle-rennen" open={zusatz.rennen.length <= 20}>
+      <summary>All {zusatz.rennen.length} {zusatz.rennen.length === 1 ? 'race' : 'races'}, season by season</summary>
+      <div class="tabelle">
+        <table>
+          <thead>
+            <tr>
+              <th class="num" scope="col">Year</th><th scope="col">Race</th><th scope="col">Team</th>
+              <th class="num" scope="col">Grid</th><th class="num" scope="col">Result</th><th class="num" scope="col">Points</th>
+            </tr>
+          </thead>
+          <tbody>
+            {[...jeSaison.values()].flatMap((liste) =>
+              liste.map((r, i) => (
+                <tr class={r.gestartet && r.gewertet ? undefined : 'raus'}>
+                  <td class="num leise">{i === 0 ? r.jahr : ''}</td>
+                  <th scope="row">
+                    <a class="zeile" href={pfad.rennen(r.id)}>{r.name}</a>
+                    {r.pole === 1 && <span class="etikett" title="Pole position">pole</span>}
+                    {r.schnellste === 1 && <span class="etikett akzent" title="Fastest lap">fastest lap</span>}
+                    {r.geteilt === 1 && <span class="etikett" title="Shared car">shared</span>}
+                  </th>
+                  <td class="leise"><a class="leise" href={pfad.team(r.teamId)}>{r.team}</a></td>
+                  <td class="num">{r.start ?? '–'}</td>
+                  <td class="num"><span class={plakette(r.gewertet ? r.platz : null)}>{ergebnis(r)}</span></td>
+                  <td class="num fett">{r.punkte ? ein(r.punkte) : ''}</td>
+                </tr>
+              )),
+            )}
+          </tbody>
+        </table>
+      </div>
+    </details>
+  </section>
 
   {duelle.length > 0 && (
     <section class="abschnitt" id="teamkollegen">
@@ -294,9 +418,9 @@ const ziele = [
             </tr>
           </thead>
           <tbody>
-            {duelle.map((d) => (
-              <tr>
-                <td><a class="zeile" href={pfad.fahrer(d.driverId)}>{namen.get(d.driverId)}</a></td>
+            {duelle.map((d, i) => (
+              <tr data-weitere={i >= 8 ? '' : undefined}>
+                <th scope="row"><a class="zeile" href={pfad.fahrer(d.driverId)}>{namen.get(d.driverId)}</a></th>
                 <td class="leise">
                   {d.years.length === 1 ? d.years[0] : `${d.years[0]}–${d.years.at(-1)}`}
                 </td>
@@ -318,13 +442,14 @@ const ziele = [
           </tbody>
         </table>
       </div>
+      {duelle.length > 8 && <MehrZeigen anzahl={duelle.length - 8} wort="team-mates" />}
       <p class="fussnote">Green: {fahrer.display_name} came out ahead in that duel.</p>
     </section>
   )}
 
   {strecken.length > 0 && (
     <section class="abschnitt" id="strecken">
-      <div class="abschnitt-kopf"><div><h2>Strongest circuits</h2></div></div>
+      <div class="abschnitt-kopf"><div><h2>Strongest circuits</h2><p>Circuits with at least two starts, most wins first.</p></div></div>
       <div class="tabelle">
         <table>
           <thead>
@@ -334,9 +459,9 @@ const ziele = [
             </tr>
           </thead>
           <tbody>
-            {strecken.map((s) => (
-              <tr>
-                <td><a class="zeile" href={pfad.strecke(s.circuitId)}>{streckenNamen.get(s.circuitId)}</a></td>
+            {strecken.map((s, i) => (
+              <tr data-weitere={i >= 10 ? '' : undefined}>
+                <th scope="row"><a class="zeile" href={pfad.strecke(s.circuitId)}>{streckenNamen.get(s.circuitId)}</a></th>
                 <td class="num">{s.starts}</td>
                 <td class="num">{s.wins.value || ''}</td>
                 <td class="num">{s.podiums.value || ''}</td>
@@ -346,14 +471,47 @@ const ziele = [
           </tbody>
         </table>
       </div>
+      {strecken.length > 10 && <MehrZeigen anzahl={strecken.length - 10} wort="circuits" />}
     </section>
   )}
 </Seite>
 
 <style>
+  .familie { margin: 0.6rem 0 0; font-size: 0.9rem; color: var(--ink-2); }
+  .aktionen { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.9rem 0 0; }
+
+  .meilensteine {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(15rem, 100%), 1fr));
+    gap: 0.5rem;
+    margin: 0 0 0.9rem;
+    padding: 0;
+    list-style: none;
+  }
+
+  .meilensteine li {
+    display: grid;
+    gap: 0.1rem;
+    padding: 0.65rem 0.85rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-s);
+  }
+
+  .meilensteine span { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+  .meilensteine a { font-weight: 650; color: var(--ink); text-decoration: none; }
+  .meilensteine a:hover { color: var(--accent); text-decoration: underline; }
+  .meilensteine i { font-style: normal; font-size: 0.84rem; color: var(--muted); }
+
+  .alle-rennen summary { cursor: pointer; min-height: 2.25rem; font-weight: 600; color: var(--ink); }
+  .alle-rennen .tabelle { margin-top: 0.5rem; }
+
   .vergleichen {
-    padding: 0.2rem 0.55rem;
-    font-size: 0.78rem;
+    display: inline-flex;
+    align-items: center;
+    min-height: 2rem;
+    padding: 0.2rem 0.65rem;
+    font-size: 0.8rem;
     font-weight: 650;
     color: var(--ink-2);
     text-decoration: none;

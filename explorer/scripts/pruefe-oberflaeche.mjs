@@ -197,6 +197,61 @@ async function pruefeAlles() {
     pruefe('Fehlerseite schlägt Lewis Hamilton vor', (await vorschlag.count()) === 1)
   })
 
+  // Am Telefon: jedes Ziel der Navigation ist über das Menü erreichbar, ohne Wischen.
+  await schritt('Telefon', '/', { breite: 360, hoehe: 740 }, async (p) => {
+    await p.locator('.menue > summary').click()
+    for (const ziel of ['Seasons', 'Races', 'Drivers', 'Teams', 'Engines', 'Circuits', 'Records', 'Compare', 'Explorer', 'Quiz']) {
+      const link = p.locator('.menue-feld').getByRole('link', { name: ziel, exact: true })
+      const box = await link.boundingBox()
+      pruefe(`Telefon: „${ziel}“ sichtbar`, !!box && box.x >= 0 && box.x + box.width <= 360 && box.y + box.height <= 740)
+    }
+    const breite = await p.evaluate(() => document.documentElement.scrollWidth)
+    pruefe('Telefon: kein waagerechtes Scrollen der Seite', breite <= 360, `${breite}px`)
+    await p.keyboard.press('Escape')
+    pruefe('Telefon: Escape schließt das Menü', !(await p.locator('.menue').evaluate((d) => d.open)))
+  })
+
+  // Die Suche am Telefon: als Knopf, der das Feld über die ganze Breite öffnet.
+  await schritt('Telefon-Suche', '/', { breite: 360, hoehe: 740 }, async (p) => {
+    await p.getByRole('button', { name: 'Search', exact: true }).click()
+    const feld = p.getByRole('combobox', { name: /search/i })
+    await feld.fill('monaco 1988')
+    const treffer = p.getByRole('option', { name: /Monaco Grand Prix 1988/ })
+    await treffer.first().waitFor({ timeout: 5000 })
+    const box = await p.locator('#suche-liste').boundingBox()
+    pruefe('Telefon: Trefferliste ganz im Bild', !!box && box.x >= 0 && box.x + box.width <= 360, JSON.stringify(box))
+  })
+
+  // Tastatur: der erste Tabstopp springt zum Inhalt.
+  await schritt('Sprunglink', '/drivers/', {}, async (p) => {
+    await p.keyboard.press('Tab')
+    const text = await p.evaluate(() => document.activeElement?.textContent?.trim())
+    pruefe('erster Tabstopp ist „Skip to content“', text === 'Skip to content', text)
+  })
+
+  // Eine unbekannte Adresse bekommt die eigene 404-Seite, eine alte deutsche wird umgeleitet.
+  {
+    const { p, kontext, status } = await seite('/gibt-es-nicht/')
+    pruefe('404 mit eigener Seite', status === 404 && (await p.locator('h1').textContent()) === 'Off the track')
+    await kontext.close()
+    const alt = await seite('/fahrer/ayrton-senna/')
+    await alt.p.waitForURL(/\/drivers\/ayrton-senna\//, { timeout: 5000 }).catch(() => {})
+    pruefe('alte Adresse /fahrer/… führt zur neuen', alt.p.url().includes('/drivers/ayrton-senna/'), alt.p.url())
+    await alt.kontext.close()
+  }
+
+  // Rundenverlauf: für geladene Rennen gezeichnet, sichtbar in der jeweiligen Breite.
+  await schritt('Rundenverlauf', '/races/abu-dhabi-grand-prix-2021/', {}, async (p) => {
+    const bild = p.locator('.rundenverlauf svg').filter({ visible: true })
+    pruefe('Rundenverlauf gezeichnet', (await bild.count()) === 1 && (await bild.locator('path.linie').count()) >= 10)
+  })
+
+  // Der Explorer liest die Abfrage aus der Adresse.
+  await schritt('Explorer-Adresse', '/explorer/?strecke=monaco', {}, async (p) => {
+    await p.locator('main table tbody tr').first().waitFor({ timeout: 10000 })
+    pruefe('Explorer: Monaco aus der Adresse – Senna vorn', (await p.locator('main table tbody tr').first().textContent()).includes('Ayrton Senna'))
+  })
+
   await browser.close()
   srv.close()
 

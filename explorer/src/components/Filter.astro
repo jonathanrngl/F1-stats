@@ -72,11 +72,38 @@ const { platzhalter, einheit, pillen = [] } = Astro.props
      * Tastendruck: `textContent` über 1.200 Zeilen ist die einzige Stelle, an
      * der es bei dieser Menge spürbar würde.
      */
-    const zeilen = [...document.querySelectorAll('main tbody tr')].map((tr) => ({
-      tr,
-      text: falte(tr.textContent.replace(/\s+/g, ' ')),
-      zellen: [...tr.cells].map((c) => c.textContent.trim()),
-    }))
+    /*
+     * Die Zellen werden mit Leerzeichen verbunden, nicht aneinandergeklebt –
+     * vorher stand „GBRLewis Hamilton2007–2026“ im Suchtext, und „gbr lewis“
+     * traf nichts. Dazu kommen die title-Attribute: Das Länderkürzel „GBR“
+     * trägt dort „United Kingdom“, und nach dem Land sucht man mit Namen.
+     */
+    const zeilen = [...document.querySelectorAll('main tbody tr')].map((tr) => {
+      const zellen = [...tr.cells].map((c) => c.textContent.trim())
+      const titel = [...tr.querySelectorAll('[title]')].map((e) => e.getAttribute('title'))
+      return { tr, text: falte([...zellen, ...titel].join(' ').replace(/\s+/g, ' ')), zellen }
+    })
+
+    /*
+     * Leerzustand: ein Satz, der sagt, dass nichts passt, und wie man
+     * zurückkommt – statt einer Tabelle, die still leer wird.
+     */
+    const leer = document.createElement('p')
+    leer.className = 'leer-meldung'
+    leer.hidden = true
+    const zurueck = Object.assign(document.createElement('button'), {
+      type: 'button',
+      className: 'leise-knopf',
+      textContent: 'Clear the filter',
+    })
+    zurueck.addEventListener('click', () => {
+      feld.value = ''
+      for (const p of pillen) p.setAttribute('aria-pressed', 'false')
+      filtere()
+      feld.focus()
+    })
+    leer.append('Nothing matches. ', zurueck)
+    leiste.after(leer)
 
     const passtPille = (z, p) => {
       const zelle = z.zellen[Number(p.dataset.spalte)] ?? ''
@@ -87,11 +114,13 @@ const { platzhalter, einheit, pillen = [] } = Astro.props
 
     function filtere() {
       const q = falte(feld.value).trim()
+      // Jedes Wort muss vorkommen, in beliebiger Reihenfolge: „monaco 1988“, „senna mclaren“.
+      const woerter = q.split(/\s+/).filter(Boolean)
       const an = pillen.filter((p) => p.getAttribute('aria-pressed') === 'true')
       let sichtbar = 0
 
       for (const z of zeilen) {
-        const passt = (q === '' || z.text.includes(q)) && an.every((p) => passtPille(z, p))
+        const passt = woerter.every((w) => z.text.includes(w)) && an.every((p) => passtPille(z, p))
         z.tr.hidden = !passt
         if (passt) sichtbar++
       }
@@ -102,6 +131,7 @@ const { platzhalter, einheit, pillen = [] } = Astro.props
 
       const aktiv = q !== '' || an.length > 0
       for (const e of weg) e.hidden = aktiv
+      leer.hidden = sichtbar > 0
 
       anzeige.textContent = aktiv
         ? `${sichtbar.toLocaleString('en-GB')} of ${zeilen.length.toLocaleString('en-GB')} ${viele}`
