@@ -240,6 +240,12 @@ async function pruefeAlles() {
     await alt.kontext.close()
   }
 
+  // Rundenverlauf: für geladene Rennen gezeichnet, sichtbar in der jeweiligen Breite.
+  await schritt('Rundenverlauf', '/races/abu-dhabi-grand-prix-2021/', {}, async (p) => {
+    const bild = p.locator('.rundenverlauf svg').filter({ visible: true })
+    pruefe('Rundenverlauf gezeichnet', (await bild.count()) === 1 && (await bild.locator('path.linie').count()) >= 10)
+  })
+
   // Der Explorer liest die Abfrage aus der Adresse.
   await schritt('Explorer-Adresse', '/explorer/?strecke=monaco', {}, async (p) => {
     await p.locator('main table tbody tr').first().waitFor({ timeout: 10000 })
