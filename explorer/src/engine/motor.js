@@ -143,7 +143,10 @@ export function motorTitel(db, id) {
                  JOIN race r ON r.id = rr.race_id
                  JOIN constructor k ON k.id = rr.constructor_id
                 WHERE rr.driver_id = sds.driver_id AND r.year = sds.year
-                ORDER BY r.round DESC LIMIT 1) AS team
+                ORDER BY r.round DESC LIMIT 1) AS team,
+              (SELECT rr.constructor_id FROM race_result rr JOIN race r ON r.id = rr.race_id
+                WHERE rr.driver_id = sds.driver_id AND r.year = sds.year
+                ORDER BY r.round DESC LIMIT 1) AS teamId
          FROM season_driver_standing sds
          JOIN driver d ON d.id = sds.driver_id
         WHERE sds.championship_won = 1

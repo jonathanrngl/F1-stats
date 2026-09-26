@@ -15,13 +15,13 @@ export function circuitRaces(db, circuitId) {
     .prepare(
       `SELECT r.id, r.year, r.round, g.name AS grandPrix, r.date,
               r.course_length_km AS laenge, r.laps AS runden,
-              (SELECT rr.driver_id FROM race_result rr WHERE rr.race_id = r.id AND rr.position = 1 LIMIT 1) AS siegerId,
+              (SELECT rr.driver_id FROM race_result rr WHERE rr.race_id = r.id AND rr.position = 1 ORDER BY rr.display_order LIMIT 1) AS siegerId,
               (SELECT d.display_name FROM race_result rr JOIN driver d ON d.id = rr.driver_id
-                WHERE rr.race_id = r.id AND rr.position = 1 LIMIT 1) AS sieger,
-              (SELECT rr.constructor_id FROM race_result rr WHERE rr.race_id = r.id AND rr.position = 1 LIMIT 1) AS siegerTeamId,
+                WHERE rr.race_id = r.id AND rr.position = 1 ORDER BY rr.display_order LIMIT 1) AS sieger,
+              (SELECT rr.constructor_id FROM race_result rr WHERE rr.race_id = r.id AND rr.position = 1 ORDER BY rr.display_order LIMIT 1) AS siegerTeamId,
               (SELECT k.name FROM race_result rr JOIN constructor k ON k.id = rr.constructor_id
-                WHERE rr.race_id = r.id AND rr.position = 1 LIMIT 1) AS siegerTeam,
-              (SELECT rr.grid_position FROM race_result rr WHERE rr.race_id = r.id AND rr.position = 1 LIMIT 1) AS siegerStart
+                WHERE rr.race_id = r.id AND rr.position = 1 ORDER BY rr.display_order LIMIT 1) AS siegerTeam,
+              (SELECT rr.grid_position FROM race_result rr WHERE rr.race_id = r.id AND rr.position = 1 ORDER BY rr.display_order LIMIT 1) AS siegerStart
          FROM race r
          JOIN grand_prix g ON g.id = r.grand_prix_id
         WHERE r.circuit_id = ?
@@ -178,6 +178,31 @@ export function circuitLayouts(db, circuitId) {
         WHERE l.circuit_id = ?
         GROUP BY l.id
         ORDER BY von`,
+    )
+    .all(circuitId)
+}
+
+/**
+ * Der Rundenrekord je Streckenführung: die schnellste Rennrunde, die je auf
+ * diesem Layout gefahren wurde.
+ *
+ * Je Layout, nicht je Strecke. Silverstone 1987 und Silverstone 2024 teilen
+ * sich den Namen, nicht den Kurs – ein Rekord über beide hinweg verglich eine
+ * Runde über 4,7 km mit einer über 5,9 km. Aus dem Rennen, nicht aus dem
+ * Qualifying: So zählt die Formel 1 den Rundenrekord.
+ */
+export function circuitLapRecords(db, circuitId) {
+  return db
+    .prepare(
+      `SELECT r.circuit_layout_id AS layout, f.time_ms AS zeit, f.lap AS runde,
+              r.id AS raceId, r.year AS jahr, d.id AS fahrerId, d.display_name AS fahrer
+         FROM fastest_lap f
+         JOIN race r ON r.id = f.race_id
+         JOIN driver d ON d.id = f.driver_id
+        WHERE r.circuit_id = ? AND f.position = 1 AND f.time_ms IS NOT NULL
+          AND f.time_ms = (SELECT MIN(f2.time_ms) FROM fastest_lap f2 JOIN race r2 ON r2.id = f2.race_id
+                            WHERE r2.circuit_layout_id = r.circuit_layout_id AND f2.time_ms IS NOT NULL)
+        ORDER BY r.year`,
     )
     .all(circuitId)
 }

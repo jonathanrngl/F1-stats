@@ -255,7 +255,7 @@ const ziele = rennen
                       <tr>
                         <td class="num"><a class="zeile" href={pfad.rennen(r.id)}>{r.year}</a></td>
                         <td>{r.siegerId ? <a class="zeile" href={pfad.fahrer(r.siegerId)}>{r.sieger}</a> : '–'}</td>
-                        <td class="leise">{r.siegerTeam ?? '–'}</td>
+                        <td class="leise">{r.siegerTeamId ? <a class="leise" href={pfad.team(r.siegerTeamId)}>{r.siegerTeam}</a> : '–'}</td>
                         <td class="num">{r.siegerStart ? <span class={plakette(r.siegerStart)}>{r.siegerStart}</span> : '–'}</td>
                       </tr>
                     ))}
@@ -274,7 +274,7 @@ const ziele = rennen
                         <th>Driver</th>
                         <th class="num">Here</th>
                         <th class="num">Elsewhere</th>
-                        <th class="num">Edge</th>
+                        <th class="num"><abbr title="Places better here than elsewhere, on average">Better by</abbr></th>
                       </tr>
                     </thead>
                     <tbody>
@@ -327,7 +327,7 @@ const ziele = rennen
                       <tr>
                         <td class="num"><span class={plakette(f.position)}>{f.position ?? '–'}</span></td>
                         <td><a class="zeile" href={pfad.fahrer(f.id)}>{f.name}</a></td>
-                        <td class="leise">{f.team ?? '–'}</td>
+                        <td class="leise">{f.teamId ? <a class="leise" href={pfad.team(f.teamId)}>{f.team}</a> : '–'}</td>
                         <td class="num fett">{ein(f.punkte)}</td>
                       </tr>
                     ))}

@@ -1,58 +1,123 @@
 # F1 Statistics Explorer
 
-Neubau neben der bestehenden Anwendung in `../src`. Die läuft unverändert
-weiter, bis dieser Stand sie einholt.
+Die Seite unter <https://jonathanrngl.github.io/F1-stats/>: rund 2.500 statische
+Seiten, eine JSON-API und ein Explorer, alles beim Bauen aus der F1DB-Datenbank
+erzeugt. Die frühere React-Anwendung aus `../src` liegt eingefroren unter
+`/classic/` (siehe `../README.md`).
 
-Architektur und Begründungen: [`../docs/ARCHITEKTUR.md`](../docs/ARCHITEKTUR.md).
-
-## Stand
-
-| Schritt | Status |
-|---|---|
-| 1 · Import F1DB, Validierung | **fertig** |
-| 2 · Statistik-Engine, Tests | **fertig** |
-| 3 · Seitengerüst Astro, Fahrerprofile | **fertig** |
-| 4 · Team-, Saison-, Renn-, Streckenseiten | **fertig** |
-| 5 · Rekorddatenbank | **fertig** |
-| 6 · JSON-API und Fahrervergleich | **fertig** |
-| 7 · Lader für Rundendaten | **fertig**, Nachladen offen |
-| 8 · WM-Punkteverlauf | **fertig** |
-| 9 · What-if: anderes Punktesystem | **fertig** |
-| 10 · Data Explorer mit Export | **fertig** |
-| 11 · Statistik-Suche in natürlicher Sprache | **fertig** |
-| 12 · Stints und Wetter (OpenF1, ab 2023) | offen |
-| 13 · Änderungen: Bewegung in den Rekordlisten | **fertig** |
-| 13 · Rennvorschau auf das nächste Rennen | **fertig** |
-| 14 · Quiz in drei Schwierigkeitsstufen | **fertig** |
+Die ursprüngliche Planung steht in [`../docs/ARCHITEKTUR.md`](../docs/ARCHITEKTUR.md);
+wo die Umsetzung davon abweicht, sagt das Dokument es am Anfang.
 
 ## Entwickeln
 
 ```bash
-npm run import   # Datenbank bauen (einmalig, 8 s)
-npm run dev      # http://localhost:4321/F1-stats/
-npm run build    # 2465 statische Seiten in ~45 s nach dist/
+npm run import          # Datenbank aus der gepinnten F1DB-Fassung bauen (~15 s)
+npm run dev             # http://localhost:4321/F1-stats/
+npm run build           # alle Seiten nach dist/, danach Ausgabe- und Linkprüfung
+npm run vorschau        # dist/ ausliefern wie GitHub Pages, auf :4323/F1-stats/
+npm run lint            # oxlint über src/ und scripts/
+npm test                # Statistik-Engine gegen die Datenbank
+npm run test:oberflaeche  # die gebaute Seite im installierten Chrome
 ```
 
-Der Build erzeugt fertiges HTML: 2465 Seiten, sieben JavaScript-Dateien in der
-gesamten Ausgabe. Eine Fahrerseite wiegt 18 KB und braucht kein JavaScript, um
-ihre Zahlen zu zeigen.
+`npm run vorschau` ersetzt `astro preview`, das die Seiten ohne den Vorsatz
+`/F1-stats/` und damit ohne Stylesheet ausliefert.
 
-`npm run dev` bindet den Vorsatz `/F1-stats/` ein, unter dem die Seite auf
-GitHub Pages liegt. `npx astro preview` tut das nicht und liefert die Seiten
-ohne Stylesheet aus – zum Ansehen des Builds ist der Entwicklungsserver der
-verlässlichere Weg.
+## Die Fassung der Daten
+
+`f1db-version.txt` nennt die F1DB-Fassung, aus der die Seite gebaut wird.
+Derselbe Commit ergibt an jedem Tag dieselbe Seite.
+
+Eine neue Fassung bringt `.github/workflows/f1db-update.yml` herein: viermal am
+Tag nachsehen, bei einer neueren importieren, alle Prüfungen laufen lassen,
+probeweise bauen – und erst dann die Fassung festschreiben und den Deploy
+anstoßen. Fällt eine Prüfung durch, bleibt die Seite beim letzten guten Stand.
+
+```bash
+npm run import                       # die gepinnte Fassung
+npm run import -- --version v2026.15.0
+npm run import -- --neueste          # die neueste veröffentlichte
+npm run import -- --csv <pfad>       # aus einem bereits entpackten Verzeichnis
+```
+
+Fassung und Prüfsumme stehen in der Tabelle `meta`, im Fuß jeder Seite und in
+`/data/version.json`.
+
+## Nichts hängt am Tag des Bauens
+
+„Das nächste Rennen“ ist das erste ohne Ergebnis in den Daten, nicht das
+erste mit einem Datum in der Zukunft. Liegt ein gefahrenes Rennen noch ohne
+Ergebnis vor, weil das Release hinterherhinkt, ist es weiter das nächste –
+seine Punkte sind noch zu vergeben, und der Titelrechner zählt sie mit.
+
+Wie viele Tage es noch sind, rechnet der Browser (`src/components/Countdown.astro`),
+ebenso die Startzeiten der Sessions in der Ortszeit des Besuchers. Einen
+täglichen Neubau braucht es deshalb nicht mehr.
+
+## Punktesysteme als Daten
+
+`src/engine/punkte.js` führt alle acht Punktesysteme seit 1950, die beiden
+Sprintformate und die Streichresultate 1950–1990 – je Saison, auch die
+geteilten Jahre 1967–1980. Die Tabelle beweist sich an der Geschichte:
+
+- Sie rechnet jede Ergebniszeile seit 1991 auf den Punkt nach, davor bis auf
+  einige Dutzend Einzelentscheidungen (Formel-2-Wagen ohne Punkteberechtigung,
+  aberkannte Punkte, geteilte schnellste Runden).
+- Mit den Streichregeln ergibt sie den amtlichen WM-Stand jedes Fahrers in
+  allen 41 Saisons bis 1990.
+- Halbe und doppelte Punkte (Spanien 1975, Abu Dhabi 2014, Belgien 2021 …)
+  erkennt sie aus den Punkten des Siegers.
+
+Darauf stehen der What-if-Rechner auf jeder Saisonseite (jedes System, mit
+oder ohne Streichresultate), der Titelrechner der Vorschau (an allen
+Titelentscheidungen seit 1991 nachgeprüft) und der „Anteil der möglichen
+Punkte“ im Vergleich und im Explorer – der einzige Punktevergleich über
+Epochen, der nicht an der Größe der Zahlen hängt.
+
+## Der Explorer und die Fragen
+
+`src/lib/abfrage.js` rechnet Abfragen über den Datenwürfel, im Browser und in
+den Tests dieselbe Rechnung. `src/lib/frage.js` übersetzt eine Frage – englisch
+oder deutsch – in eine solche Abfrage und gibt nie eine Antwort: Gerechnet
+wird über die echten Daten. Was die Übersetzung nicht verwenden konnte, steht
+darunter. Die Tests stellen dieselben Fragen wie ein Besucher und halten die
+Spitze der Tabelle gegen eine unabhängige SQL-Zählung.
+
+Jede Abfrage steht in der Adresse (`/explorer/?strecke=monaco&s=siege`) und
+lässt sich teilen, ebenso jeder Vergleich (`/comparison/?a=…&b=…&von=…&bis=…`).
+
+## Rundendaten
+
+F1DB führt keine Rundendaten. `scripts/lade-runden.mjs` holt sie von Jolpica
+(ab 1996) und legt je Rennen eine CSV nach `runden/`; der Import spielt sie ein
+und lehnt jede Datei ab, deren Fahrer im Rennen nicht vorkommen. Die
+Rennseite zeigt dann den Positionsverlauf und die Führungsrunden.
+
+Der ganze Bestand sind rund 7.000 Anfragen bei 500 je Stunde. Den holt
+`.github/workflows/runden.yml` in Portionen nach, jüngste Rennen zuerst.
 
 ## Tests
 
-```bash
-npm test        # 141 Prüfungen gegen die importierte Datenbank
-```
+`npm test` prüft die Engine gegen die importierte Datenbank:
 
-Der Massenabgleich rechnet Nennungen, Starts, Siege, Podien, Pole-Positions,
-schnellste Runden und Titel für **alle 860 Fahrer** neu und vergleicht mit den
-Gesamtzahlen, die F1DB mitliefert. Dazu Einzelfälle gegen die Rekordbücher und
-Randfälle: leere Eingaben, Division durch null, Fahrer ohne einen einzigen
-Start, geteilte Fahrten.
+- **Massenabgleich:** Nennungen, Starts, Siege, Podien, Pole-Positions,
+  schnellste Runden und Titel für jeden Fahrer, gegen die Gesamtzahlen, die
+  F1DB selbst mitliefert. Zwei unabhängige Wege zum selben Wert.
+- **Rekordbücher:** Fangio, Clark, Senna, Serien, Titelentscheidungen.
+- **Punktesysteme, What-if, Titelrechner:** siehe oben.
+- **Fragen und Explorer:** Übersetzung und Ergebnis, gegen SQL gehalten.
+- **Invarianten statt fester Zahlen:** Wo ein Test „78 Hersteller“ erwartete,
+  prüft er jetzt, dass jeder Hersteller mit Rennen in der Liste steht – eine
+  neue F1DB-Fassung soll nicht an einer Zählung scheitern, die sich zu Recht
+  ändert.
+
+`npm run build` prüft danach die Ausgabe (`scripts/pruefe-ausgabe.mjs`):
+zusammengeklebter Text und jeder seiteninterne Verweis, der ins Leere zeigt.
+
+`npm run test:oberflaeche` öffnet die gebaute Seite in Chrome: keine
+Konsolenfehler (auch keine Verletzung der Inhaltsrichtlinie), Suche,
+Vergleich, Explorer und What-if funktionieren, Menü und Suche am Telefon,
+Sprunglink, 404-Seite und die Umleitung alter Adressen.
 
 ## Pole-Position ist nicht Startplatz 1
 
@@ -66,138 +131,79 @@ Gemessen an Verstappen:
 | F1DBs eigenes Flag `polePosition` | 48 |
 
 In Belgien 2024 war Verstappen Schnellster und startete nach einer Motorstrafe
-als Elfter; die Rekordbücher schreiben ihm die Pole gut. Umgekehrt holte
-Leclerc in Monaco 2021 die Pole und ging gar nicht an den Start. Bis in die
-2000er fallen alle drei Zählungen zusammen – Fangios 29 und Sennas 65 stimmen
-in jeder.
-
-`calculatePoles` nimmt die sportliche Bedeutung, `calculateStartsFromPole`
-steht daneben. F1DBs Flag dient nur dem Abgleich.
+als Elfter; die Rekordbücher schreiben ihm die Pole gut. `calculatePoles` nimmt
+die sportliche Bedeutung, und dieselben Poles zählt die Pole-zu-Sieg-Quote.
+`calculateStartsFromPole` steht daneben, F1DBs Flag dient nur dem Abgleich.
 
 ## Wann ein Rekord fällt
 
-Die Seite `/aenderungen/` rechnet den Verlauf jeder Bestmarke aus den
-Ergebnissen nach: Alle 1163 gefahrenen Rennen laufen in zeitlicher Reihenfolge
-durch, und nach jedem steht fest, ob die Spitze sich bewegt hat. Es gibt keine
-gepflegte Liste von Rekordterminen, die jemand zu aktualisieren vergessen
-könnte – und der Endstand jeder Kette wird gegen die Rekordseite geprüft, die
-dieselbe Zahl mit einem `GROUP BY` ermittelt.
+Die Seite `/changes/` rechnet den Verlauf jeder Bestmarke aus den Ergebnissen
+nach: Alle gefahrenen Rennen laufen in zeitlicher Reihenfolge durch, und nach
+jedem steht fest, ob die Spitze sich bewegt hat. Es gibt keine gepflegte Liste
+von Rekordterminen – und der Endstand jeder Kette wird gegen die Rekordseite
+geprüft, die dieselbe Zahl mit einem `GROUP BY` ermittelt. Dieselben Sätze
+stehen im Atom-Feed `/feed.xml`.
 
-Dabei fällt eine Eigenschaft auf, die man erst sieht, wenn man es so rechnet:
 **Jede Marke wächst in Einerschritten, also muss sie einstellen, wer sie
-brechen will.** Wer von 91 auf 92 will, stand vorher bei 91 – und damit auf der
-Marke. Überholen ohne vorheriges Gleichziehen gibt es nicht. Hamilton stellte
-Schumachers 91 Siege beim Eifel-Grand-Prix 2020 ein und brach sie vierzehn Tage
-später in Portugal.
+brechen will.** Hamilton stellte Schumachers 91 Siege beim Eifel-Grand-Prix
+2020 ein und brach sie vierzehn Tage später in Portugal.
 
 **Die Termine hängen an der Zählweise.** Hier wird in Starts gezählt, nicht in
-Nennungen. Räikkönen erreichte Barrichellos 322 Starts in Mugello 2020 und zog
-zwei Rennen später in Sotschi vorbei; seine 326. *Nennung* – die in den
-Rekordbüchern übliche Marke – fiel erst beim Eifel-Grand-Prix. Beide Angaben
-sind richtig, sie zählen Verschiedenes. Die Seite sagt das dazu.
+Nennungen; die Seite sagt das dazu.
 
 **Hochrechnungen sind als solche kenntlich.** Wie weit jemand von einer Marke
-entfernt ist, steht in den Daten. Wann er sie erreicht, nicht. Die
-Fortschreibung nimmt die Trefferquote der letzten drei Saisons; wer darin zu
-wenige Starts oder keinen Erfolg dieser Art hat, bekommt keine Zahl statt einer
-unendlichen. Hält ein noch aktiver Fahrer die Marke selbst, wächst sie weiter,
-während der Verfolger aufholt – auch das steht an der Zeile.
+entfernt ist, steht in den Daten. Wann er sie erreicht, nicht.
 
 ## Das Quiz
 
-`/quiz/` stellt Fragen aus sieben Bereichen – Fahrer, Teams, Saisons, Rennen,
-Strecken, Rekorde, Motoren und Reifen – in drei Stufen oder gemischt, von leicht
-nach schwer. **Keine Frage ist von Hand geschrieben.** `src/engine/quiz.js`
-erzeugt sie beim Bauen aus der Datenbank, rund 1.800 Stück, von denen je
-Fragenart und Stufe höchstens zwanzig in `/data/quiz.json` landen (1.282 Fragen,
-368 KB, 52 KB gepackt). Fällt ein Rekord, ändert sich die Frage mit dem
-nächsten Neubau.
+`/quiz/` stellt Fragen aus sieben Bereichen in drei Stufen. **Keine Frage ist
+von Hand geschrieben.** `src/engine/quiz.js` erzeugt sie beim Bauen aus der
+Datenbank; die falschen Antworten stammen aus derselben Saison, demselben
+Rennen oder derselben Bestenliste, Mehrdeutiges fällt weg, und der Zufall ist
+gesät.
 
-**Die falschen Antworten sollen verführen.** Beim Weltmeister stehen die
-Nächstplatzierten derselben Saison zur Wahl, beim Teamkollegen Fahrer anderer
-Teams desselben Jahres, beim Austragungsort die anderen Strecken desselben
-Grand Prix – der Schweizer Grand Prix 1982 fand in Dijon statt. Bei „Wer gewann
-2008 die meisten Rennen?" steht Hamilton als falsche Antwort neben Massa.
-
-**Die Stufe hängt an Zeit und Bekanntheit.** Die zwölf jüngsten Saisons und die
-bekanntesten Namen sind leicht, ab 1985 mittel, davor schwer; Pole-Positions,
-Startplätze und Reifenhersteller sind grundsätzlich schwerer als Sieger.
-
-**Was nicht eindeutig ist, fällt weg**, statt mit einer schwachen Antwort
-aufgefüllt zu werden: Fangio fuhr 1954 für zwei Teams, in den 1950ern teilten
-sich Fahrer den Sieg, und wer „Für welches Team fuhr Jack Brabham 1966?" fragt,
-verrät die Antwort. Das Indianapolis 500 bleibt ganz draußen.
-
-**Der Zufall ist gesät.** Zwei Läufe über dieselbe Datenbank ergeben dieselbe
-Datei; gemischt wird erst im Browser, und zwar erst beim Klick auf „Start" –
-nicht im ersten Render, sonst unterschieden sich Server und Browser beim
-Hydrieren. Bereits gesehene Fragen merkt sich der Browser (die letzten 400) und
-stellt sie ans Ende.
-
-## Import
-
-```bash
-npm run import                      # lädt das neueste F1DB-Release und baut data/f1.sqlite
-npm run import -- --version <tag>   # eine bestimmte Fassung, z. B. v2026.14.1
-npm run import -- --csv <pfad>      # aus einem bereits entpackten Verzeichnis
-```
-
-Der Lauf dauert rund acht Sekunden und erzeugt eine 23 MB große SQLite-Datei.
-`data/` ist nicht eingecheckt – die Datenbank entsteht aus dem Release.
-
-### Was am Archiv geprüft wird
+## Was am Archiv geprüft wird
 
 Das Archiv ist fremde Eingabe, und aus ihm entsteht der gesamte Inhalt der
-Seite. Zwei Prüfungen stehen davor.
+Seite.
 
 **Die Prüfsumme.** Das Skript lädt die `checksums_sha256.txt` des Releases und
-vergleicht. Stimmt sie nicht, bricht der Import ab, ohne das Archiv
-anzufassen. Das fängt den abgerissenen oder unterwegs veränderten Download –
-nicht ein an der Quelle verändertes Release, denn wer das Archiv austauschen
-könnte, könnte auch die Prüfsummendatei austauschen. Fassung und Prüfsumme
-stehen im Bauprotokoll; dort ist später noch zu sehen, aus welchen Daten eine
-Fassung der Seite entstanden ist.
+vergleicht. Das fängt den abgerissenen oder unterwegs veränderten Download –
+nicht ein an der Quelle verändertes Release.
 
-**Die Kennungen.** Aus `driver.id` wird unmittelbar `/drivers/<id>/` – eine
-Kennung mit `../` darin schriebe beim Bauen Dateien außerhalb von `dist/`.
-Erlaubt sind deshalb nur Kleinbuchstaben, Ziffern und Bindestriche, geprüft
-für Fahrer, Teams, Strecken, Grands Prix, Länder und die zusammengesetzte
-Rennen-Kennung. Eine Kennung, die das verletzt, bricht den Import ab.
+**Die Kennungen.** Aus `driver.id` wird unmittelbar `/drivers/<id>/`. Erlaubt
+sind deshalb nur Kleinbuchstaben, Ziffern und Bindestriche, geprüft für jede
+Kennung, die zu einer Adresse werden kann. Das ist die wichtigere Prüfung.
 
-Das ist die wichtigere der beiden Prüfungen: Sie hängt an nichts, was ein
-Angreifer mitliefern könnte.
+**Das Format.** Jede CSV muss die Spalten haben, die der Import liest, und
+keine Zeile darf eine falsche Spaltenzahl haben. Vorher fiel eine solche Zeile
+still weg, und eine umbenannte Spalte kam überall als NULL an.
 
-**Der Import schreibt nichts, wenn eine Prüfung fehlschlägt.** Lieber keine
-Datenbank als eine mit falschen Zahlen. Geprüft wird:
+**Der Import ersetzt die alte Datenbank erst, wenn alles bestanden ist.** Er
+baut in eine Nebendatei; bricht er ab, bleibt die bisherige unberührt.
+Geprüft werden Fremdschlüssel, genau ein Sieger je Rennen (außer bei
+geteiltem Auto), keine Startplätze `0`, der Abgleich aller Fahrer mit F1DBs
+Gesamtzahlen, Stichproben aus den Rekordbüchern und bekannte
+Titelentscheidungen.
 
-- Fremdschlüssel vollständig auflösbar
-- je Rennen genau ein Sieger, außer bei geteiltem Auto (dann als solches markiert)
-- kein Startplatz `0` – Lücken sind `NULL`
-- **Nennungen, Starts, Siege, Pole-Positions und schnellste Runden stimmen für
-  alle 860 Fahrer mit den Gesamtzahlen überein, die F1DB selbst mitliefert.**
-  Zwei unabhängige Wege zum selben Wert; weicht einer ab, ist eine Annahme falsch.
-- Einzelfälle gegen die Rekordbücher: Fangio 51/24/29, Clark 72/25/33, Senna 161/41/65
-- Titelentscheidungen 2020 (Runde 14), 2021 (22), 2023 (17), 2024 (22)
-
-## Zwei Dinge, die der Import selbst herausfindet
+## Was der Import selbst herausfindet
 
 **Genannt ist nicht gestartet.** Wer sich nicht qualifizierte (`DNQ`, `DNPQ`),
 nicht antrat (`DNS`, `WD`, `DNA`, `DNP`) oder ausgeschlossen wurde (`EX`), war
-gemeldet, stand aber nicht in der Startaufstellung. Aguri Suzuki kommt so auf
-88 Nennungen bei 65 Starts, Senna auf 162 bei 161. Die Liste dieser sieben
-Werte ist nicht geraten: Mit ihr stimmt die Startzahl für alle 860 Fahrer, ohne
-sie für 445. `NC` und `DSQ` zählen als Start – diese Fahrer sind losgefahren.
+gemeldet, stand aber nicht in der Startaufstellung. Mit genau dieser Liste
+stimmt die Startzahl für jeden Fahrer mit F1DB überein.
 
-**Streichresultate erkennt der Import aus den Daten**, nicht aus einer
-gepflegten Regeltabelle: Liegt der WM-Stand eines Fahrers unter der Summe
-seiner Rennpunkte, wurde gestrichen. Ergebnis sind 26 Saisons zwischen 1950 und
-1990 – genau die bekannte Epoche.
+**Streichresultate** erkennt der Import aus den Daten: Liegt der WM-Stand eines
+Fahrers unter der Summe seiner Rennpunkte, wurde gestrichen.
+
+**Sprint-Wochenenden** erkennt er aus den Sprintergebnissen. F1DB führt ein
+Sprintdatum erst seit 2024; die Sprints 2021–2023 fehlten vorher.
 
 ## Deckung
 
-Die Tabelle `coverage` hält fest, ab wann jede Kennzahl belegt ist. Die
-Oberfläche fragt sie, bevor sie eine Null anzeigt – sonst wird aus einer
-Datenlücke eine Aussage.
+Die Tabelle `coverage` hält fest, ab wann jede Kennzahl belegt ist, und
+`/api/v1/coverage.json` gibt sie heraus. Die Oberfläche zeigt außerhalb davon
+einen Gedankenstrich statt einer Null.
 
 | Kennzahl | ab |
 |---|---|
@@ -206,10 +212,12 @@ Datenlücke eine Aussage.
 | Q1/Q2/Q3 getrennt | 2006 |
 | Boxenstopps | 1994 |
 | Fahrer des Tages | 2016 |
-| Positionsverlauf je Runde, Führungsrunden | 1996 · noch nicht geladen |
-| Reifenstints, Safety-Car, Wetter | 2023 · noch nicht geladen |
+| Sprints | 2021 |
+| Positionsverlauf je Runde, Führungsrunden | 1996 · für die Rennen in `runden/` |
+| Reifenstints, Safety-Car, Wetter | 2023 · nicht geladen |
 
 ## Datenquelle
 
-[F1DB](https://github.com/f1db/f1db), Creative Commons BY 4.0, neue Fassung
-nach jedem Rennen. Kein offizielles Angebot der Formel 1.
+[F1DB](https://github.com/f1db/f1db), Creative Commons BY 4.0, neue Fassung nach
+jedem Rennen. Rundendaten von [Jolpica-F1](https://api.jolpi.ca). Kein
+offizielles Angebot der Formel 1.

@@ -764,6 +764,48 @@ function slugRennen(r) {
  * Titelrechner zählte für Katar 2023 null Sprints. Ein Sprintergebnis ist der
  * sichere Beleg; das Datum bleibt für künftige Rennen, die noch keines haben.
  */
+/**
+ * Die Rundendaten aus runden/ einspielen – eine CSV je Rennen, von
+ * lade-runden.mjs geschrieben und im Repo abgelegt.
+ *
+ * Sie kommen nicht aus F1DB, und dieser Import baut die Datenbank jedes Mal
+ * neu. Lägen sie nur in der Datenbank, wären sie danach fort; genau das ist
+ * der ersten Fassung passiert. Geprüft wird wie beim Rest: Kennt die
+ * Datenbank das Rennen nicht, oder fuhr ein Fahrer darin gar nicht mit, bricht
+ * der Import ab.
+ */
+async function ladeRunden(db) {
+  const ordner = path.join(WURZEL, 'runden')
+  let dateien = []
+  try {
+    dateien = (await fs.readdir(ordner)).filter((d) => d.endsWith('.csv'))
+  } catch {
+    return { rennen: 0, zeilen: 0 }
+  }
+  const gibtRennen = db.prepare('SELECT 1 FROM race WHERE id = ?')
+  const fuhrMit = db.prepare('SELECT 1 FROM race_result WHERE race_id = ? AND driver_id = ? LIMIT 1')
+  const einfuegen = db.prepare('INSERT INTO lap_position (race_id, driver_id, lap, position, time_ms) VALUES (?, ?, ?, ?, ?)')
+  let zeilen = 0
+  db.exec('BEGIN')
+  for (const datei of dateien) {
+    const raceId = kennung(datei.replace(/\.csv$/, ''), `runden/${datei}`)
+    if (!gibtRennen.get(raceId)) throw new Error(`runden/${datei}: kein solches Rennen`)
+    const { kopf, krumm, zeilen: roh } = parseCSV(await fs.readFile(path.join(ordner, datei), 'utf8'))
+    if (krumm || kopf.join() !== 'driver_id,lap,position,time_ms') throw new Error(`runden/${datei}: unerwartetes Format`)
+    const geprueft = new Set()
+    for (const z of roh) {
+      if (!geprueft.has(z.driver_id)) {
+        if (!fuhrMit.get(raceId, z.driver_id)) throw new Error(`runden/${datei}: ${z.driver_id} fuhr in diesem Rennen nicht`)
+        geprueft.add(z.driver_id)
+      }
+      einfuegen.run(raceId, z.driver_id, Number(z.lap), Number(z.position), zahl(z.time_ms))
+      zeilen++
+    }
+  }
+  db.exec('COMMIT')
+  return { rennen: dateien.length, zeilen }
+}
+
 function markiereSprints(db) {
   db.exec('UPDATE race SET had_sprint = 1 WHERE id IN (SELECT DISTINCT race_id FROM sprint_result)')
   return db.prepare('SELECT COUNT(*) AS n FROM race WHERE had_sprint = 1').get().n
@@ -986,6 +1028,15 @@ try {
 
 const streich = markiereStreichresultate(db)
 const sprintWochenenden = markiereSprints(db)
+let runden
+try {
+  runden = await ladeRunden(db)
+} catch (e) {
+  db.close()
+  await verwerfen()
+  console.error(`\nRUNDENDATEN ABGELEHNT: ${e.message}`)
+  process.exit(1)
+}
 const deckung = zaehleDeckung(db)
 const fehler = pruefe(db)
 
@@ -994,6 +1045,7 @@ for (const [t, n] of Object.entries(zaehler)) console.log(`  ${t.padEnd(28)} ${S
 
 console.log('\nSaisons mit Streichresultaten:', streich.length ? `${streich.length} (${streich[0]}–${streich.at(-1)})` : 'keine')
 console.log('Sprint-Wochenenden:', sprintWochenenden)
+console.log('Rundendaten:', runden.rennen ? `${runden.rennen} Rennen, ${runden.zeilen} Zeitnahmen` : 'keine')
 
 console.log('\nDeckung:')
 for (const d of deckung) {

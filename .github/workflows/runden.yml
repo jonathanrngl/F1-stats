@@ -1,0 +1,111 @@
+# Lädt die Rundendaten nach, Stück für Stück, und legt sie im Repo ab.
+#
+# Jolpica ist die einzige Quelle für Positionen je Runde (ab 1996). Der ganze
+# Bestand sind rund 7.000 Anfragen bei 500 je Stunde – kein Lauf, sondern
+# viele. Dieser Workflow holt je Lauf höchstens 35 Rennen (gut eine Stunde),
+# jüngste zuerst, und überspringt, was schon da ist. Ist alles geladen, holt
+# jeder Lauf nur noch das Rennen vom letzten Wochenende.
+#
+#   1. laden         Rennen holen, dann Import, Tests und Bau darüber laufen
+#                    lassen. Nur lesen: hier läuft fremder Code mit fremden Daten.
+#   2. festschreiben Die neuen CSV-Dateien committen und den Deploy anstoßen.
+#                    Führt nichts aus, was aus npm oder von Jolpica stammt.
+name: Rundendaten
+
+on:
+  schedule:
+    - cron: '41 */4 * * *'
+  workflow_dispatch:
+    inputs:
+      max:
+        description: 'Höchstens so viele Rennen'
+        default: '35'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: runden
+  cancel-in-progress: false
+
+jobs:
+  laden:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    outputs:
+      neu: ${{ steps.laden.outputs.neu }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: explorer/package.json
+
+      - name: Abhaengigkeiten
+        working-directory: explorer
+        run: npm ci --ignore-scripts
+
+      # Die Datenbank braucht der Lader, um Jolpicas Fahrer den eigenen zuzuordnen.
+      - name: Datenbank importieren
+        working-directory: explorer
+        run: npm run import
+
+      - id: laden
+        name: Rennen laden
+        working-directory: explorer
+        env:
+          MAX: ${{ inputs.max || '35' }}
+        run: |
+          case "$MAX" in (*[!0-9]*|'') echo "max muss eine Zahl sein" >&2; exit 1;; esac
+          node scripts/lade-runden.mjs --max "$MAX"
+          if [ -n "$(git status --porcelain runden)" ]; then echo "neu=true" >> "$GITHUB_OUTPUT"; fi
+
+      # Dieselben Prüfungen wie beim Deploy: Der Import lehnt eine Datei ab,
+      # deren Fahrer im Rennen nicht vorkommen, und die Tests prüfen den Rest.
+      - if: steps.laden.outputs.neu == 'true'
+        name: Pruefen
+        working-directory: explorer
+        run: |
+          npm run import
+          npm test
+          npm run build
+
+      - if: steps.laden.outputs.neu == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: runden
+          path: explorer/runden/
+          retention-days: 1
+
+  festschreiben:
+    needs: laden
+    if: needs.laden.outputs.neu == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      actions: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: runden
+          path: explorer/runden/
+      - name: Committen
+        run: |
+          # Nur CSV-Dateien mit sauberem Namen – das Artefakt ist Ausgabe eines
+          # Jobs, der fremden Code ausführte.
+          if find explorer/runden -type f ! -regex '.*/[a-z0-9-]*\.csv' | grep -q .; then
+            echo "Unerwartete Datei im Artefakt" >&2; exit 1
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add explorer/runden
+          git commit -m "Rundendaten: $(git diff --cached --name-only | wc -l) Rennen"
+          git pull --rebase --quiet
+          git push
+      - name: Deploy anstossen
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy.yml --ref main

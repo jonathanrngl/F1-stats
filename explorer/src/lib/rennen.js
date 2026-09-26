@@ -143,8 +143,45 @@ export function rennDaten(id) {
     jeFahrer.set(s.fahrerId, e)
   }
 
+  /*
+   * Runde für Runde, wo es sie gibt – seit 1996, und nur für die Rennen, die
+   * lade-runden.mjs schon geholt hat. Je Fahrer eine Liste der Positionen,
+   * null für Runden, in denen er nicht mehr fuhr.
+   */
+  const rundenZeilen = alle(
+    'SELECT driver_id AS id, lap AS runde, position FROM lap_position WHERE race_id = ? ORDER BY lap',
+    id,
+  )
+  let runden = null
+  if (rundenZeilen.length) {
+    const letzte = Math.max(...rundenZeilen.map((z) => z.runde))
+    const jeFahrer = new Map()
+    for (const z of rundenZeilen) {
+      if (!jeFahrer.has(z.id)) jeFahrer.set(z.id, new Array(letzte).fill(null))
+      jeFahrer.get(z.id)[z.runde - 1] = z.position
+    }
+    const inReihenfolge = [...new Set(ergebnisse.map((e) => e.fahrerId))].filter((f) => jeFahrer.has(f))
+    runden = {
+      anzahl: letzte,
+      fahrer: inReihenfolge.map((f) => {
+        const e = ergebnisse.find((x) => x.fahrerId === f)
+        const pos = jeFahrer.get(f)
+        return {
+          id: f,
+          name: e.fahrer,
+          kuerzel: e.kuerzel ?? e.fahrer.split(' ').at(-1).slice(0, 3).toUpperCase(),
+          start: e.grid_position,
+          ziel: e.position,
+          positionen: pos,
+          gefuehrt: pos.filter((p) => p === 1).length,
+        }
+      }),
+    }
+  }
+
   return {
     rennen,
+    runden,
     gefahren: ergebnisse.length > 0,
     ergebnisse,
     qualifying,

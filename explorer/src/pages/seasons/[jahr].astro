@@ -1,7 +1,8 @@
 ---
-import { datumKurz as datum, ein, plakette, zahl } from '../../lib/format.js'
+import { datumKurz as datum, ein, plakette } from '../../lib/format.js'
 import Seite from '../../layouts/Seite.astro'
-import { alle, eine, saisonListe, rennenListe, pfad } from '../../lib/db.js'
+import { alle, saisonListe, pfad } from '../../lib/db.js'
+import { saisonDaten } from '../../lib/saison.js'
 import Verlauf from '../../components/Verlauf.astro'
 import Sprung from '../../components/Sprung.astro'
 import WasWaereWenn from '../../components/WasWaereWenn.astro'
@@ -11,48 +12,8 @@ export async function getStaticPaths() {
 }
 
 const jahr = Number(Astro.params.jahr)
-
-const saison = eine(
-  `SELECT s.*,
-          (SELECT COUNT(*) FROM race WHERE year = s.year) AS rennen
-     FROM season s WHERE s.year = ?`,
-  jahr,
-)
-
-const fahrerWertung = alle(
-  `SELECT sds.position, sds.points, sds.championship_won AS meister,
-          d.id, d.display_name AS name, d.abbreviation AS kuerzel,
-          (SELECT COUNT(*) FROM race_result rr JOIN race r ON r.id = rr.race_id
-            WHERE r.year = ?1 AND rr.driver_id = d.id AND rr.position = 1) AS siege,
-          (SELECT GROUP_CONCAT(DISTINCT k.name) FROM race_result rr
-             JOIN race r ON r.id = rr.race_id JOIN constructor k ON k.id = rr.constructor_id
-            WHERE r.year = ?1 AND rr.driver_id = d.id) AS teams
-     FROM season_driver_standing sds
-     JOIN driver d ON d.id = sds.driver_id
-    WHERE sds.year = ?1
-    ORDER BY sds.position`,
-  jahr,
-)
-
-const teamWertung = alle(
-  `SELECT scs.position, scs.points, scs.championship_won AS meister, k.id, k.name
-     FROM season_constructor_standing scs
-     JOIN constructor k ON k.id = scs.constructor_id
-    WHERE scs.year = ? ORDER BY scs.position`,
-  jahr,
-)
-
-const rennen = rennenListe(jahr).sort((a, b) => a.runde - b.runde)
-
-// Kennzahlen der Saison, direkt aus den Ergebnissen.
-const kennzahlen = eine(
-  `SELECT COUNT(DISTINCT CASE WHEN rr.position = 1 THEN rr.driver_id END) AS sieger,
-          COUNT(DISTINCT CASE WHEN rr.qualifying_position = 1 THEN rr.driver_id END) AS polesetter,
-          SUM(CASE WHEN rr.started = 1 THEN 1 ELSE 0 END) AS starts,
-          SUM(CASE WHEN rr.started = 1 AND rr.classified = 0 THEN 1 ELSE 0 END) AS ausfaelle
-     FROM race_result rr JOIN race r ON r.id = rr.race_id WHERE r.year = ?`,
-  jahr,
-)
+const d = saisonDaten(jahr)
+const { saison, fahrerWertung, teamWertung, kalender: rennen, kennzahlen, zellen, nennungen, punkte } = d
 
 /*
  * Der Verlauf kommt aus den Zwischenständen nach jeder Runde, nicht aus der
@@ -73,42 +34,58 @@ const staende = alle(
 )
 
 const rundenMitStand = [...new Set(staende.map((s) => s.runde))].sort((a, b) => a - b)
-const standProRunde = new Map()
-for (const s of staende) {
-  if (!standProRunde.has(s.runde)) standProRunde.set(s.runde, new Map())
-  standProRunde.get(s.runde).set(s.id, s.punkte)
-}
-
-const namen = new Map(fahrerWertung.map((f) => [f.id, f]))
-const verlauf = fahrerWertung
-  .filter((f) => namen.has(f.id))
-  .map((f) => {
+const fortgeschrieben = (liste, eintraege) => {
+  const proRunde = new Map()
+  for (const s of eintraege) {
+    if (!proRunde.has(s.runde)) proRunde.set(s.runde, new Map())
+    proRunde.get(s.runde).set(s.id, s.punkte)
+  }
+  return liste.map((f) => {
     let getragen = 0
     return {
       id: f.id,
       name: f.name,
       kuerzel: f.kuerzel ?? null,
       punkte: rundenMitStand.map((r) => {
-        const w = standProRunde.get(r)?.get(f.id)
+        const w = proRunde.get(r)?.get(f.id)
         if (w !== undefined) getragen = w
         return getragen
       }),
     }
   })
+}
+const verlauf = fortgeschrieben(fahrerWertung, staende)
+const teamVerlauf = fortgeschrieben(teamWertung.map((t) => ({ ...t, kuerzel: null })), d.teamStaende)
 
 const verlaufRunden = rundenMitStand.map((r) => ({
   runde: r,
-  name: rennen.find((x) => x.runde === r)?.name ?? `Round ${r}`,
+  name: rennen.find((x) => x.runde === r)?.nameVoll ?? `Round ${r}`,
 }))
 
 const entscheidung = rennen.find((r) => r.titelentscheidung)
 const meister = fahrerWertung.find((f) => f.meister)
-const meisterId = meister?.id ?? null
-
 const teamMeister = teamWertung.find((t) => t.meister)
 const fuehrender = fahrerWertung[0] ?? null
 const gefahren = rennen.filter((r) => r.siegerId).length
 const saisonLaeuft = !meister && gefahren < rennen.length
+const mitSprints = rennen.some((r) => r.mitSprint)
+
+/* Die Ergebnismatrix: eine Zelle je Fahrer und Rennen. */
+const zelle = (fahrerId, runde) => zellen.get(`${fahrerId}|${runde}`)
+const zellText = (z) => {
+  if (!z) return ''
+  if (z.gewertet) return String(z.platz)
+  if (!z.gestartet) return z.text === 'DNQ' || z.text === 'DNPQ' ? 'DNQ' : z.text
+  return 'Ret'
+}
+const zellKlasse = (z) => {
+  if (!z) return 'leer'
+  if (z.gewertet && z.platz <= 3) return `p${z.platz}`
+  if (z.punkte > 0) return 'punkte'
+  if (z.gewertet) return 'ziel'
+  return z.gestartet ? 'aus' : 'nicht'
+}
+const matrixFahrer = fahrerWertung.filter((f) => rennen.some((r) => zelle(f.id, r.runde)))
 
 /*
  * Was wäre unter einem anderen Punktesystem herausgekommen? Erst, wenn es
@@ -120,14 +97,17 @@ const mitWhatif = gefahren > 0
 const ziele = [
   verlauf.length > 0 && verlaufRunden.length > 1 && { id: 'verlauf', label: 'Progression' },
   { id: 'wertung', label: 'Standings' },
+  gefahren > 0 && { id: 'ergebnisse', label: 'Results grid' },
   { id: 'kalender', label: 'Calendar' },
+  nennungen.length > 0 && { id: 'nennungen', label: 'Entries' },
   mitWhatif && { id: 'whatif', label: 'What if' },
 ].filter(Boolean)
 ---
 
 <Seite
   titel={`Formula 1 season ${jahr} – standings and races`}
-  beschreibung={`${saison.rennen} races${meister ? `, World Champion ${meister.name}` : ''}${teamMeister ? `, constructors' title ${teamMeister.name}` : ''}.`}
+  beschreibung={`${saison.rennen} races${meister ? `, World Champion ${meister.name}` : ''}${teamMeister ? `, constructors' title ${teamMeister.name}` : ''}: standings, results grid, calendar and every entry.`}
+  brotkrumen={[{ name: 'Seasons', pfad: '/seasons/' }]}
 >
   <header class="seitenkopf">
     <div>
@@ -140,8 +120,13 @@ const ziele = [
       <ul class="eckdaten">
         {saisonLaeuft && <li class="stark">In progress</li>}
         {saison.dropped_scores === 1 && <li>Dropped scores</li>}
+        {mitSprints && <li>{rennen.filter((r) => r.mitSprint).length} sprint weekends</li>}
         {entscheidung && <li>Title decided in round {entscheidung.runde}</li>}
       </ul>
+      <p class="saison-nachbarn">
+        {jahr > 1950 && <a href={pfad.saison(jahr - 1)}>‹ {jahr - 1}</a>}
+        {saisonListe()[0]?.jahr > jahr && <a href={pfad.saison(jahr + 1)}>{jahr + 1} ›</a>}
+      </p>
     </div>
   </header>
 
@@ -165,11 +150,17 @@ const ziele = [
         <b><a href={pfad.team(teamMeister.id)}>{teamMeister.name}</a></b>
         <i>{ein(teamMeister.points)} points</i>
       </li>
-    ) : teamWertung[0] && (
+    ) : teamWertung[0] ? (
       <li>
         <span>Leading constructor</span>
         <b><a href={pfad.team(teamWertung[0].id)}>{teamWertung[0].name}</a></b>
         <i>{ein(teamWertung[0].points)} points</i>
+      </li>
+    ) : (
+      <li>
+        <span>Constructors' championship</span>
+        <b>Not yet held</b>
+        <i>It was first awarded in 1958.</i>
       </li>
     )}
   </ul>
@@ -185,6 +176,12 @@ const ziele = [
     </li>
   </ul>
 
+  <p class="punktesystem">
+    <b>Points:</b> {punkte.system.beschreibung}
+    {punkte.sprint && <> Sprints: {punkte.sprint.join('-')} for the top {punkte.sprint.length}.</>}
+    {punkte.regelText && <> {punkte.regelText}</>}
+  </p>
+
   {saison.dropped_scores === 1 && (
     <p class="hinweis warn">
       In this season not every result counted towards the championship: only a driver's best
@@ -197,7 +194,7 @@ const ziele = [
     <p class="hinweis akzent">
       <span>
         The title was decided in round {entscheidung.runde}:{' '}
-        <a href={pfad.rennen(entscheidung.id)}>{entscheidung.name}</a>
+        <a href={pfad.rennen(entscheidung.id)}>{entscheidung.nameVoll}</a>
         {' '}on {datum(entscheidung.datum)}.
       </span>
     </p>
@@ -208,11 +205,13 @@ const ziele = [
   {verlauf.length > 0 && verlaufRunden.length > 1 && (
     <section class="abschnitt" id="verlauf">
       <div class="abschnitt-kopf"><div><h2>Points progression</h2></div></div>
-      <Verlauf
-        fahrer={verlauf}
-        runden={verlaufRunden}
-        streichresultate={saison.dropped_scores === 1}
-      />
+      <Verlauf fahrer={verlauf} runden={verlaufRunden} streichresultate={saison.dropped_scores === 1} />
+      {teamVerlauf.length > 1 && (
+        <details class="team-verlauf">
+          <summary>The constructors' championship, round by round</summary>
+          <Verlauf fahrer={teamVerlauf} runden={verlaufRunden} art="team" />
+        </details>
+      )}
     </section>
   )}
 
@@ -224,15 +223,25 @@ const ziele = [
         <div class="tabelle">
           <table>
             <thead>
-              <tr><th class="num">Pos</th><th>Driver</th><th>Team</th><th class="num">Wins</th><th class="num">Points</th></tr>
+              <tr>
+                <th class="num" scope="col">Pos</th><th scope="col">Driver</th><th scope="col">Team</th>
+                <th class="num" scope="col">Wins</th>
+                {mitSprints && <th class="num" scope="col"><abbr title="Sprint wins">Sprint</abbr></th>}
+                <th class="num" scope="col">Points</th>
+              </tr>
             </thead>
             <tbody>
               {fahrerWertung.map((f) => (
                 <tr class={f.meister ? 'meister' : undefined}>
-                  <td class="num"><span class={plakette(f.position)}>{f.position ?? '–'}</span></td>
-                  <td><a class="zeile" href={pfad.fahrer(f.id)}>{f.name}</a></td>
-                  <td class="leise">{f.teams}</td>
+                  <td class="num"><span class={plakette(f.position)}>{f.position ?? f.text ?? '–'}</span></td>
+                  <th scope="row"><a class="zeile" href={pfad.fahrer(f.id)}>{f.name}</a></th>
+                  <td class="leise">
+                    {f.teams.map((t, i) => (
+                      <>{i > 0 && ', '}<a class="leise" href={pfad.team(t.id)}>{t.name}</a></>
+                    ))}
+                  </td>
                   <td class="num">{f.siege || ''}</td>
+                  {mitSprints && <td class="num">{f.sprintSiege || ''}</td>}
                   <td class="num fett">{ein(f.points)}</td>
                 </tr>
               ))}
@@ -241,43 +250,105 @@ const ziele = [
         </div>
       </div>
 
-      {teamWertung.length > 0 && (
-        <div>
-          <h3>Constructors</h3>
+      <div>
+        <h3>Constructors</h3>
+        {teamWertung.length > 0 ? (
           <div class="tabelle">
             <table>
-              <thead><tr><th class="num">Pos</th><th>Team</th><th class="num">Points</th></tr></thead>
+              <thead><tr><th class="num" scope="col">Pos</th><th scope="col">Team</th><th class="num" scope="col">Points</th></tr></thead>
               <tbody>
                 {teamWertung.map((t) => (
                   <tr class={t.meister ? 'meister' : undefined}>
                     <td class="num"><span class={plakette(t.position)}>{t.position ?? '–'}</span></td>
-                    <td><a class="zeile" href={pfad.team(t.id)}>{t.name}</a></td>
+                    <th scope="row"><a class="zeile" href={pfad.team(t.id)}>{t.name}</a></th>
                     <td class="num fett">{ein(t.points)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </div>
-      )}
+        ) : (
+          <p class="hinweis">
+            There was no constructors' championship yet – it was first awarded in 1958. Until then
+            only the drivers were ranked.
+          </p>
+        )}
+      </div>
     </div>
   </section>
+
+  {gefahren > 0 && (
+    <section class="abschnitt" id="ergebnisse">
+      <div class="abschnitt-kopf">
+        <div>
+          <h2>Results grid</h2>
+          <p>Every driver in every race: the finishing position, or why there was none. Gold, silver and bronze for the podium, green for points.</p>
+        </div>
+      </div>
+      <div class="tabelle matrix">
+        <table>
+          <caption class="sr-only">Results of every driver in every race of {jahr}</caption>
+          <thead>
+            <tr>
+              <th scope="col">Driver</th>
+              {rennen.map((r) => (
+                <th class="num" scope="col">
+                  <a class="leise" href={pfad.rennen(r.id)} title={`${r.nameVoll} – round ${r.runde}`}>{r.runde}</a>
+                  {r.mitSprint === 1 && <span class="sprintmarke" title="Sprint weekend">S</span>}
+                </th>
+              ))}
+              <th class="num" scope="col">Pts</th>
+            </tr>
+          </thead>
+          <tbody>
+            {matrixFahrer.map((f) => (
+              <tr>
+                <th scope="row"><a class="zeile" href={pfad.fahrer(f.id)}>{f.kuerzel ?? f.name}</a><span class="sr-only"> ({f.name})</span></th>
+                {rennen.map((r) => {
+                  const z = zelle(f.id, r.runde)
+                  return (
+                    <td class={`num zelle ${zellKlasse(z)}`}>
+                      {zellText(z)}
+                      {z?.pole === 1 && <sup title="Pole position">P</sup>}
+                      {z?.schnellste === 1 && <sup title="Fastest lap">F</sup>}
+                    </td>
+                  )
+                })}
+                <td class="num fett">{ein(f.points)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p class="fussnote">
+        Ret: retired. DNQ: did not qualify. P: pole position. F: fastest lap. S above a round: a
+        sprint weekend. Hover or tap a round number for the race.
+      </p>
+    </section>
+  )}
 
   <section class="abschnitt" id="kalender">
     <div class="abschnitt-kopf"><div><h2>Race calendar</h2></div></div>
     <div class="tabelle">
       <table>
-        <thead><tr><th class="num">Rd</th><th>Race</th><th>Circuit</th><th>Date</th><th>Winner</th></tr></thead>
+        <thead>
+          <tr>
+            <th class="num" scope="col"><abbr title="Round">Rd</abbr></th><th scope="col">Race</th><th scope="col">Circuit</th>
+            <th scope="col">Date</th><th scope="col">Pole</th><th scope="col">Winner</th>
+          </tr>
+        </thead>
         <tbody>
           {rennen.map((r) => (
             <tr class={r.siegerId ? undefined : 'raus'}>
               <td class="num leise">{r.runde}</td>
-              <td>
+              <th scope="row">
                 <a class="zeile" href={pfad.rennen(r.id)}>{r.name}</a>
+                {r.mitSprint === 1 && <span class="etikett" title="Sprint weekend">sprint</span>}
                 {r.titelentscheidung === 1 && <span class="etikett akzent">Title decided</span>}
-              </td>
-              <td class="leise">{r.strecke}</td>
+              </th>
+              <td class="leise"><a class="leise" href={pfad.strecke(r.streckeId)}>{r.strecke}</a></td>
               <td class="leise">{datum(r.datum)}</td>
+              <td class="leise">{r.pole ? <a class="leise" href={pfad.fahrer(r.pole.fahrerId)}>{r.pole.name}</a> : ''}</td>
               <td>
                 {r.siegerId
                   ? <a class="zeile" href={pfad.fahrer(r.siegerId)}>{r.sieger}</a>
@@ -289,6 +360,40 @@ const ziele = [
       </table>
     </div>
   </section>
+
+  {nennungen.length > 0 && (
+    <section class="abschnitt" id="nennungen">
+      <div class="abschnitt-kopf">
+        <div>
+          <h2>Entries</h2>
+          <p>Who entered with which car, engine and tyres. The entrant is the organisation that entered the car – not always the team that built it.</p>
+        </div>
+      </div>
+      <div class="tabelle">
+        <table>
+          <thead>
+            <tr><th scope="col">Constructor</th><th scope="col">Entrant</th><th scope="col">Chassis</th><th scope="col">Engine</th><th scope="col">Tyres</th><th scope="col">Drivers</th></tr>
+          </thead>
+          <tbody>
+            {nennungen.map((n) => (
+              <tr>
+                <th scope="row"><a class="zeile" href={pfad.team(n.teamId)}>{n.team}</a></th>
+                <td class="leise">{n.meldungName}</td>
+                <td class="leise">{n.chassis ?? '–'}</td>
+                <td class="leise"><a class="leise" href={pfad.seite(`/engines/${n.motorId}/`)}>{n.motor ?? n.motorHersteller}</a></td>
+                <td class="leise">{n.reifen ?? '–'}</td>
+                <td>
+                  {n.fahrer.map((f, i) => (
+                    <>{i > 0 && ', '}{f.mitSeite ? <a class="leise" href={pfad.fahrer(f.id)}>{f.name}</a> : f.name}</>
+                  ))}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  )}
 
   {mitWhatif && (
     <section class="abschnitt" id="whatif">
@@ -323,4 +428,27 @@ const ziele = [
     grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr));
     margin-bottom: 0.75rem;
   }
+
+  .saison-nachbarn { display: flex; gap: 1rem; margin: 0.6rem 0 0; font-size: 0.9rem; font-weight: 600; }
+  .saison-nachbarn a { text-decoration: none; }
+  .punktesystem { margin: 0 0 1rem; font-size: 0.9rem; color: var(--ink-2); }
+  .team-verlauf { margin-top: 1rem; }
+  .team-verlauf summary { cursor: pointer; min-height: 2.25rem; font-weight: 600; color: var(--ink); margin-bottom: 0.5rem; }
+
+  /*
+   * Die Matrix: klein und dicht, aber jede Zelle ist lesbar. Die Farbe trägt
+   * nie allein – in jeder Zelle steht die Zahl oder das Kürzel.
+   */
+  .matrix table { font-size: 0.8rem; }
+  .matrix th, .matrix td { padding: 0.35rem 0.4rem; }
+  .matrix thead th { text-align: center; }
+  .matrix .zelle { text-align: center; min-width: 2rem; font-weight: 650; }
+  .matrix .p1 { background: var(--gold); color: var(--podest-ink); }
+  .matrix .p2 { background: var(--silber); color: var(--podest-ink); }
+  .matrix .p3 { background: var(--bronze); color: var(--podest-ink); }
+  .matrix .punkte { background: var(--good-wash); color: var(--ink); }
+  .matrix .ziel { color: var(--ink-2); }
+  .matrix .aus, .matrix .nicht { color: var(--muted); font-weight: 500; }
+  .matrix sup { font-size: 0.75em; font-weight: 750; margin-left: 0.05rem; }
+  .sprintmarke { display: block; font-size: 0.75rem; color: var(--muted); }
 </style>

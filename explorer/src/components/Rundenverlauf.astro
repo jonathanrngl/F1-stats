@@ -1,0 +1,187 @@
+---
+/**
+ * Der Positionsverlauf eines Rennens: jede Runde, jeder Fahrer.
+ *
+ * Das Bild, das ein Ergebnis nicht zeigen kann – wer von hinten kam, wann
+ * die Boxenstopps die Reihenfolge durcheinanderwarfen, wer die ganze Zeit
+ * führte. Es beruht auf den Rundendaten von Jolpica, die es erst ab 1996 gibt;
+ * die Seite zeigt es nur, wo sie geladen sind.
+ *
+ * Wie der Punkteverlauf: zwei Zeichnungen für zwei Breiten, acht Farben für
+ * die ersten acht im Ziel, grau für den Rest, Namen am Linienende, und alle
+ * Werte als Tabelle darunter.
+ */
+interface Fahrer {
+  id: string
+  name: string
+  kuerzel: string
+  start: number | null
+  ziel: number | null
+  positionen: (number | null)[]
+  gefuehrt: number
+}
+
+interface Props {
+  fahrer: Fahrer[]
+  anzahl: number
+}
+
+const { fahrer, anzahl } = Astro.props
+const BENANNT = 8
+const feld = Math.max(...fahrer.flatMap((f) => f.positionen.filter((p) => p !== null)), fahrer.length)
+
+function zeichnung({ W, H, rechts, rundenJe }) {
+  const PAD = { oben: 12, rechts, unten: 34, links: 30 }
+  const PLOT_B = W - PAD.links - PAD.rechts
+  const PLOT_H = H - PAD.oben - PAD.unten
+  const x = (runde) => PAD.links + ((runde - 1) / Math.max(anzahl - 1, 1)) * PLOT_B
+  const y = (pos) => PAD.oben + ((pos - 1) / Math.max(feld - 1, 1)) * PLOT_H
+  /** Eine Linie, die abreißt, wo der Fahrer nicht mehr fuhr. */
+  const pfad = (pos) => {
+    let d = ''
+    let an = false
+    pos.forEach((p, i) => {
+      if (p === null) {
+        an = false
+        return
+      }
+      d += `${an ? 'L' : 'M'}${x(i + 1).toFixed(1)},${y(p).toFixed(1)} `
+      an = true
+    })
+    return d.trim()
+  }
+  const jede = Math.max(1, Math.ceil(anzahl / rundenJe))
+  const xWerte = []
+  for (let r = jede; r <= anzahl; r += jede) xWerte.push(r)
+  const yWerte = [1, 5, 10, 15, 20, 25].filter((p) => p <= feld)
+  return { W, H, PAD, PLOT_B, x, y, pfad, xWerte, yWerte, rechts }
+}
+
+const FASSUNGEN = [
+  { klasse: 'breit', ...zeichnung({ W: 900, H: 380, rechts: 50, rundenJe: 12 }) },
+  { klasse: 'schmal', ...zeichnung({ W: 380, H: 300, rechts: 12, rundenJe: 5 }) },
+]
+
+const benannt = fahrer.slice(0, BENANNT)
+const rest = fahrer.slice(BENANNT)
+const letzte = (f) => {
+  for (let i = f.positionen.length - 1; i >= 0; i--) if (f.positionen[i] !== null) return { runde: i + 1, pos: f.positionen[i] }
+  return null
+}
+const nachFuehrung = [...fahrer].filter((f) => f.gefuehrt > 0).sort((a, b) => b.gefuehrt - a.gefuehrt)
+const zwischen = [0.25, 0.5, 0.75].map((a) => Math.max(1, Math.round(anzahl * a)))
+
+/* Vorsatz der Seite: auf GitHub Pages "/F1-stats", beim Entwickeln leer. */
+const BASIS = import.meta.env.BASE_URL.replace(/\/$/, '')
+---
+
+<figure class="rundenverlauf">
+  {FASSUNGEN.map((z) => (
+    <svg class={z.klasse} viewBox={`0 0 ${z.W} ${z.H}`} role="img"
+      aria-label={`Position of every driver on each of the ${anzahl} laps. Laps led and positions are in the table below the chart.`}>
+      {z.yWerte.map((p) => (
+        <g>
+          <line class="gitter" x1={z.PAD.links} x2={z.W - z.PAD.rechts} y1={z.y(p)} y2={z.y(p)} />
+          <text class="achse" x={z.PAD.links - 6} y={z.y(p)} text-anchor="end" dominant-baseline="middle">{p}</text>
+        </g>
+      ))}
+      {z.xWerte.map((r) => (
+        <text class="achse" x={z.x(r)} y={z.H - 18} text-anchor="middle">{r}</text>
+      ))}
+      <text class="achse" x={z.PAD.links + z.PLOT_B / 2} y={z.H - 3} text-anchor="middle">Lap</text>
+
+      {rest.map((f) => <path class="linie grau" d={z.pfad(f.positionen)} />)}
+      {benannt.map((f, i) => <path class={`linie f${i + 1}`} d={z.pfad(f.positionen)} />)}
+      {z.rechts > 30 && benannt.map((f) => {
+        const l = letzte(f)
+        return l && <text class="marke" x={z.x(l.runde) + 6} y={z.y(l.pos)} dominant-baseline="middle">{f.kuerzel}</text>
+      })}
+    </svg>
+  ))}
+
+  <ul class="legende">
+    {benannt.map((f, i) => (
+      <li><span class={`strich f${i + 1}`}></span><a href={`${BASIS}/drivers/${f.id}/`}>{f.name}</a></li>
+    ))}
+    {rest.length > 0 && <li><span class="strich rest"></span><span class="uebrige">{rest.length} further drivers</span></li>}
+  </ul>
+
+  <figcaption>
+    {nachFuehrung.length > 0 && (
+      <>Laps led: {nachFuehrung.map((f) => `${f.name} ${f.gefuehrt}`).join(', ')}. </>
+    )}
+    Lap data from Jolpica-F1; it exists from 1996 on.
+  </figcaption>
+
+  <details class="als-tabelle">
+    <summary>Show as a table</summary>
+    <div class="tabelle">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Driver</th><th class="num" scope="col">Grid</th>
+            {zwischen.map((r) => <th class="num" scope="col">Lap {r}</th>)}
+            <th class="num" scope="col">Finish</th><th class="num" scope="col">Laps led</th>
+          </tr>
+        </thead>
+        <tbody>
+          {fahrer.map((f) => (
+            <tr>
+              <th scope="row"><a class="zeile" href={`${BASIS}/drivers/${f.id}/`}>{f.name}</a></th>
+              <td class="num">{f.start ?? '–'}</td>
+              {zwischen.map((r) => <td class="num">{f.positionen[r - 1] ?? '–'}</td>)}
+              <td class="num">{f.ziel ?? 'out'}</td>
+              <td class="num">{f.gefuehrt || ''}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </details>
+</figure>
+
+<style>
+  .rundenverlauf {
+    margin: 0;
+    padding: 1rem 1rem 0.85rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-s);
+  }
+
+  svg { display: block; width: 100%; height: auto; }
+  svg.schmal { display: none; }
+
+  @media (max-width: 40rem) {
+    svg.breit { display: none; }
+    svg.schmal { display: block; }
+  }
+
+  .gitter { stroke: var(--grid); stroke-width: 1; shape-rendering: crispEdges; }
+  .achse { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+  .f1 { --farbe: var(--s1); }
+  .f2 { --farbe: var(--s2); }
+  .f3 { --farbe: var(--s3); }
+  .f4 { --farbe: var(--s4); }
+  .f5 { --farbe: var(--s5); }
+  .f6 { --farbe: var(--s6); }
+  .f7 { --farbe: var(--s7); }
+  .f8 { --farbe: var(--s8); }
+  .rest { --farbe: var(--s-rest); }
+  .linie { fill: none; stroke: var(--farbe); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .linie.grau { stroke: var(--s-rest); stroke-width: 1.25; opacity: 0.5; }
+  .marke { fill: var(--ink-2); font-size: 11px; font-weight: 700; }
+  .strich { width: 0.9rem; height: 3px; border-radius: 1px; flex: none; background: var(--farbe); }
+
+  .legende { display: flex; flex-wrap: wrap; gap: 0.4rem 1.1rem; margin: 0.9rem 0 0; padding: 0.85rem 0 0; border-top: 1px solid var(--border); list-style: none; }
+  .legende li { display: flex; align-items: center; gap: 0.45rem; font-size: 0.84rem; }
+  .legende a { color: var(--ink-2); text-decoration: none; }
+  .legende a:hover { color: var(--accent); text-decoration: underline; }
+  .uebrige { color: var(--muted); }
+
+  figcaption { margin-top: 0.85rem; font-size: 0.84rem; color: var(--muted); text-wrap: pretty; }
+  .als-tabelle { margin-top: 0.75rem; }
+  .als-tabelle summary { cursor: pointer; min-height: 2.25rem; font-size: 0.86rem; font-weight: 600; color: var(--ink); }
+  .als-tabelle .tabelle { margin-top: 0.5rem; box-shadow: none; }
+</style>

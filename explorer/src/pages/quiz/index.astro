@@ -36,7 +36,14 @@ const stand = eine(`
     </div>
   </header>
 
-  <Quiz bereiche={bereiche} stufen={STUFEN} client:load />
+  <p class="hinweis nur-ohne-js">
+    The quiz runs in your browser and needs JavaScript. Its questions are drawn from the
+    {' '}<a href={`${import.meta.env.BASE_URL}records/`}>records</a> and the season, race and driver pages.
+  </p>
+
+  <div class="nur-mit-js">
+    <Quiz bereiche={bereiche} stufen={STUFEN} client:load />
+  </div>
 
   <details class="erklaerung abschnitt">
     <summary>Where the questions come from</summary>

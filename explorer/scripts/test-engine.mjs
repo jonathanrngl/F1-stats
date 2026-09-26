@@ -44,6 +44,7 @@ import { naechstesRennen, standVorRennen, titelKannFallen } from '../src/engine/
 import { uebersetze } from '../src/lib/frage.js'
 import { alsAdresse, ausAdresse, rechne, verzeichnis } from '../src/lib/abfrage.js'
 import { wuerfel } from '../src/lib/wuerfel.js'
+import { ordneZu } from './lade-runden.mjs'
 
 // fileURLToPath statt .pathname: Dort bliebe ein Leerzeichen im Pfad als %20 stehen.
 const HIER = path.dirname(fileURLToPath(import.meta.url))
@@ -1029,6 +1030,53 @@ const einzelwert = (sql, ...p) => db.prepare(sql).get(...p)
     einzelwert('SELECT COUNT(*) AS n FROM sprint_result WHERE position = 1').n)
 }
 console.log(`   ✓ Fragen übersetzt und gegen SQL gerechnet`)
+
+// -------------------------------------------------- 16. Rundendaten
+
+console.log('\n16. Rundendaten')
+
+/*
+ * Die Zuordnung der Jolpica-Kennungen. An ihr lag, dass die erste Fassung
+ * keine einzige Zeile speicherte: „max_verstappen“ ist nicht „max-verstappen“.
+ */
+const feld2024 = db
+  .prepare(`SELECT DISTINCT d.id, d.last_name AS nachname FROM race_result rr JOIN driver d ON d.id = rr.driver_id
+             WHERE rr.race_id = 'abu-dhabi-grand-prix-2024'`)
+  .all()
+gleich('Jolpica max_verstappen', ordneZu('max_verstappen', feld2024), 'max-verstappen')
+gleich('Jolpica hamilton', ordneZu('hamilton', feld2024), 'lewis-hamilton')
+gleich('Jolpica sainz (F1DB: Sainz Jr.)', ordneZu('sainz', feld2024), 'carlos-sainz-jr')
+gleich('Jolpica kevin_magnussen', ordneZu('kevin_magnussen', feld2024), 'kevin-magnussen')
+gleich('Unbekannte Kennung bleibt offen', ordneZu('niemand', feld2024), null)
+const feld2011 = db
+  .prepare(`SELECT DISTINCT d.id, d.last_name AS nachname FROM race_result rr JOIN driver d ON d.id = rr.driver_id
+             WHERE rr.race_id = 'japan-grand-prix-2011'`)
+  .all()
+gleich("Jolpica ambrosio (F1DB: D'Ambrosio)", ordneZu('ambrosio', feld2011), 'jerome-dambrosio')
+
+const mitRunden = db.prepare('SELECT DISTINCT race_id AS id FROM lap_position').all().map((z) => z.id)
+if (mitRunden.length) {
+  /*
+   * Je Runde hat jeder Platz höchstens einen Fahrer. Und wer die letzte Runde
+   * anführte, gewann – bis auf nachträgliche Strafen, die es gibt, aber selten.
+   */
+  const doppelt = db
+    .prepare('SELECT race_id, lap, position, COUNT(*) n FROM lap_position GROUP BY race_id, lap, position HAVING n > 1')
+    .all()
+  gleich('kein Platz zweimal in derselben Runde', doppelt.length, 0)
+  const ende = db
+    .prepare(
+      `SELECT l.race_id, l.driver_id = (SELECT driver_id FROM race_result WHERE race_id = l.race_id AND position = 1 LIMIT 1) AS sieger
+         FROM lap_position l
+        WHERE l.position = 1 AND l.lap = (SELECT MAX(lap) FROM lap_position x WHERE x.race_id = l.race_id)`,
+    )
+    .all()
+  pruefe('wer die letzte Runde führte, gewann (fast immer)',
+    ende.filter((e) => e.sieger).length >= ende.length * 0.95, `${ende.filter((e) => e.sieger).length}/${ende.length}`)
+  console.log(`   ✓ ${mitRunden.length} Rennen mit Rundendaten geprüft`)
+} else {
+  console.log('   – noch keine Rundendaten geladen')
+}
 
 db.close()
 

@@ -183,6 +183,13 @@ function fahrerStand(db, raceId, anzahl = 10) {
   return db
     .prepare(
       `SELECT s.driver_id AS id, d.display_name AS name, s.position, s.points AS punkte,
+              (SELECT rr.constructor_id
+                 FROM race_result rr
+                 JOIN race r2 ON r2.id = rr.race_id
+                WHERE rr.driver_id = s.driver_id
+                  AND r2.year = (SELECT year FROM race WHERE id = s.race_id)
+                ORDER BY r2.round DESC
+                LIMIT 1) AS teamId,
               (SELECT k.name
                  FROM race_result rr
                  JOIN race r2 ON r2.id = rr.race_id

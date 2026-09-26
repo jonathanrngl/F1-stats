@@ -10,7 +10,7 @@ import Seite from '../../layouts/Seite.astro'
 import Karriere from '../../components/Karriere.astro'
 import Sprung from '../../components/Sprung.astro'
 import { ein, prozent, raenge, zahl } from '../../lib/format.js'
-import { db, pfad } from '../../lib/db.js'
+import { alle, db, pfad } from '../../lib/db.js'
 import { land } from '../../lib/laender.js'
 import {
   motorProSaison, motorProfil, motorSieger, motorTeams, motorTitel, motorenListe,
@@ -56,15 +56,35 @@ const beschreibung =
   `${motor.name} in Formula 1: ${zahl(motor.rennen)} races, ${motor.siege} wins, ` +
   `${motor.podien} podiums (${zeitraum}).`
 
+/*
+ * Die Motoren selbst: Hubraum, Bauart, Aufladung, und wann sie liefen. Vorher
+ * stand auf der Seite nur der Hersteller – dabei ist der Weg vom 2,5-Liter-
+ * Reihenmotor der 1950er zum 1,6-Liter-Turbo-Hybrid die halbe Geschichte.
+ */
+const AUFLADUNG = { NATURALLY_ASPIRATED: 'naturally aspirated', TURBOCHARGED: 'turbo', SUPERCHARGED: 'supercharged' }
+const modelle = alle(
+  `SELECT COALESCE(e.full_name, e.name) AS name, e.capacity_l AS hubraum, e.configuration AS bauart,
+          e.aspiration AS aufladung, MIN(se.year) AS von, MAX(se.year) AS bis,
+          GROUP_CONCAT(DISTINCT k.name) AS teams
+     FROM season_entrant_engine se
+     JOIN engine e ON e.id = se.engine_id
+     JOIN constructor k ON k.id = se.constructor_id
+    WHERE se.engine_manufacturer_id = ?
+    GROUP BY e.id
+    ORDER BY von, name`,
+  id,
+)
+
 const ziele = [
   bild.length > 1 && { id: 'verlauf', label: 'Season by season' },
   titel.length > 0 && { id: 'titel', label: 'Titles' },
   { id: 'teams', label: 'Teams' },
+  modelle.length > 0 && { id: 'modelle', label: 'Engines' },
   sieger.length > 0 && { id: 'sieger', label: 'Winners' },
 ].filter(Boolean)
 ---
 
-<Seite titel={`${motor.name} – Formula 1 engine statistics`} beschreibung={beschreibung}>
+<Seite titel={`${motor.name} – Formula 1 engine statistics`} beschreibung={beschreibung} brotkrumen={[{ name: 'Engines', pfad: '/engines/' }]}>
   <header class="seitenkopf">
     <span class="wappen" title={heimat.name}>{heimat.code}</span>
     <div>
@@ -119,7 +139,7 @@ const ziele = [
           <li>
             <b>{t.jahr}</b>
             <a class="zeile" href={pfad.fahrer(t.fahrerId)}>{t.fahrer}</a>
-            <span>{t.team}</span>
+            <span>{t.teamId ? <a class="leise" href={pfad.team(t.teamId)}>{t.team}</a> : t.team}</span>
           </li>
         ))}
       </ul>
@@ -156,6 +176,30 @@ const ziele = [
       </table>
     </div>
   </section>
+
+  {modelle.length > 0 && (
+    <section class="abschnitt" id="modelle">
+      <div class="abschnitt-kopf"><div><h2>The engines</h2><p>Every specification that raced, with the teams that used it.</p></div></div>
+      <div class="tabelle">
+        <table>
+          <thead>
+            <tr><th scope="col">Engine</th><th scope="col">Years</th><th class="num" scope="col">Capacity</th><th scope="col">Layout</th><th scope="col">Teams</th></tr>
+          </thead>
+          <tbody>
+            {modelle.map((m) => (
+              <tr>
+                <th scope="row">{m.name}</th>
+                <td class="leise">{m.von === m.bis ? m.von : `${m.von}–${m.bis}`}</td>
+                <td class="num">{m.hubraum ? `${ein(m.hubraum)} l` : '–'}</td>
+                <td class="leise">{[m.bauart, AUFLADUNG[m.aufladung] ?? m.aufladung?.toLowerCase()].filter(Boolean).join(', ') || '–'}</td>
+                <td class="leise">{m.teams.split(',').join(', ')}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  )}
 
   {sieger.length > 0 && (
     <section class="abschnitt" id="sieger">

@@ -55,7 +55,7 @@ for (const j of jahre) {
     {[...jahrzehnte.entries()].map(([d, liste]) => (
       <div>
         <b>{d}s</b>
-        <span>{liste.map((j) => <a href={`#j${j}`}>{String(j).slice(2)}</a>)}</span>
+        <span>{liste.map((j) => <a href={`#j${j}`}>{j}</a>)}</span>
       </div>
     ))}
   </nav>
@@ -69,14 +69,17 @@ for (const j of jahre) {
       <div class="tabelle">
         <table>
           <thead>
-            <tr><th class="num">Rd</th><th>Race</th><th>Circuit</th><th>Date</th><th>Winner</th></tr>
+            <tr><th class="num" scope="col"><abbr title="Round">Rd</abbr></th><th scope="col">Race</th><th scope="col">Circuit</th><th scope="col">Date</th><th scope="col">Winner</th></tr>
           </thead>
           <tbody>
             {proJahr.get(j).map((r) => (
               <tr class={r.siegerId ? undefined : 'raus'}>
                 <td class="num leise">{r.runde}</td>
-                <td><a class="zeile" href={pfad.rennen(r.id)}>{r.name}</a></td>
-                <td class="leise">{r.strecke}</td>
+                <th scope="row">
+                  <a class="zeile" href={pfad.rennen(r.id)}>{r.name}</a>
+                  {r.mitSprint === 1 && <span class="etikett">sprint</span>}
+                </th>
+                <td class="leise"><a class="leise" href={pfad.strecke(r.streckeId)}>{r.strecke}</a></td>
                 <td class="leise">{datum(r.datum)}</td>
                 <td>
                   {r.siegerId
@@ -92,7 +95,13 @@ for (const j of jahre) {
   ))}
 </Seite>
 
-<style>
+{/*
+  * Global statt seitenlokal: Ein <style> ohne is:global hängt in Astro jedem
+  * Element der Seite ein Bereichsattribut an. Bei 1.172 Rennen mal neun
+  * Elementen war das der größte Teil von 660 KB HTML. Die Klassen hier sind
+  * eindeutig genug, um niemandem in die Quere zu kommen.
+  */}
+<style is:global>
   .jahre {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(min(14rem, 100%), 1fr));
@@ -109,7 +118,12 @@ for (const j of jahre) {
   .jahre b { flex: none; width: 3rem; font-size: 0.8rem; font-weight: 750; color: var(--ink); font-variant-numeric: tabular-nums; }
   .jahre span { display: flex; flex-wrap: wrap; gap: 0.15rem; }
 
+  /* Vier Ziffern, nicht zwei: „05“ ist nicht von „50“ zu unterscheiden. Und groß genug für einen Finger. */
   .jahre a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.75rem;
+    min-width: 2.75rem;
     padding: 0.1rem 0.35rem;
     font-size: 0.8rem;
     color: var(--muted);
@@ -120,6 +134,6 @@ for (const j of jahre) {
 
   .jahre a:hover { color: var(--accent-strong); background: var(--accent-wash); }
 
-  h2 a { color: var(--ink); text-decoration: none; }
-  h2 a:hover { color: var(--accent); }
+  .abschnitt h2 a { color: var(--ink); text-decoration: none; }
+  .abschnitt h2 a:hover { color: var(--accent); }
 </style>

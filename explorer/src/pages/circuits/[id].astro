@@ -1,11 +1,11 @@
 ---
-import { ein, plakette, prozent as proz, raenge, zahl } from '../../lib/format.js'
+import { ein, km, plakette, prozent as proz, raenge, zahl, zeit } from '../../lib/format.js'
 import Seite from '../../layouts/Seite.astro'
 import Sprung from '../../components/Sprung.astro'
 import { eine, streckenListe, pfad, db } from '../../lib/db.js'
 import { land } from '../../lib/laender.js'
 import {
-  circuitLayouts, circuitLeaders, circuitRaces, circuitSpecialists, circuitStats,
+  circuitLapRecords, circuitLayouts, circuitLeaders, circuitRaces, circuitSpecialists, circuitStats,
   circuitTeamLeaders,
 } from '../../engine/circuit.js'
 
@@ -27,6 +27,22 @@ const teams = circuitTeamLeaders(db(), id)
 const zahlen = circuitStats(db(), id)
 const spezialisten = circuitSpecialists(db(), id)
 const layouts = circuitLayouts(db(), id)
+const rekorde = new Map(circuitLapRecords(db(), id).map((r) => [r.layout, r]))
+const heutigesLayout = layouts.find((l) => l.aktuell === 1) ?? layouts.at(-1)
+const rekordHeute = heutigesLayout ? rekorde.get(heutigesLayout.id) : null
+
+const ART = { RACE: 'Permanent circuit', STREET: 'Street circuit', ROAD: 'Road course' }
+const RICHTUNG = { CLOCKWISE: 'Clockwise', ANTI_CLOCKWISE: 'Anti-clockwise' }
+
+const SEITE = 'https://jonathanrngl.github.io'
+const ort = {
+  '@context': 'https://schema.org',
+  '@type': 'SportsActivityLocation',
+  name: strecke.full_name ?? strecke.name,
+  address: [strecke.place_name, heimat.name].filter(Boolean).join(', '),
+  ...(strecke.latitude !== null ? { geo: { '@type': 'GeoCoordinates', latitude: strecke.latitude, longitude: strecke.longitude } } : {}),
+  url: `${SEITE}${pfad.strecke(id)}`,
+}
 
 const zeitraum = rennen.length ? `${rennen.at(-1).year}–${rennen[0].year}` : '–'
 
@@ -40,7 +56,9 @@ const ziele = [
 
 <Seite
   titel={`${strecke.name} – Formula 1 circuit statistics`}
-  beschreibung={`${rennen.length} Formula 1 races in ${strecke.place_name} (${zeitraum}).`}
+  beschreibung={`${rennen.length} Formula 1 races in ${strecke.place_name} (${zeitraum}): winners, pole-sitters, specialists, lap records and every result.`}
+  strukturiert={[ort]}
+  brotkrumen={[{ name: 'Circuits', pfad: '/circuits/' }]}
 >
   <header class="seitenkopf">
     <span class="wappen" title={heimat.name}>{heimat.code}</span>
@@ -54,9 +72,12 @@ const ziele = [
       <ul class="eckdaten">
         {strecke.place_name && strecke.place_name !== strecke.name && <li>{strecke.place_name}</li>}
         <li>{zeitraum}</li>
-        {strecke.length_km > 0 && <li>{ein(strecke.length_km)} km</li>}
+        {strecke.length_km > 0 && <li>{km(strecke.length_km)}</li>}
         {strecke.turns > 0 && <li>{strecke.turns} corners</li>}
+        {ART[strecke.type] && <li>{ART[strecke.type]}</li>}
+        {RICHTUNG[strecke.direction] && <li>{RICHTUNG[strecke.direction]}</li>}
       </ul>
+      {strecke.previous_names && <p class="frueher">Also known as: {strecke.previous_names.split(/[;,]\s*/).join(', ')}</p>}
     </div>
   </header>
 
@@ -65,6 +86,12 @@ const ziele = [
     <li><span>Not classified</span><b>{proz(zahlen.ausfallquote)}</b><i>of all starts</i></li>
     <li><span>Pole to win</span><b>{proz(zahlen.poleZuSieg)}</b><i>pole-sitter won</i></li>
     <li><span>Winner's grid slot</span><b>{ein(zahlen.mittlererSiegerStart.value)}</b><i>on average</i></li>
+    {rekordHeute && (
+      <li>
+        <span>Lap record</span><b>{zeit(rekordHeute.zeit)}</b>
+        <i><a href={pfad.fahrer(rekordHeute.fahrerId)}>{rekordHeute.fahrer}</a>, <a href={pfad.rennen(rekordHeute.raceId)}>{rekordHeute.jahr}</a>{layouts.length > 1 ? ', current layout' : ''}</i>
+      </li>
+    )}
   </ul>
 
   {zahlen.groessteAufholjagd && (
@@ -129,14 +156,15 @@ const ziele = [
         <table>
           <thead>
             <tr>
-              <th>Driver</th><th class="num">Starts here</th><th class="num">Wins</th>
-              <th class="num">Avg here</th><th class="num">Avg elsewhere</th><th class="num">Edge</th>
+              <th scope="col">Driver</th><th class="num" scope="col">Starts here</th><th class="num" scope="col">Wins</th>
+              <th class="num" scope="col">Avg finish here</th><th class="num" scope="col">Avg finish elsewhere</th>
+              <th class="num" scope="col"><abbr title="Places better here than elsewhere, on average">Better by</abbr></th>
             </tr>
           </thead>
           <tbody>
             {spezialisten.map((s) => (
               <tr>
-                <td><a class="zeile" href={pfad.fahrer(s.id)}>{s.name}</a></td>
+                <th scope="row"><a class="zeile" href={pfad.fahrer(s.id)}>{s.name}</a></th>
                 <td class="num">{s.startsHier}</td>
                 <td class="num">{s.siegeHier || ''}</td>
                 <td class="num">{ein(s.hier)}</td>
@@ -155,12 +183,12 @@ const ziele = [
       <div class="abschnitt-kopf">
         <div>
           <h2>Layouts</h2>
-          <p>The circuit has been rebuilt. Comparing lap times across a change of layout is not valid.</p>
+          <p>The circuit has been rebuilt. Comparing lap times across a change of layout is not valid – each layout has its own lap record.</p>
         </div>
       </div>
       <div class="tabelle schmal">
         <table>
-          <thead><tr><th>Period</th><th class="num">Length</th><th class="num">Corners</th><th class="num">Races</th></tr></thead>
+          <thead><tr><th scope="col">Period</th><th class="num" scope="col">Length</th><th class="num" scope="col">Corners</th><th class="num" scope="col">Races</th><th scope="col">Lap record</th></tr></thead>
           <tbody>
             {layouts.map((l) => (
               <tr>
@@ -168,9 +196,14 @@ const ziele = [
                   {l.von ? (l.von === l.bis ? l.von : `${l.von}–${l.bis}`) : 'never raced'}
                   {l.aktuell === 1 && <span class="etikett akzent">today</span>}
                 </td>
-                <td class="num">{l.laenge ? `${ein(l.laenge)} km` : '–'}</td>
+                <td class="num">{l.laenge ? km(l.laenge) : '–'}</td>
                 <td class="num">{l.kurven ?? '–'}</td>
                 <td class="num">{l.rennen}</td>
+                <td class="leise">
+                  {rekorde.get(l.id)
+                    ? <>{zeit(rekorde.get(l.id).zeit)} · <a class="leise" href={pfad.fahrer(rekorde.get(l.id).fahrerId)}>{rekorde.get(l.id).fahrer}</a>, {rekorde.get(l.id).jahr}</>
+                    : '–'}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -183,14 +216,14 @@ const ziele = [
     <div class="abschnitt-kopf"><div><h2>All races</h2></div></div>
     <div class={`tabelle${rennen.length > 25 ? ' lang' : ''}`}>
       <table>
-        <thead><tr><th>Year</th><th>Race</th><th>Winner</th><th>Team</th><th class="num">From grid</th></tr></thead>
+        <thead><tr><th scope="col">Year</th><th scope="col">Race</th><th scope="col">Winner</th><th scope="col">Team</th><th class="num" scope="col">From grid</th></tr></thead>
         <tbody>
           {rennen.map((r) => (
             <tr>
-              <td><a class="zeile" href={pfad.rennen(r.id)}>{r.year}</a></td>
+              <th scope="row"><a class="zeile" href={pfad.rennen(r.id)}>{r.year}</a></th>
               <td class="leise">{r.grandPrix}</td>
-              <td>{r.siegerId ? <a class="zeile" href={pfad.fahrer(r.siegerId)}>{r.sieger}</a> : <span class="leise">–</span>}</td>
-              <td class="leise">{r.siegerTeam ?? ''}</td>
+              <td>{r.siegerId ? <a class="zeile" href={pfad.fahrer(r.siegerId)}>{r.sieger}</a> : <span class="leise">still to come</span>}</td>
+              <td class="leise">{r.siegerTeamId ? <a class="leise" href={pfad.team(r.siegerTeamId)}>{r.siegerTeam}</a> : ''}</td>
               <td class="num">{r.siegerStart ? <span class={plakette(r.siegerStart)}>{r.siegerStart}</span> : '–'}</td>
             </tr>
           ))}
@@ -201,5 +234,6 @@ const ziele = [
 </Seite>
 
 <style>
-  .schmal { max-width: 40rem; }
+  .schmal { max-width: 52rem; }
+  .frueher { margin: 0.5rem 0 0; font-size: 0.88rem; color: var(--muted); }
 </style>

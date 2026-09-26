@@ -31,10 +31,13 @@ interface Props {
   runden: { runde: number; name: string }[]
   /** Streichresultate: Dann ist der WM-Stand nicht die Summe der Rennpunkte. */
   streichresultate?: boolean
+  /** Fahrer oder Teams – bestimmt Verweise und Beschriftung. */
+  art?: 'fahrer' | 'team'
 }
 
 import { ein, zahl } from '../lib/format.js'
-const { fahrer, runden, streichresultate = false } = Astro.props
+const { fahrer, runden, streichresultate = false, art = 'fahrer' } = Astro.props
+const WER = art === 'team' ? { mehrzahl: 'teams', weg: 'teams', kopf: 'Team', wertung: "Constructors' championship" } : { mehrzahl: 'drivers', weg: 'drivers', kopf: 'Driver', wertung: 'Championship' }
 
 const BENANNT = 8
 const n = runden.length
@@ -91,7 +94,7 @@ const BASIS = import.meta.env.BASE_URL.replace(/\/$/, '')
       class={z.klasse}
       viewBox={`0 0 ${z.W} ${z.H}`}
       role="img"
-      aria-label={`Points progression across ${n} races for ${fahrer.length} drivers. Every value is in the table below the chart.`}
+      aria-label={`Points progression across ${n} races for ${fahrer.length} ${WER.mehrzahl}. Every value is in the table below the chart.`}
     >
       {yWerte.map((v) => (
         <g>
@@ -124,20 +127,20 @@ const BASIS = import.meta.env.BASE_URL.replace(/\/$/, '')
     {benannt.map((f, i) => (
       <li>
         <span class={`strich f${i + 1}`}></span>
-        <a href={`${BASIS}/drivers/${f.id}/`}>{f.name}</a>
+        <a href={`${BASIS}/${WER.weg}/${f.id}/`}>{f.name}</a>
         <b>{zahl(f.punkte.at(-1) ?? 0)}</b>
       </li>
     ))}
     {rest.length > 0 && (
       <li>
         <span class="strich rest"></span>
-        <span class="uebrige">{rest.length} further drivers</span>
+        <span class="uebrige">{rest.length} further {WER.mehrzahl}</span>
       </li>
     )}
   </ul>
 
   <figcaption>
-    Championship standings after each round.
+    {WER.wertung} standings after each round.
     {streichresultate && (
       <>
         {' '}Not every result counted in this season: the chart shows the official championship
@@ -153,14 +156,14 @@ const BASIS = import.meta.env.BASE_URL.replace(/\/$/, '')
         <caption class="sr-only">Championship points after each round</caption>
         <thead>
           <tr>
-            <th scope="col">Driver</th>
+            <th scope="col">{WER.kopf}</th>
             {runden.map((r) => <th class="num" scope="col"><abbr title={r.name}>{r.runde}</abbr></th>)}
           </tr>
         </thead>
         <tbody>
           {fahrer.map((f) => (
             <tr>
-              <th scope="row"><a class="zeile" href={`${BASIS}/drivers/${f.id}/`}>{f.name}</a></th>
+              <th scope="row"><a class="zeile" href={`${BASIS}/${WER.weg}/${f.id}/`}>{f.name}</a></th>
               {f.punkte.map((p) => <td class="num">{ein(p)}</td>)}
             </tr>
           ))}

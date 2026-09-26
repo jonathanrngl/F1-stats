@@ -3,6 +3,7 @@ import { datum, ein, km, plakette, zahl, zeit } from '../../lib/format.js'
 import Seite from '../../layouts/Seite.astro'
 import Sprung from '../../components/Sprung.astro'
 import Countdown from '../../components/Countdown.astro'
+import Rundenverlauf from '../../components/Rundenverlauf.astro'
 import { db, rennenListe, pfad } from '../../lib/db.js'
 import { rennDaten } from '../../lib/rennen.js'
 import { naechstesRennen, zeitplan } from '../../engine/vorschau.js'
@@ -50,6 +51,7 @@ const bewegung = (s) => {
 
 const ziele = [
   d.gefahren && { id: 'ergebnis', label: 'Result' },
+  d.runden && { id: 'verlauf', label: 'Lap chart' },
   sprint.length > 0 && { id: 'sprint', label: 'Sprint' },
   qualifying.length > 0 && { id: 'qualifying', label: 'Qualifying' },
   strafen.length > 0 && { id: 'strafen', label: 'Grid penalties' },
@@ -215,6 +217,15 @@ const ereignis = {
         did not qualify and did not start. ‘shared’ marks a car that two drivers shared between
         them – permitted in the 1950s, and both were classified.
       </p>
+    </section>
+  )}
+
+  {d.runden && (
+    <section class="abschnitt" id="verlauf">
+      <div class="abschnitt-kopf">
+        <div><h2>Lap by lap</h2><p>The running order on every lap. A line that stops is a car that stopped.</p></div>
+      </div>
+      <Rundenverlauf fahrer={d.runden.fahrer} anzahl={d.runden.anzahl} />
     </section>
   )}
 
