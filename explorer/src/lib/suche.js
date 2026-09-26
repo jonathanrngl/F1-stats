@@ -69,6 +69,48 @@ export function rang(e, woerter) {
   return r
 }
 
+const UEBERSICHTEN = new Set(Object.values(ARTEN).map((a) => a.pfad))
+
+/**
+ * Aus einer Adresse, die es nicht gibt, die Suchanfrage machen, die
+ * vermutlich gemeint war – für die Vorschläge auf der Fehlerseite.
+ *
+ *   "/drivers/lewis-hamiltn/"      → "lewis hami"
+ *   "/races/monaco-grand-prix-88/" → "mona grand prix 1988"
+ *   "/fahrer/senna"                → "senna"
+ *   "/drivers/", "/"               → ""   (nichts zu raten)
+ *
+ * Gesucht wird nur mit dem letzten Stück: Davor steht die Art der Seite, und
+ * die ist bei einer falschen Adresse oft selbst falsch („fahrer“).
+ *
+ * @param {string} weg Pfad ohne den Vorsatz /F1-stats, z. B. "/drivers/hamilton/"
+ * @returns {string} Anfrage für treffer(), oder "" wenn nichts Brauchbares darin steht
+ */
+export function anfrageAusPfad(weg) {
+  const teile = falte(weg)
+    .split('/')
+    .map((t) => t.replace(/\.html?$/, ''))
+    .filter((t) => t && t !== 'index')
+  const letztes = teile.at(-1)
+  if (!letztes || UEBERSICHTEN.has(letztes)) return ''
+
+  const woerter = letztes.split(/[-_+.\s]+/).filter(Boolean)
+  const mitName = woerter.some((w) => !/^\d+$/.test(w))
+  return woerter
+    .map((w) => {
+      // „88“ neben einem Namen ist ein Jahr – und mit Jahr bevorzugt rang() das Rennen.
+      if (mitName && /^\d\d$/.test(w)) return String((Number(w) >= 50 ? 1900 : 2000) + Number(w))
+      /*
+       * treffer() verlangt, dass jedes Wort vorn passt, und ein Tippfehler
+       * sitzt selten in den ersten vier Buchstaben: Über „hami“ findet
+       * „hamiltn“ zu Hamilton. Kürzere Wörter bleiben ganz: Bei ihnen ist
+       * jeder Buchstabe schon Unterscheidung.
+       */
+      return w.length >= 6 && !/^\d+$/.test(w) ? w.slice(0, 4) : w
+    })
+    .join(' ')
+}
+
 /**
  * Die besten Treffer für eine Eingabe.
  * @param {object[]} index aus /data/suche.json
@@ -83,4 +125,23 @@ export function treffer(index, eingabe, anzahl = 8) {
     .sort((a, b) => a.r - b.r || b.e.g - a.e.g)
     .slice(0, anzahl)
     .map((x) => x.e)
+}
+
+/**
+ * Vorschläge für eine Adresse, die es nicht gibt.
+ *
+ * Findet die Anfrage aus dem Pfad nichts, folgt ein zweiter Versuch mit drei
+ * Buchstaben je Wort: „ferari“ scheitert an „fera“, weil der Fehler schon im
+ * vierten Buchstaben sitzt, „fer“ findet Ferrari.
+ */
+export function vorschlaege(index, weg, anzahl = 6) {
+  const anfrage = anfrageAusPfad(weg)
+  if (!anfrage) return []
+  const erste = treffer(index, anfrage, anzahl)
+  if (erste.length) return erste
+  const kuerzer = anfrage
+    .split(' ')
+    .map((w) => (/^\d+$/.test(w) ? w : w.slice(0, 3)))
+    .join(' ')
+  return kuerzer === anfrage ? [] : treffer(index, kuerzer, anzahl)
 }

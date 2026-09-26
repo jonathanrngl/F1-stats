@@ -137,7 +137,10 @@ export function saisonDaten(jahr) {
   )
   const fahrerNamen = new Map(alle('SELECT id, display_name AS name FROM driver').map((d) => [d.id, d.name]))
   const mitErgebnis = new Set(alle('SELECT DISTINCT driver_id AS id FROM race_result').map((z) => z.id))
+  // Wer meldete, aber nie startete (First 1989), hat keine eigene Seite.
+  const teamsMitErgebnis = new Set(alle('SELECT DISTINCT constructor_id AS id FROM race_result').map((z) => z.id))
   for (const n of nennungen) {
+    n.teamMitSeite = teamsMitErgebnis.has(n.teamId)
     n.fahrer = [...new Set(n.fahrerIds.split('|'))].map((id) => ({ id, name: fahrerNamen.get(id) ?? id, mitSeite: mitErgebnis.has(id) }))
   }
 

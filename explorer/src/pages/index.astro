@@ -119,10 +119,20 @@ const EINSTIEGE = [
           <a class="karte" href={pfad.seite('/changes/')}>
             <span class="etikett-klein">Latest record change</span>
             <b class="gross">{letzteMarke.kategorie.titel}</b>
-            <span class="dazu">{letzteMarke.halter.map((h) => h.name).join(' and ')}</span>
+            <span class="dazu">
+              {letzteMarke.halter.map((h) => h.name).join(' and ')}
+              {letzteMarke.art === 'eingestellt' ? ' equalled it' : ' took it'} on {datum(letzteMarke.datum)}
+            </span>
+            {/*
+              * Der Wert der Übernahme, nicht der heutige: Alonso übernahm den
+              * Startrekord 2022 mit 351 und baut ihn seither aus. „351 starts“
+              * allein las sich wie der Stand von heute.
+              */}
             <span class="zahlreihe">
-              <span><b>{zahlwort(letzteMarke.wert, letzteMarke.kategorie)}</b></span>
-              <span>{datum(letzteMarke.datum)}</span>
+              <span><b>{zahlwort(letzteMarke.wert, letzteMarke.kategorie)}</b> then</span>
+              {letzteMarke.rekordJetzt > letzteMarke.wert && (
+                <span><b>{zahl(letzteMarke.rekordJetzt)}</b> now</span>
+              )}
             </span>
           </a>
         )}
@@ -149,7 +159,8 @@ const EINSTIEGE = [
 
   <section class="abschnitt">
     <div class="abschnitt-kopf">
-      <div><h2>Recent seasons</h2></div>
+      {/* Ohne diese Zeile las sich „2021 · Max Verstappen · Mercedes“ als sein Team. */}
+      <div><h2>Recent seasons</h2><p>Drivers' champion, then constructors' champion.</p></div>
       <a class="mehr" href={pfad.seite('/seasons/')}>All seasons →</a>
     </div>
     <ul class="saisons">
@@ -256,10 +267,14 @@ const EINSTIEGE = [
   .countdown :global(b) { font-size: 2rem; font-weight: 800; color: var(--kopf-ink); letter-spacing: -0.03em; }
   .weiter { margin-top: auto; padding-top: 0.6rem; font-size: 0.85rem; font-weight: 650; color: var(--accent); }
 
-  /* Einstiege: Symbol, Name, ein Satz. */
+  /*
+   * Einstiege: Symbol, Name, ein Satz. Drei Spalten, nicht so viele wie
+   * passen: Neun Einstiege in vier Spalten ließen das Quiz allein in einer
+   * letzten Reihe stehen.
+   */
   .einstiege {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(16rem, 100%), 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 0.85rem;
     margin: 0;
     padding: 0;
@@ -282,10 +297,35 @@ const EINSTIEGE = [
   .einstiege b { display: block; font-size: 1.02rem; font-weight: 700; color: var(--ink); }
   .einstiege span { display: block; margin-top: 0.2rem; font-size: 0.86rem; color: var(--muted); text-wrap: pretty; }
 
-  /* Saisons: Jahr groß, darunter die beiden Meister. */
+  @media (max-width: 56rem) {
+    .einstiege { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+
+  /*
+   * Am Telefon als Zeilen mit dem Symbol links: Untereinander gestapelt
+   * waren die neun Karten fast zwei Bildschirme lang.
+   */
+  @media (max-width: 34rem) {
+    .einstiege { grid-template-columns: minmax(0, 1fr); gap: 0.5rem; }
+    .einstiege .karte {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      column-gap: 0.85rem;
+      align-items: center;
+      padding: 0.8rem 0.95rem;
+    }
+    .einstiege svg { grid-row: span 2; margin-bottom: 0; }
+    .einstiege span { margin-top: 0; }
+  }
+
+  /*
+   * Saisons: Jahr groß, darunter die beiden Meister. Feste Spaltenzahlen
+   * statt auto-fill – sechs Saisons in sieben Spuren ließen rechts eine Lücke,
+   * und am Telefon stand jede Saison allein in ihrer Zeile.
+   */
   .saisons {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(11rem, 100%), 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 0.75rem;
     margin: 0;
     padding: 0;
@@ -297,4 +337,12 @@ const EINSTIEGE = [
   .saisons .wer { font-size: 0.9rem; font-weight: 650; color: var(--ink-2); }
   .saisons .team { font-size: 0.8rem; color: var(--muted); }
   .saisons .laeuft { font-size: 0.85rem; font-weight: 650; color: var(--accent); }
+
+  @media (max-width: 56rem) {
+    .saisons { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
+
+  @media (max-width: 34rem) {
+    .saisons { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
 </style>

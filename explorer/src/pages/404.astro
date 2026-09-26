@@ -1,58 +1,135 @@
 ---
 /**
- * Die Seite für Adressen, die es nicht gibt.
+ * Die Fehlerseite. GitHub Pages liefert sie unter jeder Adresse aus, die es
+ * nicht gibt – vorher stand dort die nackte Meldung von GitHub, ohne
+ * Navigation und ohne Weg zurück.
  *
- * GitHub Pages liefert sie für jede unbekannte Adresse unter /F1-stats/ aus.
- * Vorher stand dort GitHubs eigene Fehlerseite – ohne Kopfleiste, ohne Suche,
- * ohne Weg zurück.
+ * Die meisten falschen Adressen sind fast richtig: ein Tippfehler im Namen,
+ * ein alter Link auf /drivers/hamilton/. Aus dem Pfad wird deshalb eine
+ * Suchanfrage, und die Treffer stehen gleich da. Das geschieht im Browser,
+ * denn die Seite ist für alle falschen Adressen dieselbe Datei.
  *
- * Sie hat eine zweite Aufgabe: Die Adressen waren einmal deutsch. Für die
- * Übersichten gibt es Weiterleitungen (astro.config.mjs), für die rund 2.300
- * Einzelseiten nicht – eine statische Ausgabe müsste dafür jede als eigene
- * Datei schreiben. Also fängt diese Seite sie ab: Beginnt der Pfad mit einem
- * alten Wort, schickt das Skript unten zur neuen Adresse weiter. Die
- * Kennungen selbst sind gleich geblieben, nur das erste Wort hat gewechselt.
+ * Dazu die alten deutschen Adressen: Für die Übersichten gibt es
+ * Weiterleitungen (astro.config.mjs), für die rund 2.300 Einzelseiten nicht.
+ * Beginnt der Pfad mit einem alten Wort, schickt das Skript zur neuen Adresse
+ * weiter – die Kennungen sind gleich geblieben, nur das erste Wort wechselte.
  */
 import Seite from '../layouts/Seite.astro'
 import { pfad } from '../lib/db.js'
+
+const WEITER = [
+  { weg: '/preview/', titel: 'Next race' },
+  { weg: '/seasons/', titel: 'Seasons' },
+  { weg: '/races/', titel: 'Races' },
+  { weg: '/drivers/', titel: 'Drivers' },
+  { weg: '/teams/', titel: 'Teams' },
+  { weg: '/records/', titel: 'Records' },
+]
 ---
 
-<Seite titel="Page not found" beschreibung="There is no page at this address.">
-  <header class="seitenkopf">
-    <div>
-      <p class="oberzeile">404</p>
-      <h1>There is no page here</h1>
-      <p class="lead" data-weiterleitung hidden>This address has moved – taking you to its new place …</p>
-      <p class="lead">
-        The address may be mistyped, or the page may have moved. The search at the top finds every
-        driver, team, circuit, engine, season and race.
-      </p>
-    </div>
+<Seite titel="Page not found" beschreibung="There is no page at this address." ohneIndex>
+  <header class="seitenkopf-schlicht">
+    <p class="oberzeile">Error 404</p>
+    <h1>Off the track</h1>
+    <p class="lead">
+      There is no page at <code data-pfad>this address</code>. It may have moved, or the link
+      has a typo in it.
+    </p>
+    <p class="lead" data-weiterleitung hidden>This address has moved – taking you to its new place …</p>
   </header>
 
-  <ul class="einstiege-kurz">
-    <li><a class="knopf" href={pfad.seite('/')}>Home</a></li>
-    <li><a class="knopf leise" href={pfad.seite('/drivers/')}>All drivers</a></li>
-    <li><a class="knopf leise" href={pfad.seite('/races/')}>All races</a></li>
-    <li><a class="knopf leise" href={pfad.seite('/seasons/')}>All seasons</a></li>
-  </ul>
+  <section class="abschnitt" data-vorschlaege hidden>
+    <div class="abschnitt-kopf"><div><h2>Did you mean</h2></div></div>
+    <ul class="vorschlaege" data-liste></ul>
+  </section>
+
+  <section class="abschnitt">
+    <div class="abschnitt-kopf"><div><h2>Or start from here</h2></div></div>
+    <ul class="weiter">
+      {WEITER.map((w) => (
+        <li><a class="karte" href={pfad.seite(w.weg)}>{w.titel} →</a></li>
+      ))}
+    </ul>
+  </section>
 </Seite>
 
 <script>
+  import { ARTEN, anfrageAusPfad, vorschlaege } from '../lib/suche.js'
+
   const BASIS = import.meta.env.BASE_URL.replace(/\/$/, '')
-  const ALT = {
+  const weg = decodeURIComponent(window.location.pathname)
+  const code = document.querySelector('[data-pfad]')
+  if (code) code.textContent = weg
+
+  const ohneBasis = weg.slice(BASIS.length)
+  const abschnitt = document.querySelector<HTMLElement>('[data-vorschlaege]')
+  const liste = document.querySelector<HTMLElement>('[data-liste]')
+
+  const ALT: Record<string, string> = {
     fahrer: 'drivers', rennen: 'races', saisons: 'seasons', strecken: 'circuits', rekorde: 'records',
     aenderungen: 'changes', vergleich: 'comparison', vorschau: 'preview', klassisch: 'classic',
   }
-  const weg = window.location.pathname.slice(BASIS.length)
-  const m = /^\/([a-z]+)(\/.*)?$/.exec(weg)
-  if (m && ALT[m[1]]) {
+  const alt = /^\/([a-z]+)(\/.*)?$/.exec(window.location.pathname.slice(BASIS.length))
+  const umziehen = !!(alt && ALT[alt[1]])
+  if (alt && umziehen) {
     document.querySelector<HTMLElement>('[data-weiterleitung]')?.removeAttribute('hidden')
     // replace statt assign: Die tote Adresse soll nicht im Verlauf stehen bleiben.
-    window.location.replace(`${BASIS}/${ALT[m[1]]}${m[2] ?? '/'}${window.location.search}${window.location.hash}`)
+    window.location.replace(`${BASIS}/${ALT[alt[1]]}${alt[2] ?? '/'}${window.location.search}${window.location.hash}`)
+  }
+
+  // Den Index nur holen, wenn im Pfad überhaupt etwas zu raten steht.
+  if (!umziehen && anfrageAusPfad(ohneBasis) && abschnitt && liste) {
+    fetch(`${BASIS}/data/suche.json`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then((index) => {
+        const gefunden = vorschlaege(index, ohneBasis)
+        if (!gefunden.length) return
+        liste.replaceChildren(
+          ...gefunden.map((e) => {
+            const li = document.createElement('li')
+            const a = Object.assign(document.createElement('a'), {
+              className: 'karte',
+              href: `${BASIS}/${ARTEN[e.a as keyof typeof ARTEN].pfad}/${e.i}/`,
+            })
+            const name = Object.assign(document.createElement('b'), { textContent: e.n })
+            const art = Object.assign(document.createElement('span'), {
+              textContent: ARTEN[e.a as keyof typeof ARTEN].label,
+            })
+            a.append(name, art)
+            li.append(a)
+            return li
+          }),
+        )
+        abschnitt.hidden = false
+      })
+      // Ohne Index bleibt es bei den festen Verweisen darunter – die reichen.
+      .catch(() => {})
   }
 </script>
 
 <style>
-  .einstiege-kurz { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 1rem 0 0; padding: 0; list-style: none; }
+  .seitenkopf-schlicht { margin-bottom: 2.5rem; }
+  [data-vorschlaege][hidden] { display: none; }
+  .seitenkopf-schlicht code {
+    padding: 0.1em 0.35em;
+    font-size: 0.9em;
+    word-break: break-all;
+    background: var(--accent-wash);
+    border-radius: 0.3rem;
+  }
+
+  .vorschlaege,
+  .weiter {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(9.5rem, 100%), 1fr));
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* :global – die Vorschläge schreibt erst das Skript, ohne Astros Kennung für diese Seite. */
+  .vorschlaege :global(.karte),
+  .weiter .karte { display: grid; gap: 0.15rem; height: 100%; font-weight: 650; color: var(--ink); }
+  .vorschlaege :global(span) { font-size: 0.8rem; font-weight: 500; color: var(--muted); }
 </style>

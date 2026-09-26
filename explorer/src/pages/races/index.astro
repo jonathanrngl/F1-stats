@@ -1,5 +1,5 @@
 ---
-import { datumKurz as datum, zahl } from '../../lib/format.js'
+import { tagMonat, zahl } from '../../lib/format.js'
 import Seite from '../../layouts/Seite.astro'
 import Filter from '../../components/Filter.astro'
 import { rennenListe, pfad } from '../../lib/db.js'
@@ -69,7 +69,7 @@ for (const j of jahre) {
       <div class="tabelle">
         <table>
           <thead>
-            <tr><th class="num" scope="col"><abbr title="Round">Rd</abbr></th><th scope="col">Race</th><th scope="col">Circuit</th><th scope="col">Date</th><th scope="col">Winner</th></tr>
+            <tr><th class="num" scope="col"><abbr title="Round">Rd</abbr></th><th scope="col">Race</th><th class="strecke" scope="col">Circuit</th><th scope="col">Date</th><th scope="col">Winner</th></tr>
           </thead>
           <tbody>
             {proJahr.get(j).map((r) => (
@@ -79,8 +79,8 @@ for (const j of jahre) {
                   <a class="zeile" href={pfad.rennen(r.id)}>{r.name}</a>
                   {r.mitSprint === 1 && <span class="etikett">sprint</span>}
                 </th>
-                <td class="leise"><a class="leise" href={pfad.strecke(r.streckeId)}>{r.strecke}</a></td>
-                <td class="leise">{datum(r.datum)}</td>
+                <td class="leise strecke"><a class="leise" href={pfad.strecke(r.streckeId)}>{r.strecke}</a></td>
+                <td class="leise datum">{tagMonat(r.datum)}<span class="sr-only"> {r.jahr}</span></td>
                 <td>
                   {r.siegerId
                     ? <a class="zeile" href={pfad.fahrer(r.siegerId)}>{r.sieger}</a>
@@ -136,4 +136,20 @@ for (const j of jahre) {
 
   .abschnitt h2 a { color: var(--ink); text-decoration: none; }
   .abschnitt h2 a:hover { color: var(--accent); }
+
+  /*
+   * Das Jahr steht über jeder Tabelle, im Datum wäre es das zweite Mal. Ohne
+   * es bricht das Datum nicht mehr um: Am Telefon stand „2 / Mar / 2024“ auf
+   * drei Zeilen, und die Seite war über 110.000 Pixel lang.
+   */
+  .datum { white-space: nowrap; }
+
+  /*
+   * Am Telefon ohne die Strecke: Der Name des Grand Prix nennt den Ort fast
+   * immer schon, und ohne die Spalte passt der Sieger ins Bild. Der Filter
+   * findet sie trotzdem – er liest den Text der Zeile, nicht, was sichtbar ist.
+   */
+  @media (max-width: 34rem) {
+    .strecke { display: none; }
+  }
 </style>

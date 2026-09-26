@@ -87,10 +87,23 @@ const zeitraum =
       : `${rennen[0].year}–${rennen.at(-1).year}`
 
 const titelZahl = titel.titles.value ?? 0
+
+/*
+ * Die Saisons kommen aus den Rennen, die Wertung wird dazugesucht: In ihr
+ * steht nur, wer Punkte holte – Minardi fehlten so sieben Jahre. Vor 1958 gab
+ * es keine Konstrukteurswertung, dort bleiben Platz und Punkte leer statt null.
+ */
+const ERSTE_WERTUNG = 1958
+const wmProJahr = new Map(titel.seasons.map((s) => [s.year, s]))
+const saisons = [...new Set(rennen.map((r) => r.year))].map(
+  (year) =>
+    wmProJahr.get(year) ?? { year, position: null, points: year >= ERSTE_WERTUNG ? 0 : null, won: 0 },
+)
+
 const ziele = [
   { id: 'zahlen', label: 'Numbers' },
   abstammung.length > 1 && { id: 'linie', label: 'Name changes' },
-  titel.seasons.length > 0 && { id: 'saisons', label: 'Seasons' },
+  saisons.length > 0 && { id: 'saisons', label: 'Seasons' },
   { id: 'fahrer', label: 'Drivers' },
 ].filter(Boolean)
 ---
@@ -176,9 +189,16 @@ const ziele = [
     </section>
   )}
 
-  {titel.seasons.length > 0 && (
+  {saisons.length > 0 && (
     <section class="abschnitt" id="saisons">
-      <div class="abschnitt-kopf"><div><h2>Season by season</h2></div></div>
+      <div class="abschnitt-kopf">
+        <div>
+          <h2>Season by season</h2>
+          {saisons[0].year < ERSTE_WERTUNG && (
+            <p>The constructors' championship began in {ERSTE_WERTUNG}; earlier seasons have no position.</p>
+          )}
+        </div>
+      </div>
       <div class="tabelle">
         <table>
           <thead>
@@ -188,7 +208,7 @@ const ziele = [
             </tr>
           </thead>
           <tbody>
-            {titel.seasons.map((s) => {
+            {saisons.map((s) => {
               const jahr = rennen.filter((r) => r.year === s.year)
               const namen = [...new Set(jahr.flatMap((r) => r.autos.map((a) => a.driverId)))]
               return (

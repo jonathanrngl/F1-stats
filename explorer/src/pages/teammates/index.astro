@@ -173,9 +173,17 @@ const quote = (v) => `${Math.round(v * 100)}%`
 </Seite>
 
 <style>
+  /*
+   * Die Abstände hält das Raster, nicht die Abschnitte: Deren Außenabstand
+   * fiel beim ersten weg (.abschnitt:first-child) und blieb beim zweiten –
+   * „Qualifying duels“ stand 3rem tiefer als „Race duels“ daneben.
+   */
   .raster {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(28rem, 100%), 1fr));
-    gap: 0 1.5rem;
+    gap: 3rem 1.5rem;
+    margin-top: 3rem;
   }
+
+  .raster > .abschnitt { margin-top: 0; }
 </style>

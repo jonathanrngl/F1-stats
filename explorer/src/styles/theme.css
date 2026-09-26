@@ -1181,9 +1181,22 @@ td.num {
 tbody tr { transition: background-color 0.08s ease; }
 tbody tr:hover { background: var(--surface-2); }
 
+/*
+ * Am Telefon ist fast jede Tabelle breiter als der Schirm, und rechts brach
+ * sie einfach ab – nichts sagte, dass dort noch „Points“ stand. Ein Schatten
+ * an der Kante sagt es jetzt, ohne Skript: Die beiden Deckflächen („local“)
+ * wandern mit dem Inhalt und verdecken den Schatten („scroll“), sobald man am
+ * Rand angekommen ist. Passt die Tabelle, liegen sie immer darüber.
+ */
 .tabelle {
+  --kante: color-mix(in srgb, var(--ink) 16%, transparent);
   overflow-x: auto;
-  background: var(--surface);
+  background:
+    linear-gradient(to right, var(--surface) 40%, transparent) left / 2.5rem 100% no-repeat local,
+    linear-gradient(to left, var(--surface) 40%, transparent) right / 2.5rem 100% no-repeat local,
+    radial-gradient(farthest-side at 0 50%, var(--kante), transparent) left / 0.9rem 100% no-repeat scroll,
+    radial-gradient(farthest-side at 100% 50%, var(--kante), transparent) right / 0.9rem 100% no-repeat scroll,
+    var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow-s);
@@ -1207,7 +1220,6 @@ tbody tr:hover { background: var(--surface-2); }
  * Die Namensspalte klebt links, wenn die Tabelle waagerecht scrollt: Am
  * Telefon passt ein Ergebnis mit acht Spalten nicht in die Breite, und ohne
  * den Namen weiß man nach dem Wischen nicht mehr, wessen Zeile man liest.
- * Ein weicher Schatten am rechten Rand sagt, dass es weitergeht.
  */
 .tabelle tbody th[scope='row'] {
   position: sticky;
@@ -1219,12 +1231,6 @@ tbody tr:hover { background: var(--surface-2); }
 tbody tr:hover th[scope='row'] { background: var(--surface-2); }
 tr.meister th[scope='row'] { background: color-mix(in srgb, var(--accent) 7%, var(--surface)); }
 
-.tabelle {
-  background:
-    linear-gradient(to left, var(--surface) 30%, transparent) right / 2.5rem 100% no-repeat local,
-    radial-gradient(farthest-side at 100% 50%, rgba(0, 0, 0, 0.16), transparent) right / 0.9rem 100% no-repeat scroll,
-    var(--surface);
-}
 
 /*
  * Am Telefon keine Tabelle mit eigener Höhe. Ein Scrollbereich in der
@@ -1273,6 +1279,14 @@ td .neben {
 
 td .neben a { color: var(--muted); text-decoration: none; }
 td .neben a:hover { color: var(--accent); }
+
+/*
+ * Eine Zelle mit zweiter Zeile ist ein kleiner Absatz, keine Zahl. Am Telefon
+ * drückte der Browser sie auf Wortbreite zusammen – „440 · Fernando Alonso –
+ * still racing …“ stand auf acht Zeilen, und die Tabelle scrollte trotzdem.
+ * Mit einer Mindestbreite scrollt sie, statt zu quetschen.
+ */
+td:has(> .neben) { min-width: 9.5rem; }
 
 /* Zeile des Meisters, des Siegers, des gerade gezeigten Eintrags. */
 tr.meister td { background: var(--accent-wash); }

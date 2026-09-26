@@ -1,5 +1,5 @@
 ---
-import { datumKurz as datum, ein, plakette } from '../../lib/format.js'
+import { datumKurz as datum, ein, plakette, tagMonat } from '../../lib/format.js'
 import Seite from '../../layouts/Seite.astro'
 import { alle, saisonListe, pfad } from '../../lib/db.js'
 import { saisonDaten } from '../../lib/saison.js'
@@ -333,7 +333,7 @@ const ziele = [
       <table>
         <thead>
           <tr>
-            <th class="num" scope="col"><abbr title="Round">Rd</abbr></th><th scope="col">Race</th><th scope="col">Circuit</th>
+            <th class="num" scope="col"><abbr title="Round">Rd</abbr></th><th scope="col">Race</th><th class="strecke" scope="col">Circuit</th>
             <th scope="col">Date</th><th scope="col">Pole</th><th scope="col">Winner</th>
           </tr>
         </thead>
@@ -346,8 +346,8 @@ const ziele = [
                 {r.mitSprint === 1 && <span class="etikett" title="Sprint weekend">sprint</span>}
                 {r.titelentscheidung === 1 && <span class="etikett akzent">Title decided</span>}
               </th>
-              <td class="leise"><a class="leise" href={pfad.strecke(r.streckeId)}>{r.strecke}</a></td>
-              <td class="leise">{datum(r.datum)}</td>
+              <td class="leise strecke"><a class="leise" href={pfad.strecke(r.streckeId)}>{r.strecke}</a></td>
+              <td class="leise datum">{tagMonat(r.datum)}<span class="sr-only"> {jahr}</span></td>
               <td class="leise">{r.pole ? <a class="leise" href={pfad.fahrer(r.pole.fahrerId)}>{r.pole.name}</a> : ''}</td>
               <td>
                 {r.siegerId
@@ -377,7 +377,7 @@ const ziele = [
           <tbody>
             {nennungen.map((n) => (
               <tr>
-                <th scope="row"><a class="zeile" href={pfad.team(n.teamId)}>{n.team}</a></th>
+                <th scope="row">{n.teamMitSeite ? <a class="zeile" href={pfad.team(n.teamId)}>{n.team}</a> : n.team}</th>
                 <td class="leise">{n.meldungName}</td>
                 <td class="leise">{n.chassis ?? '–'}</td>
                 <td class="leise"><a class="leise" href={pfad.seite(`/engines/${n.motorId}/`)}>{n.motor ?? n.motorHersteller}</a></td>
@@ -412,6 +412,13 @@ const ziele = [
 </Seite>
 
 <style>
+  /* Kalender wie auf /races/: Datum ohne Jahr, das die Seite schon trägt, am Telefon ohne Strecke. */
+  .datum { white-space: nowrap; }
+
+  @media (max-width: 34rem) {
+    .strecke { display: none; }
+  }
+
   /* Fahrer- und Teamwertung nebeneinander: Man liest sie zusammen. */
   .wertungen {
     display: grid;

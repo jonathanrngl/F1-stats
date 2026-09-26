@@ -419,9 +419,14 @@ const ziele = rennen
   .countdown p { flex: 1 1 22rem; margin: 0; font-size: 0.86rem; text-wrap: pretty; }
 
   /* Der Zeitplan: eine Zeile je Session, das Rennen hervorgehoben. */
+  /*
+   * auto-fit: Fünf Sessions füllen eine Reihe. Mit auto-fill und 15rem
+   * standen vier oben und das Rennen – der Grund, warum man nachsieht – allein
+   * darunter.
+   */
   .zeitplan {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(15rem, 100%), 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(10.5rem, 100%), 1fr));
     gap: 0.5rem;
     margin: 0;
     padding: 0;
@@ -442,6 +447,11 @@ const ziele = rennen
   .zeitplan time { font-weight: 650; color: var(--ink); font-variant-numeric: tabular-nums; }
   .zeitplan .rennen { border-left: 4px solid var(--accent); }
   .zeitplan .rennen .session { color: var(--accent-strong); }
+
+  /* Zwei Spalten am Telefon: Das Rennen als fünfte Karte bekommt die ganze Breite statt einer halben Zeile. */
+  @media (max-width: 34rem) {
+    .zeitplan .rennen:last-child:nth-child(odd) { grid-column: 1 / -1; }
+  }
 
   .unten { margin-top: 1.25rem; }
 
