@@ -7,6 +7,13 @@
  * der Pfad, nicht ein übergebener Wert: So kann keine Seite vergessen, sich
  * selbst zu markieren.
  */
+/*
+ * Zwei Schriften, beide mit der Seite ausgeliefert (font-src 'self'):
+ * Archivo mit Breitenachse für Überschriften und Zahlen – schmal gesetzt
+ * wie auf einer Zeitnahmetafel –, IBM Plex Sans für den Text.
+ */
+import '@fontsource-variable/archivo/wdth.css'
+import '@fontsource-variable/ibm-plex-sans/wght.css'
 import '../styles/theme.css'
 import Suche from '../components/Suche.astro'
 import { MODUS_SKRIPT } from '../lib/modus.js'

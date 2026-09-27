@@ -4,24 +4,32 @@
  *
  * Eine Tabelle sagt, wie oft wo gefahren wurde. Sie sagt nicht, dass die
  * Formel 1 dreissig Jahre lang fast nur in Europa fuhr und heute auf fünf
- * Kontinenten Station macht. Das sieht man nur auf einer Karte.
+ * Kontinenten Station macht. Das sieht man nur auf einer Karte – und am
+ * deutlichsten, wenn man die Saisons nacheinander durchgeht.
  *
  * Gezeichnet beim Bauen, ohne Kartendienst: Die Umrisse liegen als SVG-Pfade
  * im Projekt, die Punkte kommen aus den Streckenkoordinaten. Die Seite lädt
  * dafür nichts nach, und die Inhaltsrichtlinie muss keine fremde Quelle
  * erlauben.
  *
- * Zwei Karten, nicht eine: 40 der 78 Strecken liegen in Europa, vierzehn Paare
- * davon enger als anderthalb Grad. Auf der Weltkarte sind sie ein roter
- * Klumpen. Der zweite Ausschnitt zeigt dieselben Pfade durch ein engeres
- * `viewBox` – dieselbe Geometrie, nur näher heran.
+ * Eine Karte statt zwei: Früher stand Europa als zweiter, fester Ausschnitt
+ * daneben. Jetzt zoomt dieselbe Karte in eine Region – dasselbe `viewBox`-
+ * Prinzip, nur beweglich, und Nordamerika und Asien bekommen es auch. Ohne
+ * JavaScript bleibt die Weltkarte stehen, mit allen Punkten und Verweisen.
+ *
+ * Die Farbe trägt genau eine Aussage: im heutigen Kalender (rot) oder nicht
+ * mehr (blau). Das Paar ist gegen Farbfehlsichtigkeit geprüft (dataviz
+ * validate_palette.js, alle Paare, hell und dunkel auf der Landfläche). Eine
+ * Saisonwahl färbt nichts um – sie blendet aus, was in dem Jahr nicht
+ * gefahren wurde. So behält jede Strecke ihre Farbe.
  */
-import { KARTE, LAND, ortX, ortY } from '../lib/weltkarte.js'
+import { KARTE, LAND, AUSSCHNITT, ortX, ortY } from '../lib/weltkarte.js'
 
 interface Strecke {
   id: string
   name: string
   ort: string | null
+  landName: string | null
   breite: number | null
   laenge_grad: number | null
   rennen: number
@@ -31,12 +39,14 @@ interface Strecke {
 
 interface Props {
   strecken: Strecke[]
+  /** Die Jahre, in denen auf einer Strecke gefahren wurde, je Kennung. */
+  jahre: Record<string, number[]>
   /** Ab welchem Jahr eine Strecke als heute benutzt gilt. */
   aktuellAb: number
   pfadZu: (id: string) => string
 }
 
-const { strecken, aktuellAb, pfadZu } = Astro.props
+const { strecken, jahre, aktuellAb, pfadZu } = Astro.props
 
 /* Ohne Koordinaten kein Punkt – und keine erfundene Lage in der Nordsee. */
 const verortet = strecken.filter((s) => s.breite !== null && s.laenge_grad !== null)
@@ -49,7 +59,7 @@ const ohneOrt = strecken.length - verortet.length
  * mit vier.
  */
 const maxRennen = Math.max(...verortet.map((s) => s.rennen), 1)
-const radius = (n: number, mass = 1) => (2.2 + 5.5 * Math.sqrt(n / maxRennen)) * mass
+const radius = (n: number) => 2.4 + 5.6 * Math.sqrt(n / maxRennen)
 
 /*
  * Grosse Punkte zuerst, kleine darüber: In Europa liegen die Strecken so
@@ -58,207 +68,677 @@ const radius = (n: number, mass = 1) => (2.2 + 5.5 * Math.sqrt(n / maxRennen)) *
 const gezeichnet = [...verortet].sort((a, b) => b.rennen - a.rennen)
 const heute = gezeichnet.filter((s) => s.bis >= aktuellAb).length
 
-/** Der europäische Ausschnitt, in Grad. */
-const EUROPA = { lonMin: -11, lonMax: 33, latMin: 35, latMax: 59 }
+/*
+ * Europa für die Zählung unter der Zeitleiste: ein Kasten in Grad, kein
+ * Kontinent aus der Datenbank – F1DB führt keinen. Istanbul und Sotschi
+ * liegen darin, Baku, Bahrain und Casablanca nicht.
+ */
+const EUROPA = { lonMin: -11, lonMax: 42, latMin: 35, latMax: 62 }
+const inEuropa = (s: Strecke) =>
+  s.laenge_grad! >= EUROPA.lonMin && s.laenge_grad! <= EUROPA.lonMax &&
+  s.breite! >= EUROPA.latMin && s.breite! <= EUROPA.latMax
 
-const kasten = {
-  x: ortX(EUROPA.lonMin),
-  y: ortY(EUROPA.latMax),
-  breite: ortX(EUROPA.lonMax) - ortX(EUROPA.lonMin),
-  hoehe: ortY(EUROPA.latMin) - ortY(EUROPA.latMax),
+/*
+ * Die Regionen, in die man zoomen kann. Jeder Kasten wird auf das
+ * Seitenverhältnis der Karte erweitert, sonst verzerrte das `viewBox` sie
+ * oder liesse Ränder. Südamerika und Ozeanien fehlen mit Absicht: drei und
+ * zwei Strecken, weit auseinander – die Weltkarte zeigt sie schon deutlich.
+ */
+const SEITE = KARTE.breite / KARTE.hoehe
+function kasten(lonMin: number, lonMax: number, latMin: number, latMax: number) {
+  let x = ortX(lonMin)
+  let y = ortY(latMax)
+  let b = ortX(lonMax) - x
+  let h = ortY(latMin) - y
+  if (b / h < SEITE) {
+    const neu = h * SEITE
+    x -= (neu - b) / 2
+    b = neu
+  } else {
+    const neu = b / SEITE
+    y -= (neu - h) / 2
+    h = neu
+  }
+  x = Math.min(Math.max(x, 0), KARTE.breite - b)
+  y = Math.min(Math.max(y, 0), KARTE.hoehe - h)
+  return [x, y, b, h].map((v) => Math.round(v * 10) / 10)
 }
 
-/*
- * Im Ausschnitt ist alles um diesen Faktor vergrössert. Die Punkte sollen es
- * nicht in gleichem Mass sein – sonst überdeckten sie einander erst recht –,
- * also wird ihr Radius gegengerechnet. Nicht ganz: Die zweite Karte steht in
- * der schmaleren Spalte und wird kleiner dargestellt, deshalb der Zuschlag.
- */
-const zoom = KARTE.breite / kasten.breite
-const inEuropa = gezeichnet.filter(
-  (s) =>
-    s.laenge_grad >= EUROPA.lonMin &&
-    s.laenge_grad <= EUROPA.lonMax &&
-    s.breite >= EUROPA.latMin &&
-    s.breite <= EUROPA.latMax,
-)
+const REGIONEN = [
+  { id: 'welt', label: 'World', box: [0, 0, KARTE.breite, KARTE.hoehe] },
+  { id: 'europa', label: 'Europe', box: kasten(-10, 41, 35, 59) },
+  { id: 'nordamerika', label: 'North America', box: kasten(-124, -68, 16, 50) },
+  { id: 'asien', label: 'Middle East & Asia', box: kasten(44, 142, -2, 43) },
+]
+
+/* Ein Gradnetz alle 30° Länge und 20° Breite, der Äquator etwas deutlicher. */
+const netzLaenge: number[] = []
+for (let l = Math.ceil(AUSSCHNITT.lonMin / 30) * 30; l <= AUSSCHNITT.lonMax; l += 30) netzLaenge.push(l)
+const netzBreite: number[] = []
+for (let b = Math.ceil(AUSSCHNITT.latMin / 20) * 20; b <= AUSSCHNITT.latMax; b += 20) netzBreite.push(b)
 
 /* „Monza, Monza" – Ort nur nennen, wenn er nicht schon der Name ist. */
+const ortText = (s: Strecke) =>
+  [s.ort && s.ort !== s.name ? s.ort : null, s.landName].filter(Boolean).join(', ')
+const zeitraum = (s: Strecke) => (s.von === s.bis ? `${s.von}` : `${s.von}–${s.bis}`)
 const beschriftet = (s: Strecke) =>
-  `${s.name}${s.ort && s.ort !== s.name ? `, ${s.ort}` : ''} – ${s.rennen} ${
-    s.rennen === 1 ? 'race' : 'races'
-  }, ${s.von === s.bis ? s.von : `${s.von}–${s.bis}`}`
+  `${s.name}${ortText(s) ? `, ${ortText(s)}` : ''} – ${s.rennen} ${s.rennen === 1 ? 'race' : 'races'}, ${zeitraum(s)}`
 
 /*
- * Wie dicht liegen die europäischen Strecken wirklich? Gezählt statt
- * behauptet: Ein Grad Länge ist auf dieser Breite deutlich kürzer als ein Grad
- * Breite, deshalb der Faktor. Die Zahl steht in der Bildunterschrift und wäre
- * als feste Ziffer im Text beim nächsten Datenstand still falsch.
+ * Die Zeitleiste: Strecken je Saison als schmale Säulen. Sie ist zugleich
+ * Übersicht und Bedienelement – ein Klick auf eine Säule wählt die Saison.
+ * Gezählt über alle Strecken, auch die ohne Koordinaten.
  */
-const engePaare = inEuropa.reduce((n, a, i) => {
-  for (const b of inEuropa.slice(i + 1)) {
-    const d = Math.hypot(a.breite - b.breite, (a.laenge_grad - b.laenge_grad) * 0.7)
-    if (d < 1.5) n++
-  }
-  return n
-}, 0)
+const alleJahre = Object.values(jahre).flat()
+const erstesJahr = Math.min(...alleJahre)
+const letztesJahr = Math.max(...alleJahre)
+const jeJahr = new Map<number, number>()
+for (const j of alleJahre) jeJahr.set(j, (jeJahr.get(j) ?? 0) + 1)
+const saeulen = Array.from({ length: letztesJahr - erstesJahr + 1 }, (_, i) => ({
+  jahr: erstesJahr + i,
+  n: jeJahr.get(erstesJahr + i) ?? 0,
+}))
+const maxJeJahr = Math.max(...saeulen.map((s) => s.n))
+const LEISTE = { breite: 1000, hoehe: 64 }
+const saeuleB = LEISTE.breite / saeulen.length
 ---
 
-<div class="karten">
-  <figure class="weltkarte">
+<figure class="streckenkarte" data-karte data-regionen={JSON.stringify(Object.fromEntries(REGIONEN.map((r) => [r.id, r.box])))}>
+  <div class="karte-leiste nur-mit-js">
+    <div class="regionen" role="group" aria-label="Zoom to a region">
+      {REGIONEN.map((r, i) => (
+        <button type="button" data-region={r.id} aria-pressed={i === 0 ? 'true' : 'false'}>{r.label}</button>
+      ))}
+    </div>
+    <p class="saison-text" data-saison-text aria-live="polite">
+      All seasons, {erstesJahr}–{letztesJahr}
+    </p>
+  </div>
+
+  <div class="karte-flaeche">
     <svg
       viewBox={`0 0 ${KARTE.breite} ${KARTE.hoehe}`}
       role="img"
       aria-label={`World map with ${verortet.length} Formula 1 circuits. The full list follows below.`}
     >
-      {LAND.map((d) => <path class="land" d={d} />)}
+      <g class="netz" aria-hidden="true">
+        {netzLaenge.map((l) => <line x1={ortX(l)} x2={ortX(l)} y1="0" y2={KARTE.hoehe} />)}
+        {netzBreite.map((b) => <line class={b === 0 ? 'aequator' : undefined} x1="0" x2={KARTE.breite} y1={ortY(b)} y2={ortY(b)} />)}
+      </g>
 
-      {/* Der Rahmen zeigt, welchen Teil die zweite Karte vergrössert. */}
-      <rect
-        class="ausschnitt"
-        x={kasten.x}
-        y={kasten.y}
-        width={kasten.breite}
-        height={kasten.hoehe}
+      <g class="land">
+        {LAND.map((d) => <path d={d} />)}
+      </g>
+
+      <g class="punkte">
+        {gezeichnet.map((s) => (
+          <a
+            href={pfadZu(s.id)}
+            tabindex="-1"
+            class={s.bis >= aktuellAb ? 'punkt aktuell' : 'punkt'}
+            data-name={s.name}
+            data-ort={ortText(s)}
+            data-rennen={s.rennen}
+            data-zeitraum={zeitraum(s)}
+            data-jahre={(jahre[s.id] ?? []).join(',')}
+            data-europa={inEuropa(s) ? '1' : undefined}
+          >
+            <title>{beschriftet(s)}</title>
+            <circle class="treffer" cx={ortX(s.laenge_grad!)} cy={ortY(s.breite!)} r={Math.max(radius(s.rennen), 9)} data-r={radius(s.rennen)} />
+            <circle class="kreis" cx={ortX(s.laenge_grad!)} cy={ortY(s.breite!)} r={radius(s.rennen)} data-r={radius(s.rennen)} />
+          </a>
+        ))}
+      </g>
+    </svg>
+
+    {/* Die Karteikarte zum Punkt unter dem Zeiger. Befüllt per textContent – die Namen sind Daten. */}
+    <div class="tipp" data-tipp hidden>
+      <b data-feld="name"></b>
+      <span data-feld="ort"></span>
+      <span class="tipp-zahlen"><strong data-feld="rennen"></strong> <span data-feld="zeitraum"></span></span>
+      <span class="tipp-saison" data-feld="saison"></span>
+    </div>
+  </div>
+
+  <div class="zeitleiste nur-mit-js">
+    <button type="button" class="abspielen" data-abspielen aria-label="Play through the seasons">
+      <svg class="zeichen-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5v14l12-7z" /></svg>
+      <svg class="zeichen-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" /></svg>
+    </button>
+
+    <div class="leiste-rahmen">
+      <svg class="saeulen" viewBox={`0 0 ${LEISTE.breite} ${LEISTE.hoehe}`} preserveAspectRatio="none" aria-hidden="true">
+        {saeulen.map((s, i) => (
+          <rect
+            data-jahr={s.jahr}
+            x={i * saeuleB + saeuleB * 0.14}
+            width={saeuleB * 0.72}
+            y={LEISTE.hoehe - (s.n / maxJeJahr) * (LEISTE.hoehe - 4)}
+            height={(s.n / maxJeJahr) * (LEISTE.hoehe - 4)}
+          />
+        ))}
+      </svg>
+      <input
+        type="range"
+        min={erstesJahr}
+        max={letztesJahr}
+        step="1"
+        value={letztesJahr}
+        data-jahr-regler
+        aria-label="Season"
       />
+      <div class="leiste-achse" aria-hidden="true">
+        <span>{erstesJahr}</span>
+        <span>{letztesJahr}</span>
+      </div>
+    </div>
 
-      {
-        gezeichnet.map((s) => (
-          <a href={pfadZu(s.id)} tabindex="-1">
-            <title>{beschriftet(s)}</title>
-            <circle class="treffer" cx={ortX(s.laenge_grad)} cy={ortY(s.breite)} r={Math.max(radius(s.rennen), 9)} />
-            <circle
-              class={s.bis >= aktuellAb ? 'strecke aktuell' : 'strecke'}
-              cx={ortX(s.laenge_grad)}
-              cy={ortY(s.breite)}
-              r={radius(s.rennen)}
-            />
-          </a>
-        ))
-      }
-    </svg>
-    <figcaption>
-      <span class="schluessel"><i class="aktuell"></i>Used since {aktuellAb}</span>
-      <span class="schluessel"><i></i>Not used since</span>
-      <span class="notiz">
-        Circle area is the number of races held. {heute} of {verortet.length} circuits have been
-        used since {aktuellAb}.
-        {ohneOrt > 0 && ` ${ohneOrt} without recorded coordinates are not shown.`}
-      </span>
-    </figcaption>
-  </figure>
+    <button type="button" class="leise-knopf alle-saisons" data-alle disabled>All seasons</button>
+  </div>
 
-  <figure class="weltkarte europa">
-    <svg
-      viewBox={`${kasten.x} ${kasten.y} ${kasten.breite} ${kasten.hoehe}`}
-      role="img"
-      aria-label={`Europe in detail, with ${inEuropa.length} Formula 1 circuits.`}
-    >
-      {LAND.map((d) => <path class="land" d={d} />)}
-      {
-        inEuropa.map((s) => (
-          <a href={pfadZu(s.id)} tabindex="-1">
-            <title>{beschriftet(s)}</title>
-            <circle class="treffer" cx={ortX(s.laenge_grad)} cy={ortY(s.breite)} r={Math.max(radius(s.rennen, 1.6 / zoom), 7 / zoom)} />
-            <circle
-              class={s.bis >= aktuellAb ? 'strecke aktuell' : 'strecke'}
-              cx={ortX(s.laenge_grad)}
-              cy={ortY(s.breite)}
-              r={radius(s.rennen, 1.6 / zoom)}
-              stroke-width={1.2 / zoom}
-            />
-          </a>
-        ))
+  <figcaption>
+    <span class="schluessel"><i class="aktuell"></i>On the calendar since {aktuellAb}</span>
+    <span class="schluessel"><i></i>Former circuit</span>
+    <span class="schluessel nur-saison"><i class="neu"></i>First race that season</span>
+    <span class="notiz">
+      Circle area is the number of races held. {heute} of {verortet.length} circuits have been used
+      since {aktuellAb}.{ohneOrt > 0 && ` ${ohneOrt} without recorded coordinates are not shown.`}
+    </span>
+  </figcaption>
+</figure>
+
+<script>
+  /*
+   * Zoom, Saisonwahl und Karteikarte. Alles hängt am gebauten SVG: Das Skript
+   * liest die Daten aus den Attributen der Punkte und ändert nur Klassen,
+   * Radien und das viewBox – ohne Skript bleibt eine vollständige Weltkarte.
+   */
+  const figur = document.querySelector<HTMLElement>('[data-karte]')
+  if (figur) {
+    const svg = figur.querySelector<SVGSVGElement>('.karte-flaeche svg')!
+    const flaeche = figur.querySelector<HTMLElement>('.karte-flaeche')!
+    const regionen = JSON.parse(figur.dataset.regionen ?? '{}') as Record<string, number[]>
+    const knoepfe = [...figur.querySelectorAll<HTMLButtonElement>('[data-region]')]
+    const punkte = [...figur.querySelectorAll<SVGAElement>('.punkt')]
+    const kreise = [...figur.querySelectorAll<SVGCircleElement>('circle[data-r]')]
+    const tipp = figur.querySelector<HTMLElement>('[data-tipp]')!
+    const regler = figur.querySelector<HTMLInputElement>('[data-jahr-regler]')!
+    const saeulen = [...figur.querySelectorAll<SVGRectElement>('.saeulen rect')]
+    const saisonText = figur.querySelector<HTMLElement>('[data-saison-text]')!
+    const alleKnopf = figur.querySelector<HTMLButtonElement>('[data-alle]')!
+    const abspielen = figur.querySelector<HTMLButtonElement>('[data-abspielen]')!
+    const ruhig = matchMedia('(prefers-reduced-motion: reduce)').matches
+
+    const VOLL = regionen.welt[2]
+    const startText = saisonText.textContent?.trim() ?? ''
+    const daten = punkte.map((p) => ({
+      el: p,
+      name: p.dataset.name ?? '',
+      jahre: new Set((p.dataset.jahre ?? '').split(',').filter(Boolean).map(Number)),
+      erstes: Number((p.dataset.jahre ?? '').split(',')[0]),
+      europa: p.dataset.europa === '1',
+    }))
+
+    /* ------------------------------------------------------------- Zoom */
+
+    let box = regionen.welt.slice()
+
+    /*
+     * Die Punkte wachsen beim Zoomen mit, aber gedämpft: voll mitwachsend
+     * deckten sie einander in Europa erst recht zu, gar nicht mitwachsend
+     * würden sie beim Heranfahren zu Stecknadeln.
+     *
+     * Am Telefon ist die ganze Welt 360 px breit; dort wachsen die Punkte
+     * zusätzlich, sonst wären die kleinen kaum zu sehen. Die Trefferfläche
+     * rechnet in Bildschirmpixeln – 12 px Radius, egal wie weit gezoomt ist.
+     */
+    function zeichne() {
+      svg.setAttribute('viewBox', box.join(' '))
+      const zoom = VOLL / box[2]
+      const breite = svg.clientWidth || 1000
+      const schirm = Math.min(Math.max(Math.sqrt(900 / breite), 1), 1.7)
+      const mass = Math.pow(zoom, -0.72) * schirm
+      const proPixel = box[2] / breite
+      for (const k of kreise) {
+        const r = Number(k.dataset.r) * mass
+        k.setAttribute('r', String(k.classList.contains('treffer') ? Math.max(r, 12 * proPixel) : r))
       }
-    </svg>
-    <figcaption>
-      <span class="notiz voll">
-        Europe in detail: {inEuropa.length} of the {verortet.length} circuits lie inside the
-        dashed box, {engePaare} pairs of them close enough to overlap on the world map.
-      </span>
-    </figcaption>
-  </figure>
-</div>
+    }
+
+    zeichne()
+    addEventListener('resize', zeichne)
+
+    let flug = 0
+    function fliege(ziel: number[]) {
+      cancelAnimationFrame(flug)
+      tipp.hidden = true
+      if (ruhig) {
+        box = ziel.slice()
+        zeichne()
+        return
+      }
+      const von = box.slice()
+      const t0 = performance.now()
+      const dauer = 650
+      const schritt = (t: number) => {
+        const x = Math.min((t - t0) / dauer, 1)
+        const e = x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2
+        box = von.map((v, i) => v + (ziel[i] - v) * e)
+        zeichne()
+        if (x < 1) flug = requestAnimationFrame(schritt)
+      }
+      flug = requestAnimationFrame(schritt)
+    }
+
+    for (const k of knoepfe) {
+      k.addEventListener('click', () => {
+        for (const a of knoepfe) a.setAttribute('aria-pressed', String(a === k))
+        fliege(regionen[k.dataset.region ?? 'welt'])
+      })
+    }
+
+    /* --------------------------------------------------------- Saisonwahl */
+
+    let saison: number | null = null
+
+    function zeigeSaison(jahr: number | null) {
+      saison = jahr
+      figur!.classList.toggle('mit-saison', jahr !== null)
+      alleKnopf.disabled = jahr === null
+      for (const s of saeulen) s.classList.toggle('an', Number(s.dataset.jahr) === jahr)
+
+      if (jahr === null) {
+        for (const d of daten) d.el.classList.remove('an', 'neu')
+        saisonText.textContent = startText
+        regler.setAttribute('aria-valuetext', 'All seasons')
+        return
+      }
+
+      regler.value = String(jahr)
+      let n = 0
+      let europa = 0
+      const neu: string[] = []
+      for (const d of daten) {
+        const an = d.jahre.has(jahr)
+        d.el.classList.toggle('an', an)
+        d.el.classList.toggle('neu', an && d.erstes === jahr)
+        if (!an) continue
+        n++
+        if (d.europa) europa++
+        if (d.erstes === jahr) neu.push(d.name)
+      }
+      const rest = n - europa
+      let text = `${jahr}: ${n} ${n === 1 ? 'circuit' : 'circuits'} – ${europa} in Europe, ${rest} elsewhere`
+      if (neu.length && neu.length < n) {
+        text += `. New: ${neu.slice(0, 3).join(', ')}${neu.length > 3 ? ` and ${neu.length - 3} more` : ''}`
+      }
+      saisonText.textContent = text
+      regler.setAttribute('aria-valuetext', text)
+    }
+
+    regler.addEventListener('input', () => {
+      halt()
+      zeigeSaison(Number(regler.value))
+    })
+
+    for (const s of saeulen) {
+      s.addEventListener('click', () => {
+        halt()
+        zeigeSaison(Number(s.dataset.jahr))
+      })
+    }
+
+    alleKnopf.addEventListener('click', () => {
+      halt()
+      regler.value = regler.max
+      zeigeSaison(null)
+    })
+
+    /* Durch die Saisons laufen: von vorn, oder vom gewählten Jahr weiter. */
+    let takt = 0
+    function halt() {
+      clearInterval(takt)
+      takt = 0
+      figur!.classList.remove('spielt')
+      abspielen.setAttribute('aria-label', 'Play through the seasons')
+    }
+
+    abspielen.addEventListener('click', () => {
+      if (takt) return halt()
+      const min = Number(regler.min)
+      const max = Number(regler.max)
+      let jahr = saison === null || saison >= max ? min : saison + 1
+      zeigeSaison(jahr)
+      figur!.classList.add('spielt')
+      abspielen.setAttribute('aria-label', 'Pause')
+      takt = window.setInterval(() => {
+        jahr++
+        if (jahr > max) return halt()
+        zeigeSaison(jahr)
+      }, ruhig ? 900 : 420)
+    })
+
+    /* ------------------------------------------------------- Karteikarte */
+
+    const feld = (n: string) => tipp.querySelector<HTMLElement>(`[data-feld="${n}"]`)!
+
+    function zeigeTipp(p: SVGAElement) {
+      const n = Number(p.dataset.rennen)
+      feld('name').textContent = p.dataset.name ?? ''
+      feld('ort').textContent = p.dataset.ort ?? ''
+      feld('rennen').textContent = `${n} ${n === 1 ? 'race' : 'races'}`
+      feld('zeitraum').textContent = p.dataset.zeitraum ?? ''
+      const d = daten.find((x) => x.el === p)
+      feld('saison').textContent =
+        saison === null || !d ? '' : d.jahre.has(saison) ? `On the ${saison} calendar` : `Not used in ${saison}`
+      tipp.hidden = false
+
+      const kreis = p.querySelector('.kreis')!.getBoundingClientRect()
+      const rahmen = flaeche.getBoundingClientRect()
+      const mx = kreis.left + kreis.width / 2 - rahmen.left
+      const oben = kreis.top - rahmen.top
+      const b = tipp.offsetWidth
+      const h = tipp.offsetHeight
+      const x = Math.min(Math.max(mx - b / 2, 6), rahmen.width - b - 6)
+      const unten = oben - h - 10 < 4
+      tipp.style.left = `${x}px`
+      tipp.style.top = `${unten ? kreis.bottom - rahmen.top + 10 : oben - h - 10}px`
+    }
+
+    for (const p of punkte) {
+      p.addEventListener('pointerenter', () => {
+        p.classList.add('ziel')
+        zeigeTipp(p)
+      })
+      p.addEventListener('pointerleave', () => {
+        p.classList.remove('ziel')
+        tipp.hidden = true
+      })
+      /* Der native Tooltip käme sonst doppelt, über der eigenen Karteikarte. */
+      p.querySelector('title')?.remove()
+    }
+  }
+</script>
 
 <style>
-  .karten {
-    display: grid;
-    grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
-    gap: 0.9rem;
-    margin: 1.5rem 0 0;
-  }
+  .streckenkarte {
+    --meer: light-dark(#dde7ef, #0d1822);
+    --netz: light-dark(#cbd9e4, #16283a);
+    --land: light-dark(#fbfaf6, #232d37);
+    --kueste: light-dark(#b7c6d2, #34495b);
+    --punkt-aktuell: light-dark(#e10600, #ff3b2f);
+    --punkt-frueher: light-dark(#2a78d6, #4a93ea);
+    --ring: light-dark(#ffffff, #0d1822);
 
-  .weltkarte {
-    margin: 0;
-    padding: 0.75rem 0.85rem 0.7rem;
+    margin: 1.75rem 0 0;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    box-shadow: var(--shadow-s);
+    overflow: hidden;
+  }
+
+  /* ----------------------------------------------------- Leiste oben */
+
+  .karte-leiste {
     display: flex;
-    flex-direction: column;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem 1.25rem;
+    padding: 0.7rem 0.8rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .regionen {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    padding: 3px;
+    background: var(--surface-3);
+    border-radius: 0.5rem;
+  }
+
+  .regionen button {
+    min-height: 2.1rem;
+    padding: 0.25rem 0.8rem;
+    font-size: 0.84rem;
+    font-weight: 600;
+    color: var(--ink-2);
+    background: none;
+    border: none;
+    border-radius: 0.35rem;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease;
+  }
+
+  .regionen button:hover { color: var(--ink); }
+  .regionen button[aria-pressed='true'] {
+    color: var(--ink);
+    background: var(--surface);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+  }
+
+  .saison-text {
+    margin: 0;
+    font-size: 0.86rem;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+    text-wrap: pretty;
+  }
+
+  .mit-saison .saison-text { color: var(--ink); font-weight: 550; }
+
+  /* ----------------------------------------------------- Die Karte */
+
+  .karte-flaeche {
+    position: relative;
+    background: var(--meer);
   }
 
   svg { display: block; width: 100%; height: auto; }
 
-  /* Das Land ist Hintergrund, nicht Gegenstand: dunkel, ohne Kontur. */
-  .land { fill: var(--surface-3); }
-
-  .ausschnitt {
-    fill: none;
-    stroke: var(--muted);
+  .netz line {
+    stroke: var(--netz);
     stroke-width: 1;
-    stroke-dasharray: 4 3;
-    opacity: 0.5;
+    vector-effect: non-scaling-stroke;
   }
 
-  .strecke {
-    fill: var(--s-rest);
-    fill-opacity: 0.65;
-    stroke: var(--surface);
-    stroke-width: 0.8;
+  .netz .aequator { stroke-dasharray: 4 4; }
+
+  .land path {
+    fill: var(--land);
+    stroke: var(--kueste);
+    stroke-width: 0.75;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
   }
 
-  .strecke.aktuell { fill: var(--accent); fill-opacity: 0.85; }
-  a:hover .strecke { fill-opacity: 1; stroke: var(--ink); }
+  .kreis {
+    fill: var(--punkt-frueher);
+    fill-opacity: 0.8;
+    stroke: var(--ring);
+    stroke-width: 1.4;
+    vector-effect: non-scaling-stroke;
+    transition: opacity 0.25s ease, fill-opacity 0.25s ease;
+  }
+
+  .aktuell .kreis { fill: var(--punkt-aktuell); fill-opacity: 0.9; }
+
+  .punkt:hover .kreis,
+  .punkt.ziel .kreis {
+    fill-opacity: 1;
+    stroke: var(--ink);
+    stroke-width: 2;
+  }
 
   /*
    * Die Punkte sind nur für Zeiger und Finger da. Aus der Tabulatorfolge
-   * genommen (tabindex -1): 118 Stopps, die ein Vorleser in einem Bild mit
+   * genommen (tabindex -1): 78 Stopps, die ein Vorleser in einem Bild mit
    * role="img" gar nicht ansagt, waren ein Umweg ohne Ziel. Die Liste unter
    * der Karte führt zu denselben Seiten. Die unsichtbare Trefferfläche ist
    * größer als der Punkt – ein Kreis von drei Pixeln trifft kein Finger.
    */
   .treffer { fill: transparent; }
 
+  /* Mit gewählter Saison: was nicht gefahren wurde, tritt fast ganz zurück. */
+  .mit-saison .punkt:not(.an) .kreis { opacity: 0.14; }
+  .mit-saison .punkt.an .kreis { fill-opacity: 1; }
+  .mit-saison .punkt.neu .kreis { stroke: var(--ink); stroke-width: 2.2; }
+
+  .tipp {
+    position: absolute;
+    z-index: 2;
+    display: grid;
+    gap: 0.05rem;
+    min-width: 11rem;
+    max-width: 16rem;
+    padding: 0.55rem 0.7rem 0.6rem;
+    font-size: 0.8rem;
+    color: var(--muted);
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: 0.45rem;
+    box-shadow: var(--shadow);
+    pointer-events: none;
+  }
+
+  .tipp[hidden] { display: none; }
+  .tipp b { font-size: 0.95rem; color: var(--ink); font-weight: 700; }
+  .tipp-zahlen { margin-top: 0.25rem; }
+  .tipp-zahlen strong { color: var(--ink); font-weight: 700; font-variant-numeric: tabular-nums; }
+  .tipp-saison { color: var(--ink-2); font-weight: 600; }
+  .tipp-saison:empty { display: none; }
+
+  /* ----------------------------------------------------- Zeitleiste */
+
+  .zeitleiste {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.9rem;
+    padding: 0.8rem 0.9rem 0.55rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .abspielen {
+    display: grid;
+    place-items: center;
+    width: 2.6rem;
+    height: 2.6rem;
+    padding: 0;
+    color: var(--accent-ink);
+    background: var(--accent);
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+  }
+
+  .abspielen:hover { background: var(--accent-strong); }
+  .abspielen svg { width: 1.1rem; height: 1.1rem; fill: currentColor; }
+  .zeichen-pause { display: none; }
+  .spielt .zeichen-play { display: none; }
+  .spielt .zeichen-pause { display: block; }
+
+  .leiste-rahmen { position: relative; min-width: 0; }
+
+  /* Um eine halbe Knopfbreite eingerückt: So steht der Reglerknopf genau unter seiner Säule. */
+  .saeulen {
+    display: block;
+    width: calc(100% - 1.05rem);
+    height: 2.6rem;
+    margin-inline: 0.525rem;
+  }
+
+  .saeulen rect {
+    fill: var(--axis);
+    cursor: pointer;
+    transition: fill 0.12s ease;
+  }
+
+  .saeulen rect:hover { fill: var(--muted); }
+  .saeulen rect.an { fill: var(--accent); }
+
+  /*
+   * Der Regler liegt über der Unterkante der Säulen: Die Säulen zeigen, was
+   * man wählt, der Regler ist, womit man es wählt – Tastatur und Vorleser
+   * bekommen so ein echtes Bedienelement, kein Bild.
+   */
+  input[type='range'] {
+    display: block;
+    width: 100%;
+    height: 1.4rem;
+    margin: 0;
+    background: none;
+    appearance: none;
+    cursor: pointer;
+  }
+
+  input[type='range']::-webkit-slider-runnable-track { height: 3px; background: var(--border-strong); border-radius: 2px; }
+  input[type='range']::-moz-range-track { height: 3px; background: var(--border-strong); border-radius: 2px; }
+  input[type='range']::-webkit-slider-thumb {
+    appearance: none;
+    width: 1.05rem;
+    height: 1.05rem;
+    margin-top: calc(-0.525rem + 1.5px);
+    background: var(--surface);
+    border: 3px solid var(--accent);
+    border-radius: 50%;
+  }
+  input[type='range']::-moz-range-thumb {
+    width: 0.8rem;
+    height: 0.8rem;
+    background: var(--surface);
+    border: 3px solid var(--accent);
+    border-radius: 50%;
+  }
+
+  .streckenkarte:not(.mit-saison) input[type='range']::-webkit-slider-thumb { border-color: var(--border-input); }
+  .streckenkarte:not(.mit-saison) input[type='range']::-moz-range-thumb { border-color: var(--border-input); }
+
+  .leiste-achse {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.72rem;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Ohne gewählte Saison gibt es nichts zurückzusetzen; der Platz bleibt, damit nichts springt. */
+  .alle-saisons:disabled { visibility: hidden; }
+
+  /* ----------------------------------------------------- Legende */
+
   figcaption {
     display: flex;
     flex-wrap: wrap;
-    align-items: baseline;
-    gap: 0.3rem 1rem;
-    margin-top: auto;
-    padding-top: 0.7rem;
-    font-size: 0.76rem;
+    align-items: center;
+    gap: 0.35rem 1.1rem;
+    padding: 0.7rem 0.9rem 0.8rem;
+    font-size: 0.78rem;
     color: var(--muted);
+    border-top: 1px solid var(--border);
   }
 
-  .weltkarte figcaption { border-top: 1px solid var(--border); }
-
-  .schluessel { display: flex; align-items: center; gap: 0.35rem; }
+  .schluessel { display: flex; align-items: center; gap: 0.4rem; color: var(--ink-2); }
   .schluessel i {
-    width: 0.6rem;
-    height: 0.6rem;
+    width: 0.7rem;
+    height: 0.7rem;
     border-radius: 50%;
-    background: var(--s-rest);
-    opacity: 0.65;
+    background: var(--punkt-frueher);
     flex: none;
   }
-  .schluessel i.aktuell { background: var(--accent); opacity: 0.85; }
+  .schluessel i.aktuell { background: var(--punkt-aktuell); }
+  .schluessel i.neu { background: none; border: 2px solid var(--ink); }
+  .nur-saison { display: none; }
+  .mit-saison .nur-saison { display: flex; }
   .notiz { margin-left: auto; text-wrap: pretty; }
-  .notiz.voll { margin-left: 0; }
 
-  @media (max-width: 56rem) {
-    .karten { grid-template-columns: minmax(0, 1fr); }
+  @media (max-width: 40rem) {
+    .karte-leiste { padding: 0.6rem; }
+    .regionen { display: grid; grid-template-columns: 1fr 1fr; width: 100%; }
+    .regionen button { padding-inline: 0.5rem; }
+    .zeitleiste { grid-template-columns: auto minmax(0, 1fr); }
+    .alle-saisons { grid-column: 1 / -1; justify-self: start; }
     .notiz { margin-left: 0; }
   }
 </style>

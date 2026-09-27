@@ -3,10 +3,16 @@ import { km } from '../../lib/format.js'
 import Seite from '../../layouts/Seite.astro'
 import Filter from '../../components/Filter.astro'
 import Sortierung from '../../components/Sortierung.astro'
-import { eine, streckenListe, pfad } from '../../lib/db.js'
+import { alle, eine, streckenListe, pfad } from '../../lib/db.js'
 import Weltkarte from '../../components/Weltkarte.astro'
 
 const strecken = streckenListe()
+
+/* Die Jahre je Strecke – die Zeitleiste der Karte zeigt damit jede Saison einzeln. */
+const jahre: Record<string, number[]> = {}
+for (const r of alle('SELECT DISTINCT circuit_id AS id, year AS jahr FROM race ORDER BY year')) {
+  ;(jahre[r.id] ??= []).push(r.jahr)
+}
 
 /*
  * Was heisst "heute benutzt"? Der Kalender wechselt, und eine Strecke faellt
@@ -27,13 +33,13 @@ const aktuellAb = neuestesJahr - 4
       <p class="oberzeile">Circuits</p>
       <h1>Every circuit since 1950</h1>
       <p class="lead">
-        {strecken.length} circuits have hosted a World Championship round. Click a circle on
-        the map, or find one in the list below.
+        {strecken.length} circuits have hosted a World Championship round. Zoom into a region,
+        step through the seasons, or find a circuit in the list below.
       </p>
     </div>
   </header>
 
-  <Weltkarte strecken={strecken} aktuellAb={aktuellAb} pfadZu={pfad.strecke} />
+  <Weltkarte strecken={strecken} jahre={jahre} aktuellAb={aktuellAb} pfadZu={pfad.strecke} />
 
   <section class="abschnitt">
     <div class="abschnitt-kopf"><div><h2>All circuits</h2></div></div>

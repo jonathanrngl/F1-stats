@@ -16,10 +16,10 @@
 :root {
   color-scheme: light dark;
 
-  --plane: light-dark(#f4f4f2, #0b0b0c); /* Seitenhintergrund */
+  --plane: light-dark(#f3f2ee, #0c0c0d); /* Seitenhintergrund, hell wie Papier */
   --surface: light-dark(#ffffff, #151517); /* Karten, Tabelle, Diagrammfläche */
-  --surface-2: light-dark(#f8f8f6, #1c1c1f); /* Hover, Tabellenkopf */
-  --surface-3: light-dark(#ececea, #26262a); /* Balkenrinne, Chips */
+  --surface-2: light-dark(#f8f7f4, #1c1c1f); /* Hover, Tabellenkopf */
+  --surface-3: light-dark(#ebeae5, #26262a); /* Balkenrinne, Chips */
   --ink: light-dark(#0b0b0b, #ffffff);
   --ink-2: light-dark(#45443f, #cfcec6);
   --muted: light-dark(#6b6a66, #8f8e88);
@@ -86,9 +86,12 @@
      Pink und Gelb darunter – deshalb hat jedes Diagramm eine Tabellenansicht
      und Namen an den Linien, und die Farbe trägt nie allein. */
 
-  --radius: 0.75rem;
-  --radius-s: 0.45rem;
-  --sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  /* Knappe Ecken: Die Seite ist eine Tafel mit Zahlen, keine Sammlung von Kärtchen. */
+  --radius: 0.5rem;
+  --radius-s: 0.35rem;
+  --sans: 'IBM Plex Sans Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  /* Überschriften und große Zahlen: Archivo, schmal. `font-stretch` wählt die Breite. */
+  --display: 'Archivo Variable', 'Arial Narrow', var(--sans);
 
   font: 16px/1.55 var(--sans);
   color: var(--ink-2);
@@ -151,9 +154,21 @@ h2,
 h3 {
   color: var(--ink);
   font-weight: 700;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
   margin: 0;
   text-wrap: balance;
+}
+
+/*
+ * Die Schrift der Tafel: Überschriften und die Zahlen, die man von weitem
+ * lesen soll. Eine Klasse dazu, damit Seiten sie für eigene Zahlen nehmen
+ * können, ohne die Werte zu wiederholen.
+ */
+h1,
+h2,
+.anzeige {
+  font-family: var(--display);
+  font-stretch: 80%;
 }
 
 a {
@@ -283,18 +298,23 @@ html.js section:not(.alle-gezeigt) [data-weitere] { display: none; }
   line-height: 1.05;
 }
 
+.logo-text {
+  font-family: var(--display);
+}
+
 .logo-text b {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 800;
+  font-stretch: 100%;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--accent);
 }
 
 .logo-text span {
-  font-size: 1rem;
+  font-size: 1.15rem;
   font-weight: 750;
-  letter-spacing: -0.01em;
+  font-stretch: 80%;
 }
 
 /*
@@ -563,8 +583,10 @@ html.js section:not(.alle-gezeigt) [data-weitere] { display: none; }
   margin: 0 0 0.35rem;
   font-size: 0.75rem;
   font-weight: 750;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
+  font-family: var(--display);
+  font-stretch: 88%;
   color: var(--kopf-muted);
 }
 
@@ -684,17 +706,31 @@ main {
 
 .seitenkopf > div { min-width: 0; flex: 1; }
 
+/* Die Oberzeile trägt vorn die drei schrägen Striche des Logos, verkleinert. */
 .oberzeile {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.35rem;
-  margin: 0 0 0.45rem;
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  margin: 0 0 0.55rem;
+  font-family: var(--display);
+  font-stretch: 88%;
+  font-size: 0.82rem;
+  font-weight: 650;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: var(--accent);
+  color: var(--ink-2);
+}
+
+.oberzeile::before {
+  content: '';
+  flex: none;
+  width: 1.1rem;
+  height: 0.6rem;
+  margin-right: 0.2rem;
+  background: linear-gradient(var(--accent) 0 2px, transparent 2px 4px, var(--accent) 4px 6px, transparent 6px 8px, var(--accent) 8px 10px)
+    left top / 100% 10px no-repeat;
+  transform: skewX(-18deg);
 }
 
 .oberzeile a { color: inherit; text-decoration: none; }
@@ -703,10 +739,11 @@ main {
 .oberzeile .still { color: var(--muted); }
 
 h1 {
-  font-size: clamp(1.85rem, 4.2vw, 2.75rem);
-  line-height: 1.08;
+  font-size: clamp(2.1rem, 4.8vw, 3.2rem);
+  line-height: 1.02;
   font-weight: 800;
-  letter-spacing: -0.03em;
+  font-stretch: 76%;
+  letter-spacing: -0.015em;
 }
 
 .lead {
@@ -824,44 +861,45 @@ h1 {
 .abschnitt:first-child,
 .sprung + .abschnitt { margin-top: 0; }
 
+/*
+ * Jeder Abschnitt beginnt unter einer Linie über die ganze Breite, an deren
+ * Anfang ein kurzes rotes Stück sitzt – wie die Kopfzeile einer Zeitungsseite.
+ * Der Blick findet beim Scrollen den nächsten Abschnitt, ohne ihn zu suchen,
+ * und die Überschrift braucht keinen eigenen Schmuck.
+ */
 .abschnitt-kopf {
+  position: relative;
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
   gap: 0.35rem 1rem;
-  margin-bottom: 1rem;
+  margin-bottom: 1.1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--border-strong);
+}
+
+.abschnitt-kopf::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: -2px;
+  width: 2.5rem;
+  height: 3px;
+  background: var(--accent);
 }
 
 .abschnitt-kopf > div { min-width: 0; flex: 1 1 24rem; }
 
 h2 {
-  font-size: 1.35rem;
-  line-height: 1.2;
-}
-
-/* Die rote Kante vor jeder Abschnittsüberschrift – der Blick findet beim
-   Scrollen den Anfang des nächsten Abschnitts, ohne ihn zu suchen. */
-.abschnitt-kopf h2 {
-  position: relative;
-  padding-left: 0.8rem;
-}
-
-.abschnitt-kopf h2::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0.18em;
-  bottom: 0.18em;
-  width: 4px;
-  background: var(--accent);
-  border-radius: 2px;
+  font-size: 1.6rem;
+  line-height: 1.1;
+  font-weight: 750;
 }
 
 .abschnitt-kopf p {
   max-width: 46rem;
   margin: 0.35rem 0 0;
-  padding-left: 0.8rem;
   font-size: 0.9rem;
   color: var(--muted);
   text-wrap: pretty;
@@ -903,17 +941,17 @@ h3 {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  box-shadow: var(--shadow-s);
 }
 
 a.karte {
   text-decoration: none;
-  transition: border-color 0.12s ease, transform 0.12s ease;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
 }
 
+/* Beim Überfahren zeigt die Karte eine rote Unterkante, sie springt nicht. */
 a.karte:hover {
-  border-color: var(--accent);
-  transform: translateY(-1px);
+  border-color: var(--border-input);
+  box-shadow: inset 0 -3px 0 var(--accent);
 }
 
 .karte > h3:first-child { margin-bottom: 0.75rem; }
@@ -933,43 +971,50 @@ a.karte:hover {
 
 /* ------------------------------------------------------- Kennzahlkacheln */
 
+/*
+ * Die Kennzahlen als eine Tafel: ein Rahmen, darin Felder, getrennt durch
+ * Haarlinien. Jedes Feld zieht seine Linie rechts und unten selbst; was über
+ * den Rahmen hinausragt, schneidet `overflow` ab. So stimmen die Linien auch
+ * dort, wo die Tafel umbricht und die letzte Zeile nicht voll ist – eine
+ * Lücke mit farbigem Grund hätte die leeren Felder grau gefüllt.
+ */
 .kacheln {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(9.5rem, 100%), 1fr));
-  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(8rem, 100%), 1fr));
   margin: 0 0 2.25rem;
   padding: 0;
   list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
 }
 
 .kacheln li {
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
-  padding: 1rem 1.1rem;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-s);
+  gap: 0.2rem;
+  padding: 0.95rem 1.1rem 1rem;
+  box-shadow: 1px 0 0 var(--border), 0 1px 0 var(--border);
 }
 
 .kacheln b {
   order: 2;
-  font-size: 1.85rem;
-  font-weight: 800;
-  line-height: 1.05;
+  font-family: var(--display);
+  font-stretch: 78%;
+  font-size: 2.2rem;
+  font-weight: 750;
+  line-height: 1;
   color: var(--ink);
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.01em;
 }
 
 /* Die Beschriftung steht über der Zahl: Man liest erst, was gezählt wird. */
 .kacheln span {
   order: 1;
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: 0.8rem;
+  font-weight: 550;
   color: var(--muted);
 }
 
@@ -984,13 +1029,13 @@ a.karte:hover {
 
 /* Eine Kachel, die die Aussage der Seite trägt – der Titel, der Sieg. */
 .kacheln li.stark {
-  border-top: 3px solid var(--accent);
+  box-shadow: inset 0 3px 0 var(--accent), 1px 0 0 var(--border), 0 1px 0 var(--border);
 }
 
 .kacheln li.stark b { color: var(--accent); }
 
 /* Kacheln mit einem Namen statt einer Zahl: Sieger, Pole, schnellste Runde. */
-.kacheln.namen b { font-size: 1.15rem; letter-spacing: -0.01em; }
+.kacheln.namen b { font-size: 1.3rem; font-stretch: 85%; line-height: 1.15; }
 .kacheln.namen b a { color: var(--ink); text-decoration: none; }
 .kacheln.namen b a:hover { color: var(--accent); }
 
@@ -1005,7 +1050,6 @@ a.karte:hover {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  box-shadow: var(--shadow-s);
 }
 
 .daten li {
@@ -1136,17 +1180,16 @@ table {
   font-size: 0.9rem;
 }
 
+/* Der Spaltenkopf in normaler Schreibung: Er beschriftet, er ruft nicht. */
 th {
-  padding: 0.65rem 0.8rem;
+  padding: 0.7rem 0.8rem 0.6rem;
   text-align: left;
   white-space: nowrap;
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
+  font-size: 0.8rem;
+  font-weight: 600;
   color: var(--muted);
-  background: var(--surface-2);
-  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border-strong);
 }
 
 td {
@@ -1166,6 +1209,7 @@ tbody th {
   text-transform: none;
   color: inherit;
   background: none;
+  border-bottom-color: var(--border);
   white-space: normal;
   vertical-align: middle;
 }
@@ -1199,7 +1243,6 @@ tbody tr:hover { background: var(--surface-2); }
     var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  box-shadow: var(--shadow-s);
 }
 
 /* Eine lange Tabelle bekommt eine feste Höhe und einen klebenden Kopf –
@@ -1343,8 +1386,10 @@ td.verschoben { color: var(--warn); font-weight: 650; }
   padding: 0.08rem 0.4rem;
   font-size: 0.75rem;
   font-weight: 750;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
+  font-family: var(--display);
+  font-stretch: 88%;
   color: var(--muted);
   background: var(--surface-3);
   border-radius: 999px;
@@ -1508,17 +1553,14 @@ thead button[data-aktiv='1'][data-richtung='auf']::after { content: ' ▴' / '';
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  box-shadow: var(--shadow-s);
   min-width: 0;
 }
 
 .rangkarte > h3 {
   margin: 0 0 0.2rem;
-  font-size: 0.75rem;
-  font-weight: 750;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--muted);
+  font-size: 0.95rem;
+  font-weight: 650;
+  color: var(--ink);
 }
 
 .rangkarte > .unter {
@@ -1619,9 +1661,11 @@ thead button[data-aktiv='1'][data-richtung='auf']::after { content: ' ▴' / '';
 .rangkarte .rangliste li.vorn a { font-size: 1.02rem; font-weight: 700; }
 
 .rangkarte .rangliste li.vorn b {
-  font-size: 1.5rem;
-  font-weight: 800;
-  letter-spacing: -0.02em;
+  font-family: var(--display);
+  font-stretch: 78%;
+  font-size: 1.75rem;
+  font-weight: 750;
+  line-height: 1;
   color: var(--accent);
 }
 
@@ -1633,7 +1677,6 @@ thead button[data-aktiv='1'][data-richtung='auf']::after { content: ' ▴' / '';
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  box-shadow: var(--shadow-s);
 }
 
 /* ============================================================= Fußzeile */
@@ -1657,10 +1700,8 @@ footer a:hover { color: var(--accent); text-decoration: underline; }
 
 .fuss-raster h2 {
   margin: 0 0 0.6rem;
-  font-size: 0.75rem;
-  font-weight: 750;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  font-size: 0.95rem;
+  font-weight: 700;
   color: var(--kopf-ink);
 }
 
