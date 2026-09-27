@@ -10,7 +10,7 @@
  * Entscheidung, an der alles hängt: Über Siege gezeichnet wären 800 der 860
  * Fahrer ein leeres Bild. Über Starts hat jeder eine Gestalt, und der Erfolg
  * sitzt als Färbung darin – Siege unten in der Akzentfarbe, weitere Podien
- * darüber blasser, der Rest grau.
+ * darüber blasser, der Rest als helle Fläche mit Kontur.
  *
  * Gezeichnet beim Bauen, in zwei Breiten wie der Punkteverlauf (Verlauf.astro):
  * eine feste Breite von 900 ergab am Telefon Jahreszahlen von drei Pixeln.
@@ -158,7 +158,6 @@ const FASSUNGEN = [
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    box-shadow: var(--shadow-s);
   }
 
   svg { display: block; width: 100%; height: auto; }
@@ -176,14 +175,24 @@ const FASSUNGEN = [
   /*
    * Drei Stufen einer Farbe statt drei Farben: Die Reihenfolge Sieg – Podium –
    * Rest ist eine Rangfolge, und eine Rangfolge zeichnet man mit Helligkeit,
-   * nicht mit verschiedenen Farbtönen. Der Rest volldeckend in --s-rest: mit
-   * halber Deckkraft kam er auf 1,4:1 und war genau die Form, um die es geht,
-   * kaum zu sehen.
+   * nicht mit verschiedenen Farbtönen.
+   *
+   * Der Rest ist nur noch eine helle Fläche mit Kontur in --s-rest. Volldeckend
+   * grau war er der größte Block im Bild und drückte die Siege weg, um die es
+   * geht; mit halber Deckkraft (1,4:1) verschwand dagegen die Form. Die Kontur
+   * hält die 3:1, die Fläche tritt zurück.
+   *
+   * Zwischen den Stufen eine Fuge in der Farbe der Fläche, damit sie sich auch
+   * ohne Farbunterschied trennen.
    */
-  rect.siege { fill: var(--accent); }
-  rect.podien { fill: var(--accent); opacity: 0.5; }
-  rect.rest { fill: var(--s-rest); }
+  rect { vector-effect: non-scaling-stroke; transition: opacity 0.12s ease; }
+  rect.siege { fill: var(--accent); stroke: var(--surface); stroke-width: 1.5; }
+  rect.podien { fill: color-mix(in srgb, var(--accent) 45%, var(--surface)); stroke: var(--surface); stroke-width: 1.5; }
+  rect.rest { fill: color-mix(in srgb, var(--s-rest) 16%, var(--surface)); stroke: var(--s-rest); stroke-width: 1; }
   circle.titel { fill: var(--accent); stroke: var(--surface); stroke-width: 1.5; }
+
+  /* Die Saison unter dem Zeiger bleibt, die übrigen treten zurück. */
+  svg:has(g:hover) g:not(:hover) rect { opacity: 0.45; }
 
   figcaption {
     display: flex;
@@ -199,8 +208,8 @@ const FASSUNGEN = [
   .schluessel { display: flex; align-items: center; gap: 0.35rem; }
   .schluessel i { width: 0.75rem; height: 0.75rem; border-radius: 0.15rem; flex: none; }
   .schluessel i.siege { background: var(--accent); }
-  .schluessel i.podien { background: var(--accent); opacity: 0.5; }
-  .schluessel i.rest { background: var(--s-rest); }
+  .schluessel i.podien { background: color-mix(in srgb, var(--accent) 45%, var(--surface)); }
+  .schluessel i.rest { background: color-mix(in srgb, var(--s-rest) 16%, var(--surface)); border: 1px solid var(--s-rest); }
   .schluessel i.titel { background: var(--accent); border-radius: 50%; width: 0.55rem; height: 0.55rem; }
   .notiz { margin-left: auto; text-wrap: pretty; }
 

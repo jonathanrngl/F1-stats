@@ -81,6 +81,17 @@
   /* Die Sammelgruppe: zurückhaltend, aber mit 3,5:1 noch als Form zu sehen –
      #b9b8b3 hatte 2:1, und die „übrigen Starts“ im Karrierebild verschwanden. */
   --s-rest: light-dark(#8a8984, #6b6a66);
+  /* Die Karten der Strecken (Weltkarte.astro, Lagekarte.astro). Rot und Blau
+     sind als Paar geprüft (dataviz validate_palette.js, alle Paare), hell und
+     dunkel auf --karte-land. */
+  --karte-meer: light-dark(#dde7ef, #0d1822);
+  --karte-netz: light-dark(#cbd9e4, #16283a);
+  --karte-land: light-dark(#fbfaf6, #232d37);
+  --karte-kueste: light-dark(#b7c6d2, #34495b);
+  --punkt-aktuell: light-dark(#e10600, #ff3b2f);
+  --punkt-frueher: light-dark(#2a78d6, #4a93ea);
+  --punkt-ring: light-dark(#ffffff, #0d1822);
+
   /* Die Palette oben ist geprüft (dataviz validate_palette.js): in beiden
      Modi farbfehlsichtig unterscheidbar, dunkel auch ≥ 3:1. Hell liegen Grün,
      Pink und Gelb darunter – deshalb hat jedes Diagramm eine Tabellenansicht
@@ -754,57 +765,77 @@ h1 {
   text-wrap: pretty;
 }
 
-/* Eckdaten als Reihe kleiner Marken statt als Satz mit Mittelpunkten. */
+/*
+ * Eckdaten als Zeile, getrennt durch Haarlinien: Geburtstag, Zeitraum, Kürzel
+ * sind Angaben, keine Knöpfe. Als Pillen gezeichnet sahen sie aus, als könne
+ * man sie anklicken. Nur die eine Angabe, die die Seite trägt – der Titel –,
+ * steht als Marke davor.
+ */
 .eckdaten {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
-  margin: 0.85rem 0 0;
+  align-items: center;
+  row-gap: 0.4rem;
+  margin: 0.9rem 0 0;
   padding: 0;
   list-style: none;
 }
 
 .eckdaten li {
-  padding: 0.2rem 0.6rem;
-  font-size: 0.82rem;
+  padding: 0 0.75rem;
+  font-size: 0.9rem;
+  line-height: 1.35;
   color: var(--ink-2);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 999px;
+  border-left: 1px solid var(--border-strong);
   white-space: nowrap;
 }
 
+.eckdaten li:first-child,
+.eckdaten li.stark,
+.eckdaten li.stark + li { border-left: none; }
+.eckdaten li:first-child { padding-left: 0; }
+
 .eckdaten li.stark {
-  color: var(--accent-strong);
-  background: var(--accent-wash);
-  border-color: transparent;
-  font-weight: 650;
+  margin-right: 0.25rem;
+  padding: 0.2rem 0.55rem;
+  font-family: var(--display);
+  font-stretch: 88%;
+  font-size: 0.86rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--accent-ink);
+  background: var(--accent);
+  border-radius: var(--radius-s);
 }
 
 .eckdaten a { color: inherit; text-decoration: none; font-weight: 600; }
 .eckdaten a:hover { color: var(--accent); }
 
-/* Das Länderkürzel als Wappen neben der Überschrift. */
+/*
+ * Das Länderkürzel als Tafel neben der Überschrift – dunkel wie das Feld mit
+ * dem Länderkürzel auf einer Zeitnahmetafel, mit roter Unterkante.
+ */
 .wappen {
   display: grid;
   place-items: center;
   flex: none;
-  width: 4rem;
-  height: 4rem;
-  margin-top: 0.2rem;
-  font-size: 0.95rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  color: var(--accent);
-  background: var(--surface);
+  width: 4.2rem;
+  height: 4.2rem;
+  margin-top: 0.15rem;
+  font-family: var(--display);
+  font-stretch: 85%;
+  font-size: 1.2rem;
+  font-weight: 750;
+  letter-spacing: 0.02em;
+  color: var(--kopf-ink);
+  background: var(--kopf-bg);
   border: 1px solid var(--border);
-  border-bottom: 3px solid var(--accent);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-s);
+  border-radius: var(--radius-s);
+  box-shadow: inset 0 -4px 0 var(--accent);
 }
 
 @media (max-width: 34rem) {
-  .wappen { width: 3rem; height: 3rem; font-size: 0.78rem; }
+  .wappen { width: 3.2rem; height: 3.2rem; font-size: 0.95rem; }
 }
 
 /* ------------------------------------------------------ Sprungleiste */
@@ -1483,7 +1514,8 @@ thead button[data-aktiv='1'][data-richtung='auf']::after { content: ' ▴' / '';
 }
 
 .pillen button:hover { border-color: var(--accent); color: var(--ink); }
-.pillen button[aria-pressed='true'] { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
+/* Gewählt heißt dunkel, nicht rot: Bei acht gewählten Spalten war die Leiste sonst eine rote Fläche. Rot bleibt für den einen Knopf, der etwas auslöst. */
+.pillen button[aria-pressed='true'] { color: var(--plane); background: var(--ink); border-color: var(--ink); }
 
 .leer-meldung {
   padding: 2rem 1rem;
@@ -1536,7 +1568,7 @@ thead button[data-aktiv='1'][data-richtung='auf']::after { content: ' ▴' / '';
 }
 
 .wahl-chip:hover span { border-color: var(--accent); color: var(--ink); }
-.wahl-chip input:checked + span { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
+.wahl-chip input:checked + span { color: var(--plane); background: var(--ink); border-color: var(--ink); }
 .wahl-chip input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* ============================================================ Ranglisten */

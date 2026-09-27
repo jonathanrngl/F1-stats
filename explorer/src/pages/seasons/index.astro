@@ -40,9 +40,9 @@ const jahrzehnte = [...proJahrzehnt.entries()]
       <ul class="saisons">
         {liste.map((s) => (
           <li>
-            <a class="karte" href={pfad.saison(s.jahr)}>
+            <a href={pfad.saison(s.jahr)}>
               <span class="kopfzeile">
-                <b class="jahr">{s.jahr}</b>
+                <b class="jahr anzeige">{s.jahr}</b>
                 <span class="rennen">{s.rennen} races</span>
               </span>
               {s.meister ? (
@@ -69,29 +69,54 @@ const jahrzehnte = [...proJahrzehnt.entries()]
 </Seite>
 
 <style>
+  /*
+   * Jedes Jahrzehnt als eine Tafel wie auf der Startseite: zehn Felder in zwei
+   * Reihen, getrennt durch Haarlinien. Einzelne Karten mit Abstand ließen die
+   * Seite in achtzig gleich wichtige Kästchen zerfallen.
+   */
   .saisons {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(13rem, 100%), 1fr));
-    gap: 0.75rem;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     margin: 0;
     padding: 0;
     list-style: none;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
   }
 
-  .saisons .karte {
+  .saisons li { box-shadow: 1px 0 0 var(--border), 0 1px 0 var(--border); }
+
+  .saisons a {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
     gap: 0.1rem;
     height: 100%;
-    padding: 0.9rem 1.05rem;
+    padding: 0.9rem 1.05rem 1rem;
+    color: inherit;
+    text-decoration: none;
+    transition: background-color 0.12s ease;
   }
 
-  .kopfzeile { display: flex; align-items: baseline; justify-content: space-between; width: 100%; }
-  .jahr { font-size: 1.45rem; font-weight: 800; letter-spacing: -0.03em; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .saisons a:hover { background: var(--surface-2); }
+  .saisons a:hover .jahr { color: var(--accent); }
+
+  .kopfzeile { display: flex; align-items: baseline; justify-content: space-between; width: 100%; margin-bottom: 0.3rem; }
+  .jahr { font-size: 1.85rem; font-weight: 750; font-stretch: 76%; line-height: 1; color: var(--ink); font-variant-numeric: tabular-nums; transition: color 0.12s ease; }
   .rennen { font-size: 0.76rem; color: var(--muted); }
-  .wer { font-size: 0.92rem; font-weight: 650; color: var(--ink-2); }
+  .wer { font-size: 0.92rem; font-weight: 600; color: var(--ink-2); }
   .team { font-size: 0.8rem; color: var(--muted); }
-  .laeuft { font-size: 0.88rem; font-weight: 650; color: var(--accent); }
+  .laeuft { font-size: 0.88rem; font-weight: 600; color: var(--accent); }
   .etikett { margin: 0.35rem 0 0; }
+
+  @media (max-width: 56rem) {
+    .saisons { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
+
+  @media (max-width: 34rem) {
+    .saisons { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .saisons a { padding: 0.75rem 0.8rem 0.85rem; }
+  }
 </style>
