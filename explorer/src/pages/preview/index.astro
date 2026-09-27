@@ -167,6 +167,17 @@ const ziele = rennen
               </li>
             ))}
           </ol>
+          {/*
+            * Zwei Wege in den eigenen Kalender: abonnieren (webcal://), dann
+            * zieht er nach jedem Neubau nach, oder die Datei einmal laden.
+            */}
+          <p class="kalender">
+            <a class="knopf leise" href={`webcal://jonathanrngl.github.io${pfad.seite('/calendar.ics')}`}>
+              Subscribe to the {rennen.jahr} calendar
+            </a>
+            <a class="leise" href={pfad.seite('/calendar.ics')} download>Download .ics</a>
+            <span>Every session of the season, in your own time zone.</span>
+          </p>
         </section>
       )}
 
@@ -447,6 +458,18 @@ const ziele = rennen
   .zeitplan time { font-weight: 650; color: var(--ink); font-variant-numeric: tabular-nums; }
   .zeitplan .rennen { border-left: 4px solid var(--accent); }
   .zeitplan .rennen .session { color: var(--accent-strong); }
+
+  .kalender {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1.1rem;
+    margin: 0.9rem 0 0;
+    font-size: 0.86rem;
+    color: var(--muted);
+  }
+
+  .kalender a.leise:not(.knopf) { font-weight: 600; color: var(--ink-2); text-decoration: underline; text-underline-offset: 0.2em; }
 
   /* Zwei Spalten am Telefon: Das Rennen als fünfte Karte bekommt die ganze Breite statt einer halben Zeile. */
   @media (max-width: 34rem) {

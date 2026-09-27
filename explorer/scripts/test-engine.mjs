@@ -47,6 +47,8 @@ import { wuerfel } from '../src/lib/wuerfel.js'
 import { ordneZu } from './lade-runden.mjs'
 import { anfrageAusPfad, vorschlaege } from '../src/lib/suche.js'
 import { suchindex } from '../src/lib/suchindex.js'
+import { falte, ics, kalenderEintraege } from '../src/lib/kalender.js'
+import { tageskalender } from '../src/lib/heute.js'
 
 // fileURLToPath statt .pathname: Dort bliebe ein Leerzeichen im Pfad als %20 stehen.
 const HIER = path.dirname(fileURLToPath(import.meta.url))
@@ -1100,6 +1102,74 @@ gleich('Endung und Unterstrich', anfrageAusPfad('/drivers/michael_schumacher.htm
   gleich('Übersicht ohne Vorschlag', vorschlaege(index, '/drivers/').length, 0)
 }
 console.log('   ✓ Pfade gedeutet und gegen den Suchindex gefunden')
+
+// -------------------------------------------------- Kalender
+
+console.log('\n18. Der Rennkalender (calendar.ics)')
+
+{
+  const jahr = db.prepare('SELECT MAX(year) AS j FROM race').get().j
+  const eintraege = kalenderEintraege(db, jahr)
+  const soll = db
+    .prepare(
+      `SELECT SUM((fp1_date IS NOT NULL) + (fp2_date IS NOT NULL) + (fp3_date IS NOT NULL)
+                + (sprint_qualifying_date IS NOT NULL) + (sprint_date IS NOT NULL)
+                + (qualifying_date IS NOT NULL) + 1) AS n
+         FROM race WHERE year = ?`,
+    )
+    .get(jahr).n
+  gleich('jede Session der Saison ein Eintrag', eintraege.length, soll)
+  gleich('keine Kennung doppelt', new Set(eintraege.map((e) => e.uid)).size, eintraege.length)
+
+  const optionen = { name: `Formula 1 ${jahr}`, stand: '2026-09-13', url: (id) => `https://example.org/races/${id}/` }
+  const text = ics(eintraege, optionen)
+  const zeilen = text.split('\r\n')
+  pruefe('Zeilen enden auf CRLF, kein nacktes LF', !text.replace(/\r\n/g, '').includes('\n'))
+  pruefe('keine Zeile über 75 Oktette', zeilen.every((z) => Buffer.byteLength(z) <= 75),
+    zeilen.find((z) => Buffer.byteLength(z) > 75))
+  gleich('so viele BEGIN wie END', (text.match(/BEGIN:VEVENT/g) ?? []).length, (text.match(/END:VEVENT/g) ?? []).length)
+  gleich('ein VEVENT je Eintrag', (text.match(/BEGIN:VEVENT/g) ?? []).length, eintraege.length)
+  gleich('derselbe Stand ergibt dieselbe Datei', ics(eintraege, optionen), text)
+
+  /* Das Rennen dauert zwei Stunden, ab seiner Startzeit in UTC. */
+  const rennen = eintraege.find((e) => e.titel.endsWith(': Race') && e.zeit)
+  if (rennen) {
+    const block = text.slice(text.indexOf(`UID:${rennen.uid}`))
+    const start = block.match(/DTSTART:(\d{8}T\d{4})/)[1]
+    const ende = block.match(/DTEND:(\d{8}T\d{4})/)[1]
+    gleich('Rennbeginn aus Datum und Zeit', start, `${rennen.datum.replaceAll('-', '')}T${rennen.zeit.slice(0, 5).replace(':', '')}`)
+    const std = (s) => Number(s.slice(9, 11)) * 60 + Number(s.slice(11, 13))
+    gleich('Rennen dauert 120 Minuten', (std(ende) - std(start) + 1440) % 1440, 120)
+  }
+
+  /* Maskieren und Falten – mit Mehrbytezeichen, die nicht zerschnitten werden dürfen. */
+  const probe = ics([{ uid: 'x@y', titel: 'A, B; C\\D', ort: 'São Paulo', datum: '2026-01-01', zeit: null, minuten: 60, rennen: 'x', runde: 1, rennenInSaison: 1 }], optionen)
+  pruefe('Komma, Semikolon, Backslash maskiert', probe.includes('SUMMARY:A\\, B\\; C\\\\D'))
+  pruefe('ohne Uhrzeit ganztägig', probe.includes('DTSTART;VALUE=DATE:20260101') && probe.includes('DTEND;VALUE=DATE:20260102'))
+  const lang = 'DESCRIPTION:' + 'Grand Prix von São Paulo – Interlagos, '.repeat(6)
+  const gefaltet = falte(lang)
+  pruefe('gefaltet höchstens 75 Oktette je Zeile', gefaltet.split('\r\n').every((z) => Buffer.byteLength(z) <= 75))
+  gleich('entfaltet wieder dieselbe Zeile', gefaltet.replace(/\r\n /g, ''), lang)
+  console.log(`   ✓ ${eintraege.length} Sessions der Saison ${jahr}`)
+}
+
+// -------------------------------------------------- On this day
+
+console.log('\n19. On this day')
+
+{
+  const tage = tageskalender()
+  pruefe('Schlüssel sind MM-TT', Object.keys(tage).every((k) => /^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(k)))
+  const mitSieger = db
+    .prepare('SELECT COUNT(*) AS n FROM race r WHERE EXISTS (SELECT 1 FROM race_result rr WHERE rr.race_id = r.id AND rr.position = 1)')
+    .get().n
+  gleich('jedes Rennen mit Sieger genau einmal', Object.values(tage).reduce((n, t) => n + t.rennen.length, 0), mitSieger)
+  pruefe('Singapur 2009 am 27. September', tage['09-27']?.rennen.some((r) => r[2] === 'singapore-grand-prix-2009'))
+  pruefe('Senna am 21. März geboren', tage['03-21']?.geboren.some((g) => g[2] === 'ayrton-senna'))
+  pruefe('jüngste Rennen zuerst', Object.values(tage).every((t) => t.rennen.every((r, i, a) => i === 0 || a[i - 1][0] >= r[0])))
+  pruefe('nur Sieger unter den Geburtstagen', Object.values(tage).every((t) => t.geboren.every((g) => g[3] > 0)))
+  console.log(`   ✓ ${Object.keys(tage).length} Tage mit Rennen oder Geburtstagen`)
+}
 
 db.close()
 

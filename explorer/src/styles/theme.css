@@ -770,18 +770,26 @@ h1 {
  * sind Angaben, keine Knöpfe. Als Pillen gezeichnet sahen sie aus, als könne
  * man sie anklicken. Nur die eine Angabe, die die Seite trägt – der Titel –,
  * steht als Marke davor.
+ *
+ * Bricht die Zeile um, darf die nächste nicht mit einer Linie beginnen. Jede
+ * Linie sitzt deshalb links an ihrem Eintrag, einen Pixel nach links
+ * verschoben, und die Liste ragt um den Innenabstand nach links hinaus und
+ * schneidet ab: Was am Anfang einer Zeile steht, liegt genau außerhalb.
+ * Der Rand oben und unten lässt dem Fokusrahmen der Verweise Platz.
  */
 .eckdaten {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   row-gap: 0.4rem;
-  margin: 0.9rem 0 0;
-  padding: 0;
+  margin: calc(0.9rem - 4px) 0 -4px -0.75rem;
+  padding: 4px 0;
   list-style: none;
+  overflow: hidden;
 }
 
 .eckdaten li {
+  margin-left: -1px;
   padding: 0 0.75rem;
   font-size: 0.9rem;
   line-height: 1.35;
@@ -790,12 +798,11 @@ h1 {
   white-space: nowrap;
 }
 
-.eckdaten li:first-child,
 .eckdaten li.stark,
-.eckdaten li.stark + li { border-left: none; }
-.eckdaten li:first-child { padding-left: 0; }
+.eckdaten li.stark + li { border-left-color: transparent; }
 
 .eckdaten li.stark {
+  margin-left: 0.75rem;
   margin-right: 0.25rem;
   padding: 0.2rem 0.55rem;
   font-family: var(--display);

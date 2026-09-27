@@ -4,6 +4,7 @@ import {
   DIMENSIONEN, KENNZAHLEN, LEERER_FILTER, STANDARD_KENNZAHLEN,
   alsAdresse, ausAdresse, rechne, verzeichnis, zeige,
 } from '../lib/abfrage.js'
+import ErgebnisBild from './ErgebnisBild.jsx'
 
 /*
  * Der Data Explorer.
@@ -374,6 +375,16 @@ export default function Explorer({ groesse = '' }) {
           the title column stays empty.
         </p>
       )}
+
+      <ErgebnisBild
+        reihen={ergebnis.reihen}
+        kennzahl={abfrage.sortiere}
+        label={KENNZAHLEN[abfrage.sortiere]?.label ?? ''}
+        zeitlich={abfrage.dimension === 'saison' || abfrage.dimension === 'jahrzehnt'}
+        aufsteigend={!abfrage.absteigend}
+        zeige={zeige}
+        basis={BASIS}
+      />
 
       {/* Ab 25 Zeilen mit fester Höhe und klebendem Kopf, wie auf den Teamseiten –
           sonst ist die Sortierung nach dem ersten Bildschirm aus dem Blick. */}

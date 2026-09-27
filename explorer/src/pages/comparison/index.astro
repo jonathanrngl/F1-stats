@@ -355,3 +355,70 @@ import { pfad } from '../../lib/db.js'
     table.gegen th[scope='row'] { width: 40%; font-size: 0.75rem; }
   }
 </style>
+
+<style is:global>
+  /*
+   * Die beiden Karrieren als Linien (KarrierenBild.jsx). Erster Fahrer in der
+   * Akzentfarbe, zweiter in --s2 – dieselben wie an den Köpfen darüber.
+   */
+  .karrieren {
+    --farbe-0: var(--accent);
+    --farbe-1: var(--s2);
+    margin: 1rem 0 1.25rem;
+    padding: 0.85rem 1rem 0.5rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+
+  .karrieren-kopf { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 0.6rem 1rem; }
+  .karrieren figcaption { display: grid; gap: 0.1rem; font-size: 0.8rem; color: var(--muted); }
+  .karrieren figcaption b { font-size: 0.95rem; color: var(--ink); font-weight: 650; }
+
+  .masswahl { display: flex; gap: 2px; padding: 3px; background: var(--surface-3); border-radius: 0.5rem; }
+  .masswahl button {
+    min-height: 2rem;
+    padding: 0.2rem 0.75rem;
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--ink-2);
+    background: none;
+    border: none;
+    border-radius: 0.35rem;
+    cursor: pointer;
+  }
+  .masswahl button:hover { color: var(--ink); }
+  .masswahl button[aria-pressed='true'] { color: var(--ink); background: var(--surface); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12); }
+
+  .karrieren-stand {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.2rem 1.25rem;
+    min-height: 1.4rem;
+    margin: 0.6rem 0 0.2rem;
+    font-size: 0.84rem;
+    color: var(--ink-2);
+    font-variant-numeric: tabular-nums;
+  }
+  .karrieren-stand span { display: inline-flex; align-items: center; gap: 0.4rem; }
+  .karrieren-stand b { color: var(--ink); }
+  /* Ein kurzer Strich in der Farbe der Linie, kein Kästchen. */
+  .karrieren-stand i { width: 1rem; height: 3px; border-radius: 2px; }
+  .karrieren-stand .s0 i { background: var(--farbe-0); }
+  .karrieren-stand .s1 i { background: var(--farbe-1); }
+
+  .karrieren svg { display: block; overflow: visible; touch-action: pan-y; }
+  .karrieren .gitter { stroke: var(--grid); }
+  .karrieren .grundlinie { stroke: var(--axis); }
+  .karrieren .achse { font-size: 11px; fill: var(--muted); font-variant-numeric: tabular-nums; }
+  .karrieren .fadenkreuz { stroke: var(--border-input); stroke-dasharray: 3 3; }
+  .karrieren .linie polyline { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+  .karrieren .linie circle { stroke: var(--surface); stroke-width: 1.5; }
+  .karrieren .linie.s0 polyline { stroke: var(--farbe-0); }
+  .karrieren .linie.s1 polyline { stroke: var(--farbe-1); }
+  .karrieren .linie.s0 circle, .karrieren .zeiger.s0 { fill: var(--farbe-0); }
+  .karrieren .linie.s1 circle, .karrieren .zeiger.s1 { fill: var(--farbe-1); }
+  .karrieren .zeiger { stroke: var(--surface); stroke-width: 2; }
+  .karrieren .ende { font-size: 12.5px; font-weight: 650; fill: var(--ink); font-variant-numeric: tabular-nums; }
+</style>
