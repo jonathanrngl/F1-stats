@@ -300,3 +300,42 @@ const BEISPIELE = [
   .verstanden .luecke { color: var(--warn); font-weight: 600; }
   .verstanden .quelle { font-size: 0.8rem; color: var(--muted); text-wrap: pretty; }
 </style>
+
+<style is:global>
+  /*
+   * Das Ergebnis als Bild (ErgebnisBild.jsx): eine Reihe, die Akzentfarbe, die
+   * Reihe unter dem Zeiger dunkler. Global, weil React die Elemente erzeugt.
+   */
+  .ergebnisbild {
+    margin: 0 0 1rem;
+    padding: 0.8rem 1rem 0.6rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+
+  .ergebnisbild figcaption {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.25rem 1rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.84rem;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .ergebnisbild figcaption b { color: var(--ink); font-weight: 650; }
+  .ergebnisbild svg { display: block; overflow: visible; }
+  .ergebnisbild .treffer { fill: transparent; }
+  .ergebnisbild .balken { fill: var(--accent); transition: fill 0.1s ease; }
+  .ergebnisbild .reihe.an .balken { fill: var(--accent-strong); }
+  .ergebnisbild .reihe.an .treffer { fill: var(--surface-2); }
+  .ergebnisbild .name { font-size: 13px; font-weight: 600; fill: var(--ink); }
+  .ergebnisbild .name a { fill: var(--ink); }
+  .ergebnisbild .name a:hover { fill: var(--accent); text-decoration: underline; }
+  .ergebnisbild .wert { font-size: 12.5px; font-weight: 650; fill: var(--ink-2); font-variant-numeric: tabular-nums; }
+  .ergebnisbild .achse { font-size: 11px; fill: var(--muted); font-variant-numeric: tabular-nums; }
+  .ergebnisbild .gitter { stroke: var(--grid); }
+  .ergebnisbild .grundlinie, .ergebnisbild .null { stroke: var(--axis); }
+</style>

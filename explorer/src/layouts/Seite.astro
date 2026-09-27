@@ -274,8 +274,9 @@ const ldText = ld.length ? JSON.stringify(ld.length === 1 ? ld[0] : ld).replace(
           Data from <a href="https://github.com/f1db/f1db">F1DB</a>
           {quelle.version && <> {quelle.version}</>}, Creative Commons BY 4.0
           {quelle.stand && <>, up to the {quelle.stand.jahr} {quelle.stand.grandPrixVoll} on {datum(quelle.stand.datum)}</>}.
-          Also available as <a href={`${BASIS}/api/v1/`}>JSON</a> and as a{' '}
-          <a href={`${BASIS}/feed.xml`}>feed of record changes</a>.
+          Also available as <a href={`${BASIS}/api/v1/`}>JSON</a>, as a{' '}
+          <a href={`${BASIS}/feed.xml`}>feed of record changes</a> and as a{' '}
+          <a href={`${BASIS}/calendar.ics`}>race calendar</a>.
           Not an official Formula 1 site. F1, FORMULA ONE and Formula 1 are trade marks of
           Formula One Licensing BV. The earlier version of this site is still available{' '}
           <a href={`${BASIS}/classic/`}>here</a>.
@@ -295,7 +296,15 @@ const ldText = ld.length ? JSON.stringify(ld.length === 1 ? ld[0] : ld).replace(
       const wurzel = document.documentElement
 
       const jetzt = () => (wurzel.dataset.theme as 'light' | 'dark' | undefined) ?? 'system'
-      const beschrifte = () => knopf?.setAttribute('aria-label', `Colour scheme: ${TEXT[jetzt()]}`)
+      /*
+       * Ein Symbol, drei Zustände – das erklärt sich nicht von selbst. Der
+       * Tooltip sagt deshalb, was gilt und was der nächste Klick tut.
+       */
+      const beschrifte = () => {
+        const naechster = FOLGE[(FOLGE.indexOf(jetzt()) + 1) % FOLGE.length]
+        knopf?.setAttribute('aria-label', `Colour scheme: ${TEXT[jetzt()]}`)
+        knopf?.setAttribute('title', `Colour scheme: ${TEXT[jetzt()]} – click for ${TEXT[naechster]}`)
+      }
 
       beschrifte()
       knopf?.addEventListener('click', () => {

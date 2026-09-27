@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 /**
  * Das Quiz im Browser.
@@ -195,7 +195,8 @@ export default function Quiz({ bereiche, stufen }) {
     if (fragen.length) setSpiel({ fragen, antworten: [], index: 0, stufe: wahl.stufe })
   }
 
-  const antworte = (j) => {
+  /* Stabil zwischen den Renderdurchgängen, damit die Tastenbelegung unten nicht bei jedem neu anmeldet. */
+  const antworte = useCallback((j) => {
     if (!frage || beantwortet) return
     gesehenMerken(frage.i)
     setSpiel((s) => {
@@ -203,7 +204,7 @@ export default function Quiz({ bereiche, stufen }) {
       antworten[s.index] = j
       return { ...s, antworten }
     })
-  }
+  }, [frage, beantwortet])
 
   const weiter = () => setSpiel((s) => ({ ...s, index: s.index + 1 }))
 
@@ -212,7 +213,7 @@ export default function Quiz({ bereiche, stufen }) {
     if (frage && !beantwortet) frageKopf.current?.focus()
     else if (frage && beantwortet) weiterKnopf.current?.focus()
     else if (vorbei) endeKopf.current?.focus()
-  }, [spiel?.index, beantwortet, vorbei])
+  }, [frage, spiel?.index, beantwortet, vorbei])
 
   /*
    * Tasten: 1–4 oder A–D antworten. Weiter geht es mit Enter, ohne eigene
@@ -231,7 +232,7 @@ export default function Quiz({ bereiche, stufen }) {
     }
     window.addEventListener('keydown', taste)
     return () => window.removeEventListener('keydown', taste)
-  }, [frage, beantwortet])
+  }, [frage, beantwortet, antworte])
 
   const nachStufe = useMemo(() => {
     if (!vorbei || spiel.stufe !== 0) return null

@@ -1,5 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { ein, prozent as proz, zahl } from '../lib/format.js'
+import KarrierenBild from './KarrierenBild.jsx'
 
 /*
  * Fahrervergleich im Browser.
@@ -336,6 +337,8 @@ export default function Vergleich() {
               rather than claim a zero.
             </p>
           )}
+
+          <KarrierenBild profile={beide} von={spanneVon} bis={spanneBis} />
 
           <table className="gegen">
             <caption className="sr-only">{beide[0].name} and {beide[1].name} compared, {spanneVon}–{spanneBis}</caption>

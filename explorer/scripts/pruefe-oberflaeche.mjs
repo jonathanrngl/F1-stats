@@ -28,7 +28,7 @@ const NUR_SERVER = process.argv.includes('--nur-server')
 const TYPEN = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css',
   '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png',
-  '.xml': 'application/xml', '.txt': 'text/plain; charset=utf-8', '.woff2': 'font/woff2',
+  '.xml': 'application/xml', '.txt': 'text/plain; charset=utf-8', '.woff2': 'font/woff2', '.ics': 'text/calendar; charset=utf-8',
 }
 
 /** Ausliefern wie GitHub Pages: Verzeichnis → index.html, sonst 404.html. */
@@ -155,17 +155,43 @@ async function pruefeAlles() {
     pruefe('Enter führt zum ersten Treffer', p.url().includes('/drivers/ayrton-senna/'), p.url())
   })
 
-  // Vergleich aus der Adresse.
+  // Vergleich aus der Adresse – mit dem Bild der beiden Karrieren.
   await schritt('Vergleich', '/comparison/?a=lewis-hamilton&b=michael-schumacher', {}, async (p) => {
     await p.getByText('Michael Schumacher').first().waitFor({ timeout: 5000 })
     const inhalt = await p.locator('main').textContent()
     pruefe('Vergleich zeigt beide Fahrer', inhalt.includes('Lewis Hamilton') && inhalt.includes('Michael Schumacher'))
+    await p.locator('.karrieren svg').waitFor({ timeout: 5000 })
+    pruefe('Vergleich zeichnet zwei Linien', (await p.locator('.karrieren polyline').count()) === 2)
+    await p.getByRole('button', { name: 'Podiums' }).click()
+    pruefe('Vergleich schaltet auf Podien', (await p.locator('.karrieren figcaption b').textContent()).startsWith('Podiums'))
   })
 
-  // Explorer: lädt den Würfel und zeigt Zeilen.
+  // Explorer: lädt den Würfel, zeigt Zeilen und darüber das Bild der Spitze.
   await schritt('Explorer', '/explorer/', {}, async (p) => {
     await p.locator('main table tbody tr').first().waitFor({ timeout: 10000 })
     pruefe('Explorer zeigt Ergebnisse', (await p.locator('main table tbody tr').count()) > 0)
+    pruefe('Explorer zeichnet die Spitze', (await p.locator('.ergebnisbild .balken').count()) === 12)
+  })
+
+  // On this day: der Tag des Besuchers, und das Blättern.
+  await schritt('On this day', '/', {}, async (p) => {
+    await p.locator('[data-heute-inhalt] .heute-spalte').first().waitFor({ timeout: 5000 })
+    const vorher = await p.locator('[data-heute-datum]').textContent()
+    pruefe('On this day zeigt heute', vorher.startsWith('Today'), vorher)
+    await p.getByRole('button', { name: 'Next day' }).click()
+    const nachher = await p.locator('[data-heute-datum]').textContent()
+    pruefe('On this day blättert weiter', nachher !== vorher && !nachher.startsWith('Today'), nachher)
+    pruefe('On this day führt zurück zu heute', await p.getByRole('button', { name: 'Today' }).isVisible())
+  })
+
+  // Der Kalender: ausgeliefert, gültig gebaut, verlinkt aus der Vorschau.
+  await schritt('Kalender', '/preview/', {}, async (p) => {
+    const antwort = await p.request.get(`${WURZEL}/calendar.ics`)
+    const text = await antwort.text()
+    pruefe('calendar.ics ausgeliefert', antwort.status() === 200 && text.startsWith('BEGIN:VCALENDAR\r\n'))
+    pruefe('calendar.ics mit Sessions', (text.match(/BEGIN:VEVENT/g) ?? []).length > 20)
+    const abo = p.locator('a[href^="webcal://"]')
+    pruefe('Vorschau bietet das Abo an', (await abo.count()) === 0 || (await abo.first().getAttribute('href')).endsWith('/calendar.ics'))
   })
 
   // What-if: ein anderes System wählen zeigt eine andere Tabelle.

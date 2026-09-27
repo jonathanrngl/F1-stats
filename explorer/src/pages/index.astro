@@ -143,6 +143,31 @@ const WERKZEUGE = [
     </section>
   )}
 
+  {/*
+    * „On this day": welcher Tag heute ist, weiß nur der Browser. Ohne Skript
+    * fehlt der Abschnitt ganz, statt einen Tag zu zeigen, der nicht heute ist.
+    */}
+  <section class="abschnitt heute nur-mit-js" data-heute aria-labelledby="heute-titel">
+    <div class="abschnitt-kopf">
+      <div>
+        <h2 id="heute-titel">On this day</h2>
+        <p data-heute-datum>Races held on this date, and race winners born on it.</p>
+      </div>
+      <div class="blaettern" role="group" aria-label="Choose a day">
+        <button type="button" data-schritt="-1" aria-label="Previous day">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg>
+        </button>
+        <button type="button" class="heute-knopf" data-zurueck hidden>Today</button>
+        <button type="button" data-schritt="1" aria-label="Next day">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" /></svg>
+        </button>
+      </div>
+    </div>
+    <div class="heute-inhalt" data-heute-inhalt aria-live="polite">
+      <p class="heute-leer">Loading …</p>
+    </div>
+  </section>
+
   <section class="abschnitt">
     <div class="abschnitt-kopf"><div><h2>Explore</h2></div></div>
     <div class="einstiege">
@@ -199,6 +224,135 @@ const WERKZEUGE = [
     </ul>
   </section>
 </Seite>
+
+<script>
+  /*
+   * „On this day": den Tag des Besuchers aus dem Kalender lesen
+   * (/data/heute.json, gebaut von lib/heute.js) und zeigen. Geblättert wird
+   * durch ein Schaltjahr, damit auch der 29. Februar erreichbar bleibt.
+   */
+  const BASIS = import.meta.env.BASE_URL.replace(/\/$/, '')
+  const abschnitt = document.querySelector<HTMLElement>('[data-heute]')
+
+  type Rennen = [number, string, string, string, string]
+  type Geboren = [number, string, string, number, number]
+  type Tag = { rennen: Rennen[]; geboren: Geboren[] }
+
+  if (abschnitt) {
+    const inhalt = abschnitt.querySelector<HTMLElement>('[data-heute-inhalt]')!
+    const kopf = abschnitt.querySelector<HTMLElement>('[data-heute-datum]')!
+    const zurueck = abschnitt.querySelector<HTMLButtonElement>('[data-zurueck]')!
+    const jetzt = new Date()
+    const diesesJahr = jetzt.getFullYear()
+    /* Der Tag als Datum im Schaltjahr 2024, in UTC – nur Monat und Tag zählen. */
+    const heute = Date.UTC(2024, jetzt.getMonth(), jetzt.getDate())
+    let gezeigt = heute
+    let kalender: Record<string, Tag> = {}
+
+    const TAG_MS = 86_400_000
+    const schluessel = (t: number) => new Date(t).toISOString().slice(5, 10)
+    const alsText = (t: number) =>
+      new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long', timeZone: 'UTC' }).format(t)
+    /* Einen Tag weiter, über das Jahresende hinweg im Kreis. */
+    const weiter = (t: number, n: number) => {
+      const neu = t + n * TAG_MS
+      if (neu >= Date.UTC(2025, 0, 1)) return neu - 366 * TAG_MS
+      if (neu < Date.UTC(2024, 0, 1)) return neu + 366 * TAG_MS
+      return neu
+    }
+
+    const el = <K extends keyof HTMLElementTagNameMap>(tag: K, klasse?: string, text?: string) => {
+      const e = document.createElement(tag)
+      if (klasse) e.className = klasse
+      if (text !== undefined) e.textContent = text
+      return e
+    }
+    const verweis = (weg: string, text: string) => {
+      const a = el('a', undefined, text)
+      a.href = `${BASIS}${weg}`
+      return a
+    }
+    const vor = (jahr: number) => {
+      const n = diesesJahr - jahr
+      return n === 0 ? 'this year' : n === 1 ? 'a year ago' : `${n} years ago`
+    }
+
+    function spalte(titel: string) {
+      const s = el('div', 'heute-spalte')
+      s.append(el('h3', undefined, titel))
+      const liste = el('ol', 'heute-liste')
+      s.append(liste)
+      return { s, liste }
+    }
+
+    function zeige() {
+      const tag = kalender[schluessel(gezeigt)] ?? { rennen: [], geboren: [] }
+      const istHeute = gezeigt === heute
+      kopf.textContent = istHeute
+        ? `Today, ${alsText(gezeigt)}: races held on this date, and race winners born on it.`
+        : `${alsText(gezeigt)}: races held on this date, and race winners born on it.`
+      zurueck.hidden = istHeute
+      inhalt.replaceChildren()
+
+      if (tag.rennen.length) {
+        const { s, liste } = spalte(`${tag.rennen.length} ${tag.rennen.length === 1 ? 'race' : 'races'}`)
+        for (const [jahr, gp, id, sieger, siegerId] of tag.rennen) {
+          const li = el('li')
+          li.append(el('b', 'anzeige', String(jahr)))
+          const was = el('span', 'was')
+          was.append(verweis(`/races/${id}/`, gp))
+          const wer = el('span', 'wer', 'won by ')
+          wer.append(verweis(`/drivers/${siegerId}/`, sieger))
+          was.append(wer)
+          li.append(was, el('span', 'wann', vor(jahr)))
+          liste.append(li)
+        }
+        inhalt.append(s)
+      } else {
+        /* Kein Rennen an diesem Tag – dann wenigstens sagen, wann das nächste war. */
+        let t = gezeigt
+        for (let i = 0; i < 366 && !kalender[schluessel(t)]?.rennen.length; i++) t = weiter(t, 1)
+        const p = el('div', 'heute-spalte heute-leer')
+        p.append(el('p', undefined, `No World Championship race has ever been held on ${alsText(gezeigt)}.`))
+        const sprung = el('button', 'leise-knopf', `Next race day: ${alsText(t)} →`)
+        sprung.type = 'button'
+        sprung.addEventListener('click', () => { gezeigt = t; zeige() })
+        p.append(sprung)
+        inhalt.append(p)
+      }
+
+      if (tag.geboren.length) {
+        const { s, liste } = spalte('Born on this day')
+        for (const [jahr, name, id, siege, titel] of tag.geboren) {
+          const li = el('li')
+          li.append(el('b', 'anzeige', String(jahr)))
+          const was = el('span', 'was')
+          was.append(verweis(`/drivers/${id}/`, name))
+          was.append(el('span', 'wer', titel > 0
+            ? `${titel}× World Champion, ${siege} ${siege === 1 ? 'win' : 'wins'}`
+            : `${siege} ${siege === 1 ? 'win' : 'wins'}`))
+          li.append(was)
+          liste.append(li)
+        }
+        s.classList.add('geboren')
+        inhalt.append(s)
+      }
+    }
+
+    for (const knopf of abschnitt.querySelectorAll<HTMLButtonElement>('[data-schritt]')) {
+      knopf.addEventListener('click', () => {
+        gezeigt = weiter(gezeigt, Number(knopf.dataset.schritt))
+        zeige()
+      })
+    }
+    zurueck.addEventListener('click', () => { gezeigt = heute; zeige() })
+
+    fetch(`${BASIS}/data/heute.json`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then((d) => { kalender = d; zeige() })
+      .catch(() => { abschnitt.hidden = true })
+  }
+</script>
 
 <style>
   /* Der Kopf der Startseite: links die Aussage, rechts die vier Zahlen. */
@@ -323,6 +477,95 @@ const WERKZEUGE = [
   }
   .weiter { margin-top: auto; padding-top: 0.6rem; font-size: 0.85rem; font-weight: 600; color: var(--kopf-ink); }
   .jetzt-rennen:hover .weiter { color: var(--accent); }
+
+  /*
+   * „On this day": links die Rennen des Tages, rechts die Geburtstage. Die
+   * Einträge schreibt das Skript – daher :global, Astros Bereichsattribut
+   * tragen nur die Elemente aus dem Gerüst.
+   */
+  .blaettern { display: flex; flex: none; align-items: center; gap: 0.35rem; }
+
+  .blaettern button {
+    display: grid;
+    place-items: center;
+    min-width: 2.4rem;
+    height: 2.4rem;
+    padding: 0 0.6rem;
+    font-size: 0.86rem;
+    font-weight: 600;
+    color: var(--ink-2);
+    background: var(--surface);
+    border: 1px solid var(--border-input);
+    border-radius: var(--radius-s);
+    cursor: pointer;
+  }
+
+  .blaettern button:hover { color: var(--ink); border-color: var(--accent); }
+  .blaettern button[hidden] { display: none; }
+  .blaettern svg { width: 1.05rem; height: 1.05rem; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+
+  .heute-inhalt {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 1rem;
+    min-height: 8rem;
+  }
+
+  .heute-inhalt :global(.heute-spalte) {
+    flex: 1 1 26rem;
+    min-width: 0;
+    padding: 0.35rem 1.2rem 0.4rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+
+  .heute-inhalt :global(.heute-spalte.geboren) { flex: 0 1 22rem; }
+
+  .heute-inhalt :global(h3) {
+    margin: 0.7rem 0 0.25rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--muted);
+  }
+
+  .heute-inhalt :global(.heute-liste) { margin: 0; padding: 0; list-style: none; }
+
+  .heute-inhalt :global(.heute-liste li) {
+    display: grid;
+    grid-template-columns: 3.4rem minmax(0, 1fr) auto;
+    align-items: baseline;
+    gap: 0.9rem;
+    padding: 0.6rem 0;
+    border-top: 1px solid var(--border);
+  }
+
+  .heute-inhalt :global(.heute-liste li b) {
+    font-size: 1.45rem;
+    font-weight: 750;
+    font-stretch: 76%;
+    line-height: 1;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .heute-inhalt :global(.was) { display: grid; min-width: 0; }
+  .heute-inhalt :global(.was > a) { font-weight: 650; color: var(--ink); text-decoration: none; }
+  .heute-inhalt :global(.was > a:hover) { color: var(--accent); }
+  .heute-inhalt :global(.wer) { font-size: 0.84rem; color: var(--muted); }
+  .heute-inhalt :global(.wer a) { color: var(--ink-2); text-decoration: none; }
+  .heute-inhalt :global(.wer a:hover) { color: var(--accent); }
+  .heute-inhalt :global(.wann) { font-size: 0.78rem; color: var(--muted); white-space: nowrap; }
+
+  .heute-inhalt :global(.heute-leer) { padding: 1rem 1.2rem 1.1rem; }
+  .heute-inhalt :global(.heute-leer p) { margin: 0 0 0.75rem; color: var(--ink-2); }
+  .heute-leer { color: var(--muted); }
+
+  @media (max-width: 34rem) {
+    .heute-inhalt :global(.heute-liste li) { grid-template-columns: 2.9rem minmax(0, 1fr); }
+    .heute-inhalt :global(.wann) { display: none; }
+  }
 
   /*
    * Die Einstiege als Verzeichnis: links die Dinge mit ihrer Zahl, rechts die
