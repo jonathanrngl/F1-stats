@@ -28,7 +28,7 @@ const NUR_SERVER = process.argv.includes('--nur-server')
 const TYPEN = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css',
   '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png',
-  '.xml': 'application/xml', '.txt': 'text/plain; charset=utf-8',
+  '.xml': 'application/xml', '.txt': 'text/plain; charset=utf-8', '.woff2': 'font/woff2',
 }
 
 /** Ausliefern wie GitHub Pages: Verzeichnis → index.html, sonst 404.html. */
