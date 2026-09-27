@@ -1,0 +1,172 @@
+---
+/**
+ * Wo eine Strecke liegt: ein kleiner Kartenausschnitt im Kopf ihrer Seite.
+ *
+ * „Monte Carlo, Monaco" sagt dem, der es kennt, alles, und allen anderen
+ * wenig. Der Ausschnitt zeigt die Umgebung und die Nachbarn – Imola liegt
+ * zwei Stunden von Monza, Spa eine von Zandvoort. Ein Klick öffnet die große
+ * Karte, in die Region gezoomt und mit dieser Strecke markiert.
+ *
+ * Dieselben Umrisse und Farben wie die große Karte. Gezeichnet werden nur die
+ * Landflächen, die den Ausschnitt berühren – alle 58 Umrisse auf jeder der 78
+ * Streckenseiten wären 30 KB, von denen man nichts sähe.
+ */
+import { KARTE, LAND, ortX, ortY } from '../lib/weltkarte.js'
+import { pfad } from '../lib/db.js'
+
+interface Ort {
+  id: string
+  name: string
+  breite: number | null
+  laenge_grad: number | null
+  bis: number
+}
+
+interface Props {
+  strecke: Ort
+  /** Alle Strecken, für die Nachbarn im Ausschnitt. */
+  alle: Ort[]
+  aktuellAb: number
+}
+
+const { strecke, alle, aktuellAb } = Astro.props
+const verortet = strecke.breite !== null && strecke.laenge_grad !== null
+
+/* Der Ausschnitt: rund 30° breit, um die Strecke gelegt, an den Rändern der Karte angehalten. */
+const B = 110
+const H = 69
+const cx = verortet ? ortX(strecke.laenge_grad!) : 0
+const cy = verortet ? ortY(strecke.breite!) : 0
+const x = Math.min(Math.max(cx - B / 2, 0), KARTE.breite - B)
+const y = Math.min(Math.max(cy - H / 2, 0), KARTE.hoehe - H)
+
+/* Die Umrisse, deren Punkte den Ausschnitt berühren – grob über ihren Begrenzungsrahmen. */
+const land = LAND.filter((d) => {
+  const z = d.match(/-?\d+(\.\d+)?/g)!.map(Number)
+  let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity
+  for (let i = 0; i < z.length - 1; i += 2) {
+    x0 = Math.min(x0, z[i]); x1 = Math.max(x1, z[i])
+    y0 = Math.min(y0, z[i + 1]); y1 = Math.max(y1, z[i + 1])
+  }
+  return x1 >= x && x0 <= x + B && y1 >= y && y0 <= y + H
+})
+
+const nachbarn = alle
+  .filter((s) => s.id !== strecke.id && s.breite !== null && s.laenge_grad !== null)
+  .map((s) => ({ ...s, px: ortX(s.laenge_grad!), py: ortY(s.breite!) }))
+  .filter((s) => s.px >= x && s.px <= x + B && s.py >= y && s.py <= y + H)
+
+/* Die Beschriftung links vom Punkt, wenn er rechts im Ausschnitt sitzt – sonst liefe sie hinaus. */
+const links = cx > x + B * 0.62
+const aktuell = strecke.bis >= aktuellAb
+const ziel = `${pfad.seite('/circuits/')}?strecke=${strecke.id}`
+---
+
+{verortet && (
+  <a class="lage" href={ziel} aria-label={`${strecke.name} on the circuit map`}>
+    <svg viewBox={`${x} ${y} ${B} ${H}`} aria-hidden="true">
+      <rect class="meer" x={x} y={y} width={B} height={H} />
+      {land.map((d) => <path class="land" d={d} />)}
+      {nachbarn.map((s) => (
+        <circle class={s.bis >= aktuellAb ? 'nachbar aktuell' : 'nachbar'} cx={s.px} cy={s.py} r="1.2" />
+      ))}
+      <circle class="puls" cx={cx} cy={cy} r="2.9" />
+      <circle class={aktuell ? 'hier aktuell' : 'hier'} cx={cx} cy={cy} r="2.5" />
+      <text x={links ? cx - 4.5 : cx + 4.5} y={cy} text-anchor={links ? 'end' : 'start'} dominant-baseline="middle">{strecke.name}</text>
+    </svg>
+    <span class="unterzeile">
+      <span>{nachbarn.length ? `${nachbarn.length} other ${nachbarn.length === 1 ? 'circuit' : 'circuits'} nearby` : 'No other circuit nearby'}</span>
+      <span class="weiter">On the map →</span>
+    </span>
+  </a>
+)}
+
+<style>
+  .lage {
+    display: block;
+    flex: 0 0 min(19rem, 36%);
+    align-self: flex-start;
+    margin-left: auto;
+    overflow: hidden;
+    color: inherit;
+    text-decoration: none;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    transition: border-color 0.12s ease;
+  }
+
+  .lage:hover { border-color: var(--border-input); }
+  .lage:hover .weiter { color: var(--accent); }
+
+  svg { display: block; width: 100%; height: auto; }
+
+  .meer { fill: var(--karte-meer); }
+
+  .land {
+    fill: var(--karte-land);
+    stroke: var(--karte-kueste);
+    stroke-width: 0.75;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .nachbar { fill: var(--punkt-frueher); opacity: 0.55; }
+  .nachbar.aktuell { fill: var(--punkt-aktuell); }
+
+  .hier {
+    fill: var(--punkt-frueher);
+    stroke: var(--punkt-ring);
+    stroke-width: 1.5;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .hier.aktuell { fill: var(--punkt-aktuell); }
+
+  /* Ein Ring, der sich vom Punkt löst – der Blick findet ihn, ohne zu suchen. */
+  .puls {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 1.5;
+    vector-effect: non-scaling-stroke;
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: puls 2.4s ease-out infinite;
+  }
+
+  @keyframes puls {
+    from { transform: scale(1); opacity: 0.8; }
+    to { transform: scale(3.2); opacity: 0; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .puls { animation: none; opacity: 0; }
+  }
+
+  text {
+    font: 700 4.6px var(--sans);
+    fill: var(--ink);
+    paint-order: stroke;
+    stroke: var(--karte-land);
+    stroke-width: 1.8px;
+    stroke-linejoin: round;
+  }
+
+  .unterzeile {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.78rem;
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+  }
+
+  .weiter { font-weight: 600; color: var(--ink-2); white-space: nowrap; transition: color 0.12s ease; }
+
+  /* Schmal: unter den Kopf, über die volle Breite. */
+  @media (max-width: 48rem) {
+    :global(.seitenkopf):has(> .lage) { flex-wrap: wrap; }
+    .lage { flex-basis: 100%; margin-left: 0; }
+  }
+</style>

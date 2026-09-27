@@ -2,6 +2,7 @@
 import { ein, km, plakette, prozent as proz, raenge, zahl, zeit } from '../../lib/format.js'
 import Seite from '../../layouts/Seite.astro'
 import Sprung from '../../components/Sprung.astro'
+import Lagekarte from '../../components/Lagekarte.astro'
 import { eine, streckenListe, pfad, db } from '../../lib/db.js'
 import { land } from '../../lib/laender.js'
 import {
@@ -44,6 +45,11 @@ const ort = {
   url: `${SEITE}${pfad.strecke(id)}`,
 }
 
+/* Dieselbe Grenze wie auf der Übersicht: im Kalender der letzten fünf Saisons. */
+const aktuellAb = eine('SELECT MAX(year) AS jahr FROM race').jahr - 4
+const strecken = streckenListe()
+const hierListe = strecken.find((z) => z.id === id)
+
 const zeitraum = rennen.length ? `${rennen.at(-1).year}–${rennen[0].year}` : '–'
 
 const ziele = [
@@ -79,6 +85,7 @@ const ziele = [
       </ul>
       {strecke.previous_names && <p class="frueher">Also known as: {strecke.previous_names.split(/[;,]\s*/).join(', ')}</p>}
     </div>
+    {hierListe && <Lagekarte strecke={hierListe} alle={strecken} aktuellAb={aktuellAb} />}
   </header>
 
   <ul class="kacheln">
