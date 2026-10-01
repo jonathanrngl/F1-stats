@@ -47,7 +47,7 @@ const WEITER = [
     <div class="abschnitt-kopf"><div><h2>Or start from here</h2></div></div>
     <ul class="weiter">
       {WEITER.map((w) => (
-        <li><a class="karte" href={pfad.seite(w.weg)}>{w.titel} →</a></li>
+        <li><a class="karte" href={pfad.seite(w.weg)}>{w.titel}</a></li>
       ))}
     </ul>
   </section>
@@ -114,8 +114,8 @@ const WEITER = [
     padding: 0.1em 0.35em;
     font-size: 0.9em;
     word-break: break-all;
-    background: var(--accent-wash);
-    border-radius: 0.3rem;
+    background: var(--surface-2);
+    border-radius: var(--radius-s);
   }
 
   .vorschlaege,

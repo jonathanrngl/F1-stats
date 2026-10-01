@@ -8,12 +8,12 @@
  * selbst zu markieren.
  */
 /*
- * Zwei Schriften, beide mit der Seite ausgeliefert (font-src 'self'):
- * Archivo mit Breitenachse für Überschriften und Zahlen – schmal gesetzt
- * wie auf einer Zeitnahmetafel –, IBM Plex Sans für den Text.
+ * Eine Schrift, mit der Seite ausgeliefert (font-src 'self'): Libre Franklin,
+ * die Franklin Gothic der Statistikseiten im Sportteil. Überschriften, Text
+ * und Tabellen unterscheiden sich nur in Gewicht und Größe – zwei Familien
+ * nebeneinander hatten die Seite in Plakat und Fließtext zerlegt.
  */
-import '@fontsource-variable/archivo/wdth.css'
-import '@fontsource-variable/ibm-plex-sans/wght.css'
+import '@fontsource-variable/libre-franklin/wght.css'
 import '../styles/theme.css'
 import Suche from '../components/Suche.astro'
 import { MODUS_SKRIPT } from '../lib/modus.js'
@@ -124,7 +124,8 @@ const ldText = ld.length ? JSON.stringify(ld.length === 1 ? ld[0] : ld).replace(
     {/* Fremde Ziele erfahren die Herkunft, nicht die besuchte Unterseite. */}
     <meta name="referrer" content="strict-origin-when-cross-origin" />
     <link rel="icon" type="image/svg+xml" href={`${BASIS}/favicon.svg`} />
-    <meta name="theme-color" content="#111113" />
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#15181d" media="(prefers-color-scheme: dark)" />
     <title>{seitentitel}</title>
     <meta name="description" content={beschreibung} />
     {ohneIndex ? <meta name="robots" content="noindex" /> : <link rel="canonical" href={kanonisch} />}
@@ -156,8 +157,7 @@ const ldText = ld.length ? JSON.stringify(ld.length === 1 ? ld[0] : ld).replace(
     <header class="kopf">
       <div class="wrap">
         <a class="logo" href={`${BASIS}/`} aria-label="Formula 1 Statistics – home">
-          <span class="logo-zeichen" aria-hidden="true"><i></i><i></i><i></i></span>
-          <span class="logo-text"><b>Formula 1</b><span>Statistics</span></span>
+          <b>Formula 1</b><span>Statistics</span>
         </a>
 
         {/*
@@ -249,8 +249,7 @@ const ldText = ld.length ? JSON.stringify(ld.length === 1 ? ld[0] : ld).replace(
         <div class="fuss-raster">
           <div>
             <a class="logo" href={`${BASIS}/`}>
-              <span class="logo-zeichen" aria-hidden="true"><i></i><i></i><i></i></span>
-              <span class="logo-text"><b>Formula 1</b><span>Statistics</span></span>
+              <b>Formula 1</b><span>Statistics</span>
             </a>
             <p>
               Every number on this site is worked out from the race results themselves – not

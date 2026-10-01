@@ -1,5 +1,8 @@
 /*
- * Theme: Rot / Weiß / Schwarz.
+ * Theme: eine Ergebnisliste. Weißes Papier, Tinte, Haarlinien – und Rot nur
+ * dort, wo es etwas sagt: Sieg, Titel, Führung, Rekord. Vorher stand Rot an
+ * jeder Überschrift, jeder Oberzeile, jeder Kartenkante, und weil es überall
+ * war, sagte es nirgends etwas.
  *
  * Alle Farben stehen als Token hier – die Seiten und die Graphen greifen nur
  * über die Rollen darauf zu. Jede Rolle ist einmal notiert, hell und dunkel in
@@ -16,27 +19,34 @@
 :root {
   color-scheme: light dark;
 
-  --plane: light-dark(#f3f2ee, #0c0c0d); /* Seitenhintergrund, hell wie Papier */
-  --surface: light-dark(#ffffff, #151517); /* Karten, Tabelle, Diagrammfläche */
-  --surface-2: light-dark(#f8f7f4, #1c1c1f); /* Hover, Tabellenkopf */
-  --surface-3: light-dark(#ebeae5, #26262a); /* Balkenrinne, Chips */
-  --ink: light-dark(#0b0b0b, #ffffff);
-  --ink-2: light-dark(#45443f, #cfcec6);
-  --muted: light-dark(#6b6a66, #8f8e88);
-  --border: light-dark(#e4e4e0, #2a2a2d);
-  --border-strong: light-dark(#d2d2cd, #3a3a3e);
+  /* Seite und Fläche sind hell dasselbe Weiß: Der Inhalt steht auf dem Papier,
+     nicht in Kästchen darauf. Dunkel ein kühles Asphaltgrau, kein Schwarz. */
+  --plane: light-dark(#ffffff, #15181d); /* Seitenhintergrund */
+  --surface: light-dark(#ffffff, #15181d); /* Tabelle, Diagrammfläche */
+  --surface-2: light-dark(#f3f4f6, #1c2027); /* Hover, Tabellenkopf, Kasten */
+  --surface-3: light-dark(#e8eaed, #262b33); /* Balkenrinne, Chips */
+  --ink: light-dark(#20242c, #eceef1); /* 15,4:1 auf Weiß */
+  --ink-2: light-dark(#3d434d, #c5cad2);
+  --muted: light-dark(#646b76, #959ca7); /* 5,3:1 auf Weiß, 5,9:1 auf #15181d */
+  --border: light-dark(#e3e5e8, #2a2f37);
+  --border-strong: light-dark(#c9cdd3, #3b414b);
   /* Der Rand eines Bedienelements muss sich abheben, nicht nur andeuten:
      mindestens 3:1 zur Fläche (WCAG 1.4.11). --border-strong erreicht 1,5:1
      und bleibt für Trennlinien. */
-  --border-input: light-dark(#8f8e88, #6b6a66);
-  --grid: light-dark(#ebebe8, #242426); /* Gitternetz, haarfein */
-  --axis: light-dark(#c9c9c4, #3a3a37);
+  --border-input: light-dark(#868d98, #6f7682);
+  --grid: light-dark(#eceef0, #232830); /* Gitternetz, haarfein */
+  --axis: light-dark(#c9cdd3, #3b414b);
 
-  /* 4,97:1 auf Weiß, 4,93:1 auf #141414 */
-  --accent: light-dark(#e10600, #ff2b1f);
-  --accent-strong: light-dark(#b80500, #ff5c52);
-  --accent-wash: light-dark(rgba(225, 6, 0, 0.07), rgba(255, 43, 31, 0.13));
-  --accent-ink: light-dark(#ffffff, #0a0a0a);
+  /* Signalrot: 5,9:1 auf Weiß, 6,2:1 auf #15181d. Nur für Daten, nie für Schmuck. */
+  --accent: light-dark(#c8102e, #ff6b6b);
+  --accent-strong: light-dark(#a00d25, #ff8e8e);
+  --accent-wash: light-dark(rgba(200, 16, 46, 0.06), rgba(255, 107, 107, 0.12));
+  --accent-ink: light-dark(#ffffff, #15181d);
+
+  /* Was man anklickt, ist Tinte – unterstrichen, nicht eingefärbt. Ein roter
+     Verweis sah aus wie ein Rekord. */
+  --link: var(--ink);
+  --link-line: light-dark(#a9afb8, #59606b);
 
   /* Gegenrichtung zum Rot: Plätze gewonnen, Auto hielt durch, Titel noch drin. */
   --good: light-dark(#0f7a52, #2fbf88);
@@ -57,14 +67,15 @@
   --bronze: #d49563;
   --podest-ink: #1a1a1a;
 
-  /* Die Kopfleiste ist in beiden Modi dunkel: Sie ist der Rahmen der Seite,
-     nicht ihr Inhalt, und hält so auf jeder Seite denselben Anker. */
-  --kopf-bg: #111113;
-  --kopf-ink: #f5f5f3;
-  --kopf-muted: #a9a8a2;
-  --kopf-hover: rgba(255, 255, 255, 0.08);
-  --kopf-linie: rgba(255, 255, 255, 0.1);
-  --kopf-h: 3.6rem;
+  /* Die Kopfleiste gehört zum Papier: gleicher Grund, eine Linie darunter.
+     Ein schwarzer Balken mit roter Kante war das Lauteste auf jeder Seite,
+     und er sagte nur „Website“. */
+  --kopf-bg: var(--plane);
+  --kopf-ink: var(--ink);
+  --kopf-muted: var(--muted);
+  --kopf-hover: var(--surface-2);
+  --kopf-linie: var(--border);
+  --kopf-h: 3.5rem;
 
   /* Kategoriale Serienfarben der Graphen, rot-geführt.
      Reihenfolge gegen die CVD-Gates geprüft (schlechtestes Nachbarpaar
@@ -98,11 +109,12 @@
      und Namen an den Linien, und die Farbe trägt nie allein. */
 
   /* Knappe Ecken: Die Seite ist eine Tafel mit Zahlen, keine Sammlung von Kärtchen. */
-  --radius: 0.5rem;
-  --radius-s: 0.35rem;
-  --sans: 'IBM Plex Sans Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  /* Überschriften und große Zahlen: Archivo, schmal. `font-stretch` wählt die Breite. */
-  --display: 'Archivo Variable', 'Arial Narrow', var(--sans);
+  --radius: 4px;
+  --radius-s: 3px;
+  --sans: 'Libre Franklin Variable', 'Franklin Gothic Book', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  /* Dieselbe Familie für Überschriften und große Zahlen – nur schwerer. Der
+     Name bleibt, damit Seiten, die ihn nutzen, nichts ändern müssen. */
+  --display: var(--sans);
 
   font: 16px/1.55 var(--sans);
   color: var(--ink-2);
@@ -123,23 +135,27 @@
   color-scheme: dark;
 }
 
-/* Der Schatten ist die eine Ausnahme: light-dark() nimmt kein Wertepaar, das
-   selbst Kommas enthält, und eine Schattenliste besteht aus genau solchen. */
+/*
+ * Schatten nur für das, was über der Seite liegt: Trefferliste, Menü. Was auf
+ * der Seite steht, liegt flach – `--shadow-s` bleibt als Name, ist aber leer.
+ *
+ * Der Schatten ist die eine Ausnahme bei den Tokens: light-dark() nimmt kein
+ * Wertepaar, das selbst Kommas enthält, und eine Schattenliste besteht aus
+ * genau solchen.
+ */
 :root {
-  --shadow: 0 1px 2px rgba(11, 11, 11, 0.05), 0 8px 24px -12px rgba(11, 11, 11, 0.18);
-  --shadow-s: 0 1px 2px rgba(11, 11, 11, 0.04), 0 2px 6px -2px rgba(11, 11, 11, 0.06);
+  --shadow: 0 12px 32px -8px rgba(32, 36, 44, 0.22), 0 0 0 1px rgba(32, 36, 44, 0.04);
+  --shadow-s: none;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 8px 24px -12px rgba(0, 0, 0, 0.8);
-    --shadow-s: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.7);
   }
 }
 
 :root[data-theme='dark'] {
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 8px 24px -12px rgba(0, 0, 0, 0.8);
-  --shadow-s: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.7);
 }
 
 * {
@@ -158,6 +174,7 @@ body {
   color: var(--ink-2);
   background: var(--plane);
   font: 16px/1.55 var(--sans);
+  font-variant-numeric: lining-nums;
 }
 
 h1,
@@ -172,20 +189,27 @@ h3 {
 
 /*
  * Die Schrift der Tafel: Überschriften und die Zahlen, die man von weitem
- * lesen soll. Eine Klasse dazu, damit Seiten sie für eigene Zahlen nehmen
- * können, ohne die Werte zu wiederholen.
+ * lesen soll – dieselbe Franklin, nur schwer und eng gesetzt. Eine Klasse
+ * dazu, damit Seiten sie für eigene Zahlen nehmen können.
  */
 h1,
 h2,
 .anzeige {
   font-family: var(--display);
-  font-stretch: 80%;
+  font-weight: 800;
+  letter-spacing: -0.025em;
 }
 
+.anzeige { font-variant-numeric: tabular-nums lining-nums; }
+
 a {
-  color: var(--accent);
-  text-underline-offset: 0.2em;
+  color: var(--link);
+  text-decoration-color: var(--link-line);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.22em;
 }
+
+a:hover { text-decoration-color: currentColor; }
 
 button,
 select,
@@ -193,10 +217,11 @@ input {
   font: inherit;
 }
 
+/* Der Fokus in Tinte: Er zeigt, wo man ist, und soll nicht wie ein Rekord aussehen. */
 :where(button, select, a, input, summary, [tabindex]):focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--ink);
   outline-offset: 2px;
-  border-radius: 0.35rem;
+  border-radius: var(--radius-s);
 }
 
 /*
@@ -209,23 +234,24 @@ html.js .nur-ohne-js { display: none !important; }
 html.js section:not(.alle-gezeigt) [data-weitere] { display: none; }
 .mehr-zeigen { margin-top: 0.6rem; }
 
-/* Ein Verweis, der wie ein Knopf aussieht: „Compare with another driver →“. */
+/* Ein Verweis, der wie ein Knopf aussieht: „Compare with another driver“. Tinte, nicht Rot. */
 .knopf {
   display: inline-flex;
   align-items: center;
   min-height: 2.5rem;
   padding: 0.45rem 0.95rem;
   font-size: 0.9rem;
-  font-weight: 650;
-  color: var(--accent-ink);
-  background: var(--accent);
-  border-radius: 0.5rem;
+  font-weight: 600;
+  color: var(--plane);
+  background: var(--ink);
+  border: 1px solid var(--ink);
+  border-radius: var(--radius);
   text-decoration: none;
 }
 
-.knopf:hover { background: var(--accent-strong); }
-.knopf.leise { color: var(--ink); background: var(--surface); border: 1px solid var(--border-input); }
-.knopf.leise:hover { border-color: var(--accent); }
+.knopf:hover { background: var(--ink-2); border-color: var(--ink-2); }
+.knopf.leise { color: var(--ink); background: var(--plane); border-color: var(--border-input); }
+.knopf.leise:hover { border-color: var(--ink); }
 
 /* Nur für Hilfsmittel: erklärt, was ein Platzhalter gerade tut. */
 .sr-only {
@@ -263,9 +289,9 @@ html.js section:not(.alle-gezeigt) [data-weitere] { display: none; }
   top: 0;
   z-index: 40;
   color: var(--kopf-ink);
-  background: var(--kopf-bg);
-  border-bottom: 3px solid var(--accent);
-  color-scheme: dark;
+  background: color-mix(in srgb, var(--kopf-bg) 94%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
 }
 
 .kopf .wrap {
@@ -275,58 +301,27 @@ html.js section:not(.alle-gezeigt) [data-weitere] { display: none; }
   min-height: var(--kopf-h);
 }
 
-/* Der Schriftzug: ein schräger roter Balken als Marke, daneben der Name. */
+/*
+ * Der Schriftzug: nur der Name, schwer gesetzt. Die drei schrägen roten
+ * Striche davor erinnerten an das Logo der Formel 1 selbst – eine Seite, die
+ * nicht offiziell ist, soll auch nicht so aussehen.
+ */
 .logo {
   display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  margin-right: 0.5rem;
+  align-items: baseline;
+  gap: 0.4rem;
+  margin-right: 0.75rem;
   color: var(--kopf-ink);
   text-decoration: none;
   white-space: nowrap;
   flex: none;
-}
-
-.logo-zeichen {
-  display: grid;
-  gap: 3px;
-  width: 1.55rem;
-  transform: skewX(-18deg);
-}
-
-.logo-zeichen i {
-  display: block;
-  height: 4px;
-  background: var(--accent);
-  border-radius: 1px;
-}
-
-.logo-zeichen i:nth-child(2) { width: 78%; }
-.logo-zeichen i:nth-child(3) { width: 56%; }
-
-.logo-text {
-  display: grid;
-  line-height: 1.05;
-}
-
-.logo-text {
-  font-family: var(--display);
-}
-
-.logo-text b {
-  font-size: 0.72rem;
+  font-size: 1.05rem;
   font-weight: 800;
-  font-stretch: 100%;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--accent);
+  letter-spacing: -0.02em;
 }
 
-.logo-text span {
-  font-size: 1.15rem;
-  font-weight: 750;
-  font-stretch: 80%;
-}
+.logo b { font-weight: 800; }
+.logo span { font-weight: 400; color: var(--muted); letter-spacing: -0.01em; }
 
 /*
  * Drei Breiten, drei Formen der Kopfleiste:
@@ -354,12 +349,12 @@ html.js section:not(.alle-gezeigt) [data-weitere] { display: none; }
 .klappe > summary {
   position: relative;
   display: block;
-  padding: 0.5rem 0.7rem;
+  padding: 0.5rem 0.65rem;
   font-size: 0.9rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--kopf-muted);
   text-decoration: none;
-  border-radius: 0.4rem;
+  border-radius: var(--radius);
   white-space: nowrap;
 }
 
@@ -369,20 +364,20 @@ html.js section:not(.alle-gezeigt) [data-weitere] { display: none; }
   background: var(--kopf-hover);
 }
 
-/* Der aktive Punkt bekommt die Linie, auf der die Leiste ohnehin steht. */
+/* Der aktive Punkt: in Tinte, und unterstrichen auf der Linie, auf der die Leiste steht. */
 .hauptnav a[aria-current='page'] {
   color: var(--kopf-ink);
+  font-weight: 650;
 }
 
 .hauptnav > ul > li > a[aria-current='page']::after {
   content: '';
   position: absolute;
-  left: 0.7rem;
-  right: 0.7rem;
-  bottom: -0.1rem;
+  left: 0.65rem;
+  right: 0.65rem;
+  bottom: calc((var(--kopf-h) - 2.4rem) / -2 - 1px);
   height: 2px;
-  background: var(--accent);
-  border-radius: 2px;
+  background: var(--ink);
 }
 
 /* Hell / dunkel / System. Ein Knopf, der reihum schaltet. */
@@ -398,7 +393,7 @@ html.js section:not(.alle-gezeigt) [data-weitere] { display: none; }
   color: var(--kopf-muted);
   background: none;
   border: 1px solid var(--kopf-linie);
-  border-radius: 0.45rem;
+  border-radius: var(--radius);
   cursor: pointer;
 }
 
@@ -433,21 +428,21 @@ html.js section:not(.alle-gezeigt) [data-weitere] { display: none; }
   padding: 0.45rem 2rem 0.45rem 2.1rem;
   font-size: 0.88rem;
   color: var(--kopf-ink);
-  background: rgba(255, 255, 255, 0.07)
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%23a9a8a2' stroke-width='2' stroke-linecap='round' viewBox='0 0 24 24'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E")
+  background: var(--surface-2)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%23868d98' stroke-width='2' stroke-linecap='round' viewBox='0 0 24 24'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E")
     no-repeat 0.65rem 50%;
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  border-radius: 0.45rem;
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius);
   appearance: none;
 }
 
 .suche input::placeholder { color: var(--kopf-muted); }
-/* Fokus sichtbar wie überall: der rote Rahmen, nicht nur ein Farbwechsel des Randes. */
+/* Fokus sichtbar wie überall: der Rahmen in Tinte, nicht nur ein Farbwechsel des Randes. */
 .suche input:focus-visible {
-  border-color: var(--accent);
-  outline: 2px solid var(--accent);
+  border-color: var(--ink);
+  outline: 2px solid var(--ink);
   outline-offset: 1px;
-  background-color: rgba(255, 255, 255, 0.11);
+  background-color: var(--plane);
 }
 .suche input::-webkit-search-cancel-button { display: none; }
 
@@ -481,7 +476,7 @@ html.js section:not(.alle-gezeigt) [data-weitere] { display: none; }
   color-scheme: light dark;
   background: var(--surface);
   border: 1px solid var(--border-strong);
-  border-radius: 0.6rem;
+  border-radius: var(--radius);
   box-shadow: var(--shadow);
 }
 
@@ -495,11 +490,11 @@ html.js section:not(.alle-gezeigt) [data-weitere] { display: none; }
   gap: 0.1rem 0.6rem;
   min-height: 2.75rem;
   padding: 0.45rem 0.55rem;
-  border-radius: 0.4rem;
+  border-radius: var(--radius-s);
   text-decoration: none;
 }
 
-.suche .ergebnisse a[aria-selected='true'] { background: var(--surface-3); outline: 1px solid var(--border-input); }
+.suche .ergebnisse a[aria-selected='true'] { background: var(--surface-2); outline: 1px solid var(--border-input); }
 .suche .ergebnisse b { color: var(--ink); font-weight: 600; font-size: 0.92rem; }
 .suche .ergebnisse i {
   grid-column: 2;
@@ -541,7 +536,7 @@ html.js section:not(.alle-gezeigt) [data-weitere] { display: none; }
   color-scheme: light dark;
   background: var(--surface);
   border: 1px solid var(--border-strong);
-  border-radius: 0.6rem;
+  border-radius: var(--radius);
   box-shadow: var(--shadow);
 }
 
@@ -553,13 +548,13 @@ html.js section:not(.alle-gezeigt) [data-weitere] { display: none; }
   gap: 0.05rem;
   padding: 0.5rem 0.65rem;
   white-space: normal;
+  border-radius: var(--radius-s);
 }
 
 .werkzeuge a:hover { background: var(--surface-2); }
 .werkzeuge b { color: var(--ink); font-size: 0.92rem; font-weight: 650; }
 .werkzeuge span { color: var(--muted); font-size: 0.8rem; }
-.werkzeuge a[aria-current='page'] { background: var(--accent-wash); }
-.werkzeuge a[aria-current='page'] b { color: var(--accent-strong); }
+.werkzeuge a[aria-current='page'] { background: var(--surface-2); box-shadow: inset 2px 0 0 var(--ink); }
 
 /* Das Menü am schmalen Schirm: verborgen, bis es gebraucht wird. */
 .menue { display: none; }
@@ -575,29 +570,26 @@ html.js section:not(.alle-gezeigt) [data-weitere] { display: none; }
 
 .menue-feld {
   position: fixed;
-  top: calc(var(--kopf-h) + 3px);
+  top: calc(var(--kopf-h) + 1px);
   left: 0;
   right: 0;
   z-index: 45;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(14rem, 100%), 1fr));
   gap: 1rem 1.5rem;
-  max-height: calc(100svh - var(--kopf-h) - 3px);
+  max-height: calc(100svh - var(--kopf-h) - 1px);
   overflow-y: auto;
   padding: 1rem 1.5rem 1.5rem;
-  background: var(--kopf-bg);
-  border-bottom: 3px solid var(--accent);
-  box-shadow: 0 16px 32px -16px rgba(0, 0, 0, 0.6);
+  background: var(--plane);
+  border-bottom: 1px solid var(--border-strong);
+  box-shadow: var(--shadow);
 }
 
 .menue-feld h2 {
   margin: 0 0 0.35rem;
-  font-size: 0.75rem;
-  font-weight: 750;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  font-family: var(--display);
-  font-stretch: 88%;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0;
   color: var(--kopf-muted);
 }
 
@@ -619,12 +611,12 @@ html.js section:not(.alle-gezeigt) [data-weitere] { display: none; }
   font-weight: 600;
   color: var(--kopf-ink);
   text-decoration: none;
-  background: rgba(255, 255, 255, 0.04);
-  border-radius: 0.45rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
 }
 
 .menue-feld a:hover { background: var(--kopf-hover); }
-.menue-feld a[aria-current='page'] { box-shadow: inset 3px 0 0 var(--accent); background: var(--kopf-hover); }
+.menue-feld a[aria-current='page'] { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
 
 /* Mittlere Breite: die Suche als Knopf, ihr Feld klappt darunter auf. */
 @media (max-width: 72rem) {
@@ -640,7 +632,7 @@ html.js section:not(.alle-gezeigt) [data-weitere] { display: none; }
   .suche.offen .suche-feld { display: block; }
   .suche.offen .suche-knopf { color: var(--kopf-ink); background: var(--kopf-hover); }
   .suche .ergebnisse { width: 100%; }
-  .suche input { background-color: #1d1d20; }
+  .suche input { background-color: var(--plane); }
 }
 
 /* Schmal: Menü statt Leiste, die Suche über die volle Breite. */
@@ -652,13 +644,13 @@ html.js section:not(.alle-gezeigt) [data-weitere] { display: none; }
   .suche { position: static; }
   .suche-feld {
     position: fixed;
-    top: calc(var(--kopf-h) + 3px);
+    top: calc(var(--kopf-h) + 1px);
     left: 0;
     right: 0;
     width: auto;
     padding: 0.75rem 1rem;
-    background: var(--kopf-bg);
-    border-bottom: 3px solid var(--accent);
+    background: var(--plane);
+    border-bottom: 1px solid var(--border-strong);
   }
   .suche .ergebnisse {
     position: static;
@@ -670,7 +662,6 @@ html.js section:not(.alle-gezeigt) [data-weitere] { display: none; }
 }
 
 @media (max-width: 30rem) {
-  .logo-text b { display: none; }
   .menue > summary span { display: none; }
   .menue > summary { padding: 0; min-width: 2.5rem; justify-content: center; }
 }
@@ -685,9 +676,9 @@ html.js section:not(.alle-gezeigt) [data-weitere] { display: none; }
   z-index: 60;
   padding: 0.6rem 1rem;
   font-weight: 700;
-  color: var(--accent-ink);
-  background: var(--accent);
-  border-radius: 0 0 0.45rem 0.45rem;
+  color: var(--plane);
+  background: var(--ink);
+  border-radius: 0 0 var(--radius) var(--radius);
   text-decoration: none;
 }
 
@@ -717,50 +708,39 @@ main {
 
 .seitenkopf > div { min-width: 0; flex: 1; }
 
-/* Die Oberzeile trägt vorn die drei schrägen Striche des Logos, verkleinert. */
+/*
+ * Die Oberzeile ist eine Brotkrume: wo die Seite liegt, in normaler
+ * Schreibung und leise. Als rote Versalzeile mit Logostrichen rief sie über
+ * jeder Überschrift, und auf Übersichten wiederholte sie nur den Menüpunkt.
+ */
 .oberzeile {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.35rem;
-  margin: 0 0 0.55rem;
-  font-family: var(--display);
-  font-stretch: 88%;
-  font-size: 0.82rem;
-  font-weight: 650;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--ink-2);
+  gap: 0.4rem;
+  margin: 0 0 0.6rem;
+  font-size: 0.88rem;
+  font-weight: 450;
+  color: var(--muted);
 }
 
-.oberzeile::before {
-  content: '';
-  flex: none;
-  width: 1.1rem;
-  height: 0.6rem;
-  margin-right: 0.2rem;
-  background: linear-gradient(var(--accent) 0 2px, transparent 2px 4px, var(--accent) 4px 6px, transparent 6px 8px, var(--accent) 8px 10px)
-    left top / 100% 10px no-repeat;
-  transform: skewX(-18deg);
-}
-
-.oberzeile a { color: inherit; text-decoration: none; }
-.oberzeile a:hover { text-decoration: underline; }
-.oberzeile .trenner { color: var(--muted); font-weight: 400; }
+.oberzeile a { color: var(--ink-2); text-decoration: underline; text-decoration-color: var(--link-line); }
+.oberzeile a:hover { color: var(--ink); text-decoration-color: currentColor; }
+.oberzeile .trenner { color: var(--border-input); }
 .oberzeile .still { color: var(--muted); }
 
 h1 {
-  font-size: clamp(2.1rem, 4.8vw, 3.2rem);
-  line-height: 1.02;
+  font-size: clamp(2rem, 4.4vw, 2.9rem);
+  line-height: 1.05;
   font-weight: 800;
-  font-stretch: 76%;
-  letter-spacing: -0.015em;
+  letter-spacing: -0.03em;
 }
 
 .lead {
-  max-width: 46rem;
-  margin: 0.7rem 0 0;
-  font-size: 1.02rem;
+  max-width: 42rem;
+  margin: 0.75rem 0 0;
+  font-size: 1.05rem;
+  line-height: 1.6;
   color: var(--ink-2);
   text-wrap: pretty;
 }
@@ -768,8 +748,8 @@ h1 {
 /*
  * Eckdaten als Zeile, getrennt durch Haarlinien: Geburtstag, Zeitraum, Kürzel
  * sind Angaben, keine Knöpfe. Als Pillen gezeichnet sahen sie aus, als könne
- * man sie anklicken. Nur die eine Angabe, die die Seite trägt – der Titel –,
- * steht als Marke davor.
+ * man sie anklicken. Die eine Angabe, die die Seite trägt – der Titel –, steht
+ * vorn und in Rot: Sie ist ein Ergebnis, kein Schmuck.
  *
  * Bricht die Zeile um, darf die nächste nicht mit einer Linie beginnen. Jede
  * Linie sitzt deshalb links an ihrem Eintrag, einen Pixel nach links
@@ -798,51 +778,38 @@ h1 {
   white-space: nowrap;
 }
 
-.eckdaten li.stark,
-.eckdaten li.stark + li { border-left-color: transparent; }
-
 .eckdaten li.stark {
-  margin-left: 0.75rem;
-  margin-right: 0.25rem;
-  padding: 0.2rem 0.55rem;
-  font-family: var(--display);
-  font-stretch: 88%;
-  font-size: 0.86rem;
   font-weight: 700;
-  letter-spacing: 0.02em;
-  color: var(--accent-ink);
-  background: var(--accent);
-  border-radius: var(--radius-s);
+  color: var(--accent);
 }
 
-.eckdaten a { color: inherit; text-decoration: none; font-weight: 600; }
-.eckdaten a:hover { color: var(--accent); }
+.eckdaten a { color: inherit; text-decoration: underline; text-decoration-color: var(--link-line); }
+.eckdaten a:hover { text-decoration-color: currentColor; }
 
 /*
- * Das Länderkürzel als Tafel neben der Überschrift – dunkel wie das Feld mit
- * dem Länderkürzel auf einer Zeitnahmetafel, mit roter Unterkante.
+ * Das Länderkürzel neben der Überschrift, wie es in einer Ergebnisliste neben
+ * dem Namen steht: drei Buchstaben in einem Rahmen, nicht mehr.
  */
 .wappen {
   display: grid;
   place-items: center;
   flex: none;
-  width: 4.2rem;
-  height: 4.2rem;
-  margin-top: 0.15rem;
-  font-family: var(--display);
-  font-stretch: 85%;
-  font-size: 1.2rem;
-  font-weight: 750;
-  letter-spacing: 0.02em;
-  color: var(--kopf-ink);
-  background: var(--kopf-bg);
-  border: 1px solid var(--border);
+  min-width: 3.4rem;
+  height: 2.2rem;
+  margin-top: 0.55rem;
+  padding: 0 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+  background: var(--plane);
+  border: 1.5px solid var(--ink);
   border-radius: var(--radius-s);
-  box-shadow: inset 0 -4px 0 var(--accent);
+  font-variant-numeric: tabular-nums;
 }
 
 @media (max-width: 34rem) {
-  .wappen { width: 3.2rem; height: 3.2rem; font-size: 0.95rem; }
+  .wappen { min-width: 2.9rem; height: 1.9rem; margin-top: 0.3rem; font-size: 0.82rem; }
 }
 
 /* ------------------------------------------------------ Sprungleiste */
@@ -854,33 +821,34 @@ h1 {
  */
 .sprung {
   position: sticky;
-  top: calc(var(--kopf-h) + 3px);
+  top: calc(var(--kopf-h) + 1px);
   z-index: 30;
   display: flex;
-  gap: 0.25rem;
-  margin: 0 0 2rem;
-  padding: 0.45rem 0;
+  gap: 1.25rem;
+  margin: 0 0 2.25rem;
+  padding: 0;
   overflow-x: auto;
   scrollbar-width: none;
-  background: color-mix(in srgb, var(--plane) 88%, transparent);
+  background: color-mix(in srgb, var(--plane) 94%, transparent);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--border);
 }
 
 .sprung::-webkit-scrollbar { display: none; }
 
+/* Reiter, keine Pillen: Der gelesene Abschnitt ist unterstrichen, wie der Menüpunkt oben. */
 .sprung a {
   flex: none;
-  padding: 0.3rem 0.75rem;
-  font-size: 0.84rem;
-  font-weight: 600;
-  color: var(--ink-2);
+  padding: 0.65rem 0 calc(0.65rem - 2px);
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--muted);
   text-decoration: none;
-  border-radius: 999px;
+  border-bottom: 2px solid transparent;
 }
 
-.sprung a:hover { color: var(--ink); background: var(--surface-3); }
-.sprung a.an { color: var(--accent-strong); background: var(--accent-wash); }
+.sprung a:hover { color: var(--ink); }
+.sprung a.an { color: var(--ink); font-weight: 650; border-bottom-color: var(--ink); }
 
 /* Unter 52rem bricht die Kopfleiste um und ist höher; dort klebt die
    Sprungleiste nicht, sonst deckten beide zusammen ein Drittel der Seite ab. */
@@ -900,39 +868,28 @@ h1 {
 .sprung + .abschnitt { margin-top: 0; }
 
 /*
- * Jeder Abschnitt beginnt unter einer Linie über die ganze Breite, an deren
- * Anfang ein kurzes rotes Stück sitzt – wie die Kopfzeile einer Zeitungsseite.
+ * Jeder Abschnitt beginnt unter einer Linie in Tinte über die ganze Breite.
  * Der Blick findet beim Scrollen den nächsten Abschnitt, ohne ihn zu suchen,
- * und die Überschrift braucht keinen eigenen Schmuck.
+ * und die Überschrift braucht keinen eigenen Schmuck – auch kein rotes Stück
+ * am Anfang der Linie.
  */
 .abschnitt-kopf {
-  position: relative;
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
   gap: 0.35rem 1rem;
   margin-bottom: 1.1rem;
-  padding-top: 0.85rem;
-  border-top: 1px solid var(--border-strong);
-}
-
-.abschnitt-kopf::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: -2px;
-  width: 2.5rem;
-  height: 3px;
-  background: var(--accent);
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--ink);
 }
 
 .abschnitt-kopf > div { min-width: 0; flex: 1 1 24rem; }
 
 h2 {
-  font-size: 1.6rem;
-  line-height: 1.1;
-  font-weight: 750;
+  font-size: 1.4rem;
+  line-height: 1.15;
+  font-weight: 800;
 }
 
 .abschnitt-kopf p {
@@ -944,13 +901,10 @@ h2 {
 }
 
 .abschnitt-kopf .mehr {
-  font-size: 0.86rem;
+  font-size: 0.88rem;
   font-weight: 600;
-  text-decoration: none;
   white-space: nowrap;
 }
-
-.abschnitt-kopf .mehr:hover { text-decoration: underline; }
 
 h3 {
   font-size: 1rem;
@@ -961,7 +915,7 @@ h3 {
 .spalten {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(17rem, 100%), 1fr));
-  gap: 1rem;
+  gap: 2rem 2.5rem;
 }
 
 .spalten.zwei {
@@ -983,13 +937,11 @@ h3 {
 
 a.karte {
   text-decoration: none;
-  transition: border-color 0.12s ease, box-shadow 0.12s ease;
 }
 
-/* Beim Überfahren zeigt die Karte eine rote Unterkante, sie springt nicht. */
+/* Beim Überfahren wird der Rahmen zur Tinte – die Karte springt nicht und färbt sich nicht. */
 a.karte:hover {
-  border-color: var(--border-input);
-  box-shadow: inset 0 -3px 0 var(--accent);
+  border-color: var(--ink);
 }
 
 .karte > h3:first-child { margin-bottom: 0.75rem; }
@@ -1010,49 +962,48 @@ a.karte:hover {
 /* ------------------------------------------------------- Kennzahlkacheln */
 
 /*
- * Die Kennzahlen als eine Tafel: ein Rahmen, darin Felder, getrennt durch
- * Haarlinien. Jedes Feld zieht seine Linie rechts und unten selbst; was über
- * den Rahmen hinausragt, schneidet `overflow` ab. So stimmen die Linien auch
- * dort, wo die Tafel umbricht und die letzte Zeile nicht voll ist – eine
- * Lücke mit farbigem Grund hätte die leeren Felder grau gefüllt.
+ * Die Kennzahlen als eine Zeile der Ergebnisliste: kein Rahmen, keine
+ * Kästchen, nur Linien oben und unten und Haarlinien zwischen den Feldern.
+ * Jedes Feld zieht seine Linie links und oben selbst; was über den Rand
+ * hinausragt – vor der ersten Spalte, über der ersten Reihe –, schneidet
+ * `overflow` ab. So stimmen die Linien auch dort, wo die Zeile umbricht.
  */
 .kacheln {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(8rem, 100%), 1fr));
-  margin: 0 0 2.25rem;
+  margin: 0 0 2.5rem;
   padding: 0;
   list-style: none;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-top: 2px solid var(--ink);
+  border-bottom: 1px solid var(--border-strong);
   overflow: hidden;
 }
 
 .kacheln li {
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
-  padding: 0.95rem 1.1rem 1rem;
-  box-shadow: 1px 0 0 var(--border), 0 1px 0 var(--border);
+  gap: 0.3rem;
+  padding: 0.85rem 1.1rem 1rem;
+  box-shadow: -1px 0 0 var(--border), 0 -1px 0 var(--border);
 }
 
+/* Die große Zahl ist das eine laute Element der Seite: schwer, eng, mit Tabellenziffern. */
 .kacheln b {
   order: 2;
   font-family: var(--display);
-  font-stretch: 78%;
-  font-size: 2.2rem;
-  font-weight: 750;
+  font-size: 2.5rem;
+  font-weight: 800;
   line-height: 1;
   color: var(--ink);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums lining-nums;
+  letter-spacing: -0.04em;
 }
 
 /* Die Beschriftung steht über der Zahl: Man liest erst, was gezählt wird. */
 .kacheln span {
   order: 1;
-  font-size: 0.8rem;
-  font-weight: 550;
+  font-size: 0.85rem;
+  font-weight: 500;
   color: var(--muted);
 }
 
@@ -1065,29 +1016,23 @@ a.karte:hover {
   text-wrap: pretty;
 }
 
-/* Eine Kachel, die die Aussage der Seite trägt – der Titel, der Sieg. */
-.kacheln li.stark {
-  box-shadow: inset 0 3px 0 var(--accent), 1px 0 0 var(--border), 0 1px 0 var(--border);
-}
-
+/* Eine Kachel, die die Aussage der Seite trägt – der Titel, der Sieg: die Zahl in Rot. */
 .kacheln li.stark b { color: var(--accent); }
 
 /* Kacheln mit einem Namen statt einer Zahl: Sieger, Pole, schnellste Runde. */
-.kacheln.namen b { font-size: 1.3rem; font-stretch: 85%; line-height: 1.15; }
+.kacheln.namen b { font-size: 1.3rem; line-height: 1.2; letter-spacing: -0.02em; }
 .kacheln.namen b a { color: var(--ink); text-decoration: none; }
-.kacheln.namen b a:hover { color: var(--accent); }
+.kacheln.namen b a:hover { text-decoration: underline; }
 
-/* Zahlen und Zeilen neben einer Beschriftung, zweispaltig. */
+/* Zahlen und Zeilen neben einer Beschriftung, zweispaltig, direkt auf dem Papier. */
 .daten {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(18rem, 100%), 1fr));
-  gap: 0 2rem;
+  gap: 0 2.5rem;
   margin: 0;
-  padding: 0.35rem 1.2rem;
+  padding: 0;
   list-style: none;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-bottom: 1px solid var(--border);
 }
 
 .daten li {
@@ -1100,7 +1045,6 @@ a.karte:hover {
   font-size: 0.9rem;
 }
 
-.daten li:last-child { border-bottom: none; }
 .daten span { color: var(--muted); }
 .daten b { color: var(--ink); font-weight: 650; text-align: right; font-variant-numeric: tabular-nums; }
 .daten li.breit { grid-column: 1 / -1; flex-direction: column; gap: 0.25rem; }
@@ -1108,21 +1052,21 @@ a.karte:hover {
 
 /* -------------------------------------------------------------- Hinweise */
 
+/* Ein Hinweis ist ein grau unterlegter Absatz mit einer Linie davor – die Farbe der Linie sagt die Art. */
 .hinweis {
   max-width: 50rem;
   margin: 0 0 1.5rem;
-  padding: 0.85rem 1.05rem;
-  font-size: 0.9rem;
+  padding: 0.8rem 1rem;
+  font-size: 0.92rem;
   color: var(--ink-2);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-left: 4px solid var(--axis);
-  border-radius: var(--radius-s);
+  background: var(--surface-2);
+  border-left: 3px solid var(--border-input);
+  border-radius: 0 var(--radius-s) var(--radius-s) 0;
   text-wrap: pretty;
 }
 
 .hinweis > b:first-child { color: var(--ink); }
-.hinweis.akzent { border-left-color: var(--accent-strong); background: var(--accent-wash); }
+.hinweis.akzent { border-left-color: var(--accent); }
 .hinweis.warn { border-left-color: var(--warn); background: var(--warn-wash); }
 .hinweis.gut { border-left-color: var(--good); background: var(--good-wash); }
 .hinweis p { margin: 0; }
@@ -1144,9 +1088,8 @@ a.karte:hover {
 .erklaerung {
   max-width: 52rem;
   margin: 1rem 0 0;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
 }
 
 .erklaerung.abschnitt { margin-top: 3rem; }
@@ -1155,29 +1098,15 @@ a.karte:hover {
   display: flex;
   align-items: center;
   gap: 0.55rem;
-  padding: 0.8rem 1.1rem;
-  font-size: 0.9rem;
-  font-weight: 650;
+  padding: 0.75rem 0.1rem;
+  font-size: 0.92rem;
+  font-weight: 600;
   color: var(--ink);
   cursor: pointer;
   list-style: none;
 }
 
 .erklaerung > summary::-webkit-details-marker { display: none; }
-
-.erklaerung > summary::before {
-  content: 'i';
-  display: grid;
-  place-items: center;
-  flex: none;
-  width: 1.3rem;
-  height: 1.3rem;
-  font: 700 0.75rem/1 Georgia, serif;
-  font-style: italic;
-  color: var(--accent-strong);
-  background: var(--accent-wash);
-  border-radius: 50%;
-}
 
 .erklaerung > summary::after {
   content: '';
@@ -1192,11 +1121,10 @@ a.karte:hover {
 }
 
 .erklaerung[open] > summary::after { rotate: 225deg; translate: 0 0.12rem; }
-.erklaerung > summary:hover { color: var(--accent); }
+.erklaerung > summary:hover { text-decoration: underline; text-underline-offset: 0.22em; }
 
 .erklaerung > div {
-  padding: 0 1.1rem 1rem;
-  border-top: 1px solid var(--border);
+  padding: 0 0.1rem 1rem;
 }
 
 .erklaerung p,
@@ -1220,14 +1148,14 @@ table {
 
 /* Der Spaltenkopf in normaler Schreibung: Er beschriftet, er ruft nicht. */
 th {
-  padding: 0.7rem 0.8rem 0.6rem;
+  padding: 0.65rem 0.8rem 0.55rem;
   text-align: left;
   white-space: nowrap;
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   font-weight: 600;
-  color: var(--muted);
+  color: var(--ink-2);
   background: var(--surface);
-  border-bottom: 1px solid var(--border-strong);
+  border-bottom: 1.5px solid var(--ink);
 }
 
 td {
@@ -1235,8 +1163,6 @@ td {
   border-bottom: 1px solid var(--border);
   vertical-align: middle;
 }
-
-tbody tr:last-child td { border-bottom: none; }
 
 /* Zeilenköpfe im Rumpf sehen aus wie Zellen – für Vorleser sind sie der Name der Zeile. */
 tbody th {
@@ -1247,12 +1173,10 @@ tbody th {
   text-transform: none;
   color: inherit;
   background: none;
-  border-bottom-color: var(--border);
+  border-bottom: 1px solid var(--border);
   white-space: normal;
   vertical-align: middle;
 }
-
-tbody tr:last-child th { border-bottom: none; }
 
 th.num,
 td.num {
@@ -1260,7 +1184,6 @@ td.num {
   font-variant-numeric: tabular-nums;
 }
 
-tbody tr { transition: background-color 0.08s ease; }
 tbody tr:hover { background: var(--surface-2); }
 
 /*
@@ -1279,16 +1202,15 @@ tbody tr:hover { background: var(--surface-2); }
     radial-gradient(farthest-side at 0 50%, var(--kante), transparent) left / 0.9rem 100% no-repeat scroll,
     radial-gradient(farthest-side at 100% 50%, var(--kante), transparent) right / 0.9rem 100% no-repeat scroll,
     var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
 }
 
 /* Eine lange Tabelle bekommt eine feste Höhe und einen klebenden Kopf –
    bei 860 Zeilen weiß man sonst nach dem dritten Bildschirm nicht mehr,
-   welche Spalte was war. */
+   welche Spalte was war. Die Linie unten sagt, wo der Bereich endet. */
 .tabelle.lang {
   max-height: min(75vh, 48rem);
   overflow: auto;
+  border-bottom: 1px solid var(--border-strong);
 }
 
 .tabelle.lang thead th {
@@ -1310,7 +1232,6 @@ tbody tr:hover { background: var(--surface-2); }
 }
 
 tbody tr:hover th[scope='row'] { background: var(--surface-2); }
-tr.meister th[scope='row'] { background: color-mix(in srgb, var(--accent) 7%, var(--surface)); }
 
 
 /*
@@ -1339,17 +1260,19 @@ a.zeile {
   text-decoration: none;
 }
 
+/* In einer Tabelle wäre jede Zeile unterstrichen; der Strich kommt erst unter dem Zeiger. */
 a.zeile:hover {
-  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-color: currentColor;
 }
 
-/* Ein Verweis in einer Nebenspalte: da, aber nicht rot. */
+/* Ein Verweis in einer Nebenspalte: da, aber leise. */
 a.leise {
   color: inherit;
   text-decoration: none;
 }
 
-a.leise:hover { color: var(--accent); }
+a.leise:hover { color: var(--ink); text-decoration: underline; }
 
 td .neben {
   display: block;
@@ -1359,7 +1282,7 @@ td .neben {
 }
 
 td .neben a { color: var(--muted); text-decoration: none; }
-td .neben a:hover { color: var(--accent); }
+td .neben a:hover { color: var(--ink); text-decoration: underline; }
 
 /*
  * Eine Zelle mit zweiter Zeile ist ein kleiner Absatz, keine Zahl. Am Telefon
@@ -1369,9 +1292,13 @@ td .neben a:hover { color: var(--accent); }
  */
 td:has(> .neben) { min-width: 9.5rem; }
 
-/* Zeile des Meisters, des Siegers, des gerade gezeigten Eintrags. */
-tr.meister td { background: var(--accent-wash); }
-tr.meister:hover td { background: color-mix(in srgb, var(--accent) 11%, transparent); }
+/*
+ * Zeile des Meisters, des Siegers, des gerade gezeigten Eintrags: ein roter
+ * Strich vor der Zeile, wie eine Markierung am Rand einer Ergebnisliste. Eine
+ * rosa unterlegte Zeile färbte bei Hamilton sieben von zwanzig Zeilen ein.
+ */
+tr.meister > :first-child { box-shadow: inset 3px 0 0 var(--accent); }
+tr.meister a.zeile { font-weight: 700; }
 tr.raus td { color: var(--muted); }
 tr.raus a.zeile { color: var(--muted); font-weight: 500; }
 
@@ -1390,11 +1317,11 @@ td.verschoben { color: var(--warn); font-weight: 650; }
   height: 1.6rem;
   padding: 0 0.3rem;
   font-size: 0.8rem;
-  font-weight: 750;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: var(--ink-2);
   background: var(--surface-3);
-  border-radius: 0.35rem;
+  border-radius: var(--radius-s);
 }
 
 .pos.p1 { color: var(--podest-ink); background: var(--gold); }
@@ -1408,35 +1335,36 @@ td.verschoben { color: var(--warn); font-weight: 650; }
   margin-right: 0.55rem;
   padding: 0.12rem 0.3rem;
   font-size: 0.75rem;
-  font-weight: 750;
-  letter-spacing: 0.02em;
+  font-weight: 700;
+  letter-spacing: 0.03em;
   text-align: center;
-  color: var(--muted);
-  background: var(--surface-3);
-  border-radius: 0.25rem;
+  color: var(--ink-2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-s);
   vertical-align: 0.08em;
 }
 
-/* Kleine Marke hinter einem Namen: geteiltes Auto, heute, Indy, Titel. */
+/*
+ * Kleine Marke hinter einem Namen: geteiltes Auto, heute, Indy, Titel. In
+ * normaler Schreibung und gerahmt – als Versalpille las sich jede wie ein
+ * Hinweis auf etwas Neues.
+ */
 .etikett {
   display: inline-block;
   margin-left: 0.45rem;
-  padding: 0.08rem 0.4rem;
+  padding: 0 0.35rem;
   font-size: 0.75rem;
-  font-weight: 750;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  font-family: var(--display);
-  font-stretch: 88%;
+  font-weight: 600;
+  line-height: 1.5;
   color: var(--muted);
-  background: var(--surface-3);
-  border-radius: 999px;
-  vertical-align: 0.12em;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-s);
+  vertical-align: 0.1em;
   white-space: nowrap;
 }
 
-.etikett.akzent { color: var(--accent-strong); background: var(--accent-wash); }
-.etikett.gut { color: var(--good); background: var(--good-wash); }
+.etikett.akzent { color: var(--accent); border-color: currentColor; }
+.etikett.gut { color: var(--good); border-color: currentColor; }
 
 /* --------------------------------------------------- sortierbare Tabellen */
 
@@ -1467,7 +1395,7 @@ thead button:hover { color: var(--ink); }
 /* Die Pfeile mit leerem Alternativtext: Sie zeigen die Richtung, sind aber nicht
    Teil des Knopfnamens – die sagt aria-sort am Spaltenkopf. */
 thead button::after { content: ' ↕' / ''; opacity: 0.35; }
-thead button[data-aktiv='1'] { color: var(--accent-strong); }
+thead button[data-aktiv='1'] { color: var(--ink); font-weight: 700; }
 thead button[data-aktiv='1']::after { content: ' ▾' / ''; opacity: 1; font-size: 0.8em; }
 thead button[data-aktiv='1'][data-richtung='auf']::after { content: ' ▴' / ''; }
 
@@ -1494,34 +1422,33 @@ thead button[data-aktiv='1'][data-richtung='auf']::after { content: ' ▴' / '';
   padding: 0.6rem 0.8rem 0.6rem 2.3rem;
   font-size: 0.92rem;
   color: var(--ink);
-  background: var(--surface)
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%238f8e88' stroke-width='2' stroke-linecap='round' viewBox='0 0 24 24'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E")
+  background: var(--plane)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%23868d98' stroke-width='2' stroke-linecap='round' viewBox='0 0 24 24'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E")
     no-repeat 0.75rem 50%;
   border: 1px solid var(--border-strong);
-  border-radius: var(--radius-s);
+  border-radius: var(--radius);
   appearance: none;
-  box-shadow: var(--shadow-s);
 }
 
-.filterleiste input[type='search']:focus { border-color: var(--accent); outline: none; }
+.filterleiste input[type='search']:focus { border-color: var(--ink); outline: none; }
 .filterleiste output { font-size: 0.85rem; color: var(--muted); font-variant-numeric: tabular-nums; }
 
-/* Umschalter als Pillen: „nur Weltmeister", „nur aktive". */
+/* Umschalter: „nur Weltmeister", „nur aktive". Der Name „Pillen“ ist geblieben, die Form nicht. */
 .pillen { display: flex; flex-wrap: wrap; gap: 0.35rem; }
 
 .pillen button {
   padding: 0.35rem 0.8rem;
-  font-size: 0.83rem;
-  font-weight: 600;
+  font-size: 0.85rem;
+  font-weight: 500;
   color: var(--ink-2);
-  background: var(--surface);
-  border: 1px solid var(--border-strong);
-  border-radius: 999px;
+  background: var(--plane);
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius);
   cursor: pointer;
 }
 
-.pillen button:hover { border-color: var(--accent); color: var(--ink); }
-/* Gewählt heißt dunkel, nicht rot: Bei acht gewählten Spalten war die Leiste sonst eine rote Fläche. Rot bleibt für den einen Knopf, der etwas auslöst. */
+.pillen button:hover { border-color: var(--ink); color: var(--ink); }
+/* Gewählt heißt Tinte, nicht rot: Bei acht gewählten Spalten war die Leiste sonst eine rote Fläche. */
 .pillen button[aria-pressed='true'] { color: var(--plane); background: var(--ink); border-color: var(--ink); }
 
 .leer-meldung {
@@ -1537,18 +1464,18 @@ thead button[data-aktiv='1'][data-richtung='auf']::after { content: ' ▴' / '';
   font: inherit;
   font-size: 0.86rem;
   font-weight: 600;
-  color: var(--accent-strong);
+  color: var(--ink);
   background: none;
   border: 1px dashed var(--border-input);
-  border-radius: 0.4rem;
+  border-radius: var(--radius);
   cursor: pointer;
 }
 
-.leise-knopf:hover { border-style: solid; border-color: var(--accent); }
+.leise-knopf:hover { border-style: solid; border-color: var(--ink); }
 
 .pillen button { min-height: 2.25rem; }
 .filterleiste input[type='search'] { border-color: var(--border-input); }
-.filterleiste input[type='search']:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.filterleiste input[type='search']:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
 
 /*
  * Auswahl zwischen vorgerechneten Ansichten (Wahl.astro, What-if): echte
@@ -1567,31 +1494,30 @@ thead button[data-aktiv='1'][data-richtung='auf']::after { content: ' ▴' / '';
   min-height: 2.25rem;
   padding: 0.35rem 0.85rem;
   font-size: 0.86rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--ink-2);
-  background: var(--surface);
+  background: var(--plane);
   border: 1px solid var(--border-input);
-  border-radius: 999px;
+  border-radius: var(--radius);
 }
 
-.wahl-chip:hover span { border-color: var(--accent); color: var(--ink); }
-.wahl-chip input:checked + span { color: var(--plane); background: var(--ink); border-color: var(--ink); }
-.wahl-chip input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+.wahl-chip:hover span { border-color: var(--ink); color: var(--ink); }
+.wahl-chip input:checked + span { color: var(--plane); background: var(--ink); border-color: var(--ink); font-weight: 600; }
+.wahl-chip input:focus-visible + span { outline: 2px solid var(--ink); outline-offset: 2px; }
 
 /* ============================================================ Ranglisten */
 
 /*
- * Eine kurze Bestenliste in einer Karte. Der erste Eintrag ist der Rekord und
- * steht groß oben; die übrigen folgen als Liste. So liest man beim
- * Überfliegen der Rekordseite erst die Halter und erst dann die Verfolger.
+ * Eine kurze Bestenliste. Der erste Eintrag ist der Rekord und steht groß
+ * oben; die übrigen folgen als Liste. So liest man beim Überfliegen der
+ * Rekordseite erst die Halter und erst dann die Verfolger. Ohne Kasten: Die
+ * Linie oben trennt eine Liste von der nächsten.
  */
 .rangkarte {
   display: flex;
   flex-direction: column;
-  padding: 1.05rem 1.15rem 0.6rem;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  padding: 0.75rem 0 0.3rem;
+  border-top: 1px solid var(--ink);
   min-width: 0;
 }
 
@@ -1661,7 +1587,7 @@ thead button[data-aktiv='1'][data-richtung='auf']::after { content: ' ▴' / '';
 }
 
 .rangliste > li > a { flex: 1; }
-.rangliste a:hover { color: var(--accent); }
+.rangliste a:hover { text-decoration: underline; }
 
 .rangliste i {
   font-style: normal;
@@ -1673,7 +1599,7 @@ thead button[data-aktiv='1'][data-richtung='auf']::after { content: ' ▴' / '';
 }
 
 .rangliste i a { color: var(--muted); font-weight: 400; }
-.rangliste i a:hover { color: var(--accent); }
+.rangliste i a:hover { color: var(--ink); text-decoration: underline; }
 
 .rangliste b {
   flex: none;
@@ -1694,42 +1620,43 @@ thead button[data-aktiv='1'][data-richtung='auf']::after { content: ' ▴' / '';
   height: 1.75rem;
   color: var(--podest-ink);
   background: var(--gold);
-  border-radius: 0.4rem;
+  border-radius: var(--radius-s);
 }
 
 .rangkarte .rangliste li.vorn a { font-size: 1.02rem; font-weight: 700; }
 
+/* Die Rekordzahl in Rot: Sie ist der Rekord. */
 .rangkarte .rangliste li.vorn b {
   font-family: var(--display);
-  font-stretch: 78%;
   font-size: 1.75rem;
-  font-weight: 750;
+  font-weight: 800;
+  letter-spacing: -0.03em;
   line-height: 1;
   color: var(--accent);
 }
 
 /* ============================================================ Diagramme */
 
+/* Ein Diagramm steht auf dem Papier, gerahmt von einer Linie oben und unten. */
 .bild {
   margin: 0;
-  padding: 1rem 1.1rem 0.85rem;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  padding: 1rem 0 0.85rem;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
 }
 
 /* ============================================================= Fußzeile */
 
 footer {
   padding-block: 2.5rem 3rem;
-  font-size: 0.84rem;
-  color: var(--kopf-muted);
-  background: var(--kopf-bg);
-  border-top: 3px solid var(--accent);
+  font-size: 0.86rem;
+  color: var(--muted);
+  background: var(--surface-2);
+  border-top: 1px solid var(--border);
 }
 
-footer a { color: var(--kopf-ink); text-decoration: none; }
-footer a:hover { color: var(--accent); text-decoration: underline; }
+footer a { color: var(--ink-2); text-decoration: none; }
+footer a:hover { color: var(--ink); text-decoration: underline; }
 
 .fuss-raster {
   display: grid;
