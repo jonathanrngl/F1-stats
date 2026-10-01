@@ -247,7 +247,7 @@ export default function Quiz({ bereiche, stufen }) {
   const verweis = (f) =>
     f.l && (
       <a className="quiz-verweis" href={`${BASIS}/${f.l}`} target="_blank" rel="noopener">
-        {ZIEL[f.l.split('/')[0]] ?? 'More'} →<span className="sr-only"> (opens in a new tab)</span>
+        {ZIEL[f.l.split('/')[0]] ?? 'More'}<span className="sr-only"> (opens in a new tab)</span>
       </a>
     )
 

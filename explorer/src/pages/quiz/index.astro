@@ -89,12 +89,9 @@ const stand = eine(`
 
   .quiz-wahl legend {
     padding: 0 0.35rem;
-    font-size: 0.75rem;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
+    font-size: 0.85rem;
+    font-weight: 600;
     font-family: var(--display);
-    font-stretch: 88%;
     color: var(--muted);
   }
 
@@ -118,7 +115,7 @@ const stand = eine(`
   }
 
   .stufenwahl label:hover { border-color: var(--accent); }
-  .stufenwahl label.an { background: var(--accent-wash); border-color: var(--accent-strong); box-shadow: inset 0 0 0 1px var(--accent); }
+  .stufenwahl label.an { background: var(--surface-2); border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
   .stufenwahl b { color: var(--ink); font-weight: 700; }
   .stufenwahl span { font-size: 0.8rem; color: var(--ink-2); text-wrap: pretty; }
   .stufenwahl i { margin-top: 0.3rem; font-style: normal; font-size: 0.75rem; color: var(--muted); font-variant-numeric: tabular-nums; }
@@ -231,7 +228,7 @@ const stand = eine(`
   .quiz-kopf .etikett { margin-left: 0.25rem; }
   .etikett.stufe-1 { color: var(--good); background: var(--good-wash); }
   .etikett.stufe-2 { color: var(--warn); background: var(--warn-wash); }
-  .etikett.stufe-3 { color: var(--accent-strong); background: var(--accent-wash); }
+  .etikett.stufe-3 { color: var(--ink); border-color: var(--ink); }
 
   /* Fortschritt als Reihe von Segmenten: grün richtig, rot falsch. Man sieht
      den Verlauf der Runde, ohne zu zählen. */
@@ -282,7 +279,7 @@ const stand = eine(`
     transition: border-color 0.12s ease, background 0.12s ease;
   }
 
-  .antworten button:not(:disabled):hover { border-color: var(--accent-strong); background: var(--accent-wash); }
+  .antworten button:not(:disabled):hover { border-color: var(--ink); background: var(--surface-2); }
   .antworten button:disabled { cursor: default; }
 
   .antworten kbd {
@@ -292,8 +289,8 @@ const stand = eine(`
     width: 1.7rem;
     height: 1.7rem;
     font: inherit;
-    font-size: 0.75rem;
-    font-weight: 750;
+    font-size: 0.85rem;
+    font-weight: 600;
     color: var(--muted);
     background: var(--surface);
     border: 1px solid var(--border);
@@ -363,22 +360,18 @@ const stand = eine(`
   .quiz-ende {
     max-width: 48rem;
     padding: 1.4rem 1.35rem;
-    color: var(--kopf-muted);
-    background: var(--kopf-bg);
-    border-left: 4px solid var(--accent);
-    border-radius: var(--radius);
+    color: var(--muted);
+    background: var(--surface-2);
+    border-left: 3px solid var(--ink);
+    border-radius: 0 var(--radius) var(--radius) 0;
   }
 
   .quiz-ende h2 { display: grid; gap: 0.2rem; outline: none; }
 
   .quiz-ende h2 span {
-    font-size: 0.75rem;
-    font-weight: 750;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    font-family: var(--display);
-    font-stretch: 88%;
-    color: var(--accent);
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--muted);
   }
 
   .quiz-ende h2 b {
@@ -407,7 +400,7 @@ const stand = eine(`
 
   .quiz-knoepfe { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 1.2rem; }
   .quiz-ende .quiz-knopf.leise { color: var(--kopf-ink); background: transparent; border-color: var(--kopf-linie); }
-  .quiz-ende .quiz-knopf.leise:hover { border-color: var(--accent); }
+  .quiz-ende .quiz-knopf.leise:hover { border-color: var(--ink); }
 
   .rueckblick-kopf { margin: 2.25rem 0 0.75rem; font-size: 1.1rem; }
 

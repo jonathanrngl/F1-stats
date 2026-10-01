@@ -221,7 +221,7 @@ const person = {
         </p>
       )}
       <p class="aktionen">
-        <a class="knopf" href={`${pfad.seite('/comparison/')}?a=${fahrer.id}`}>Compare with another driver →</a>
+        <a class="knopf" href={`${pfad.seite('/comparison/')}?a=${fahrer.id}`}>Compare with another driver</a>
         <a class="knopf leise" href={`${pfad.seite('/explorer/')}?fahrer=${fahrer.id}&d=saison&s=punkte`}>Season by season in the Explorer</a>
       </p>
     </div>
@@ -434,7 +434,7 @@ const person = {
                     class="vergleichen"
                     href={`${pfad.seite('/comparison/')}?a=${fahrer.id}&b=${d.driverId}`}
                   >
-                    Compare →
+                    Compare
                   </a>
                 </td>
               </tr>
@@ -498,7 +498,7 @@ const person = {
     border-radius: var(--radius-s);
   }
 
-  .meilensteine span { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); font-family: var(--display); font-stretch: 88%; }
+  .meilensteine span { font-size: 0.85rem; font-weight: 600; color: var(--muted); font-family: var(--display); }
   .meilensteine a { font-weight: 650; color: var(--ink); text-decoration: none; }
   .meilensteine a:hover { color: var(--accent); text-decoration: underline; }
   .meilensteine i { font-style: normal; font-size: 0.84rem; color: var(--muted); }
