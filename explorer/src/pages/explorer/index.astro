@@ -163,7 +163,7 @@ const BEISPIELE = [
     cursor: pointer;
   }
 
-  .leise-knopf:hover { border-style: solid; border-color: var(--accent); }
+  .leise-knopf:hover { border-style: solid; border-color: var(--link); }
 
   .schalter { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; margin-top: 0.85rem; }
   .schalter label { display: flex; align-items: center; gap: 0.45rem; min-height: 2rem; font-size: 0.86rem; color: var(--ink-2); }
@@ -198,9 +198,9 @@ const BEISPIELE = [
     cursor: pointer;
   }
 
-  .export button:hover { border-color: var(--accent); color: var(--accent-strong); }
+  .export button:hover { border-color: var(--link); color: var(--link); }
 
-  .explorer th button {
+  .explorer th button:not(.info) {
     min-height: 2rem;
     padding: 0;
     font: inherit;
@@ -213,9 +213,9 @@ const BEISPIELE = [
     cursor: pointer;
   }
 
-  .explorer th button:hover { color: var(--ink); }
+  .explorer th button:not(.info):hover { color: var(--link); }
   .explorer td a { color: var(--ink); font-weight: 600; text-decoration: none; }
-  .explorer td a:hover { color: var(--accent); text-decoration: underline; }
+  .explorer td a:hover { color: var(--link); text-decoration: underline; }
 
   .mehr-zeilen { margin-top: 0.75rem; font-size: 0.86rem; color: var(--muted); }
 
@@ -271,7 +271,7 @@ const BEISPIELE = [
     appearance: none;
   }
 
-  .frage input:focus-visible { border-color: var(--accent); outline: 2px solid var(--accent); outline-offset: 1px; }
+  .frage input:focus-visible { border-color: var(--link); outline: 2px solid var(--link); outline-offset: 1px; }
 
   .frage button {
     flex: none;
@@ -327,7 +327,7 @@ const BEISPIELE = [
   .ergebnisbild .reihe.an .treffer { fill: var(--surface-2); }
   .ergebnisbild .name { font-size: 13px; font-weight: 600; fill: var(--ink); }
   .ergebnisbild .name a { fill: var(--ink); }
-  .ergebnisbild .name a:hover { fill: var(--accent); text-decoration: underline; }
+  .ergebnisbild .name a:hover { fill: var(--link); text-decoration: underline; }
   .ergebnisbild .wert { font-size: 12.5px; font-weight: 650; fill: var(--ink-2); font-variant-numeric: tabular-nums; }
   .ergebnisbild .achse { font-size: 11px; fill: var(--muted); font-variant-numeric: tabular-nums; }
   .ergebnisbild .gitter { stroke: var(--grid); }

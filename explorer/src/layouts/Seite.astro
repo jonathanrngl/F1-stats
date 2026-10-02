@@ -283,6 +283,23 @@ const ldText = ld.length ? JSON.stringify(ld.length === 1 ? ld[0] : ld).replace(
       </div>
     </footer>
 
+    {/*
+      * Die Infobox hinter den „i“-Knöpfen (lib/info.js). Eine für die ganze
+      * Seite: Das Skript füllt sie mit dem Begriff, dessen Knopf gedrückt wurde.
+      */}
+    <div id="info-box" class="info-box" popover role="dialog" aria-labelledby="info-box-titel">
+      <b id="info-box-titel" data-info-titel></b>
+      <p data-info-text></p>
+      <button type="button" class="info-zu" popovertarget="info-box" popovertargetaction="hide" aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+      </button>
+    </div>
+
+    <script>
+      import { starte } from '../lib/info.js'
+      starte()
+    </script>
+
     <script>
       /*
        * Der Umschalter: System → hell → dunkel → System. Die Wahl steht im

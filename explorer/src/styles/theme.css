@@ -43,10 +43,25 @@
   --accent-wash: light-dark(rgba(200, 16, 46, 0.06), rgba(255, 107, 107, 0.12));
   --accent-ink: light-dark(#ffffff, #15181d);
 
-  /* Was man anklickt, ist Tinte – unterstrichen, nicht eingefärbt. Ein roter
-     Verweis sah aus wie ein Rekord. */
-  --link: var(--ink);
-  --link-line: light-dark(#a9afb8, #59606b);
+  /*
+   * Zwei Farben mit je einer Aufgabe. Rot heißt „Ergebnis“: Sieg, Titel,
+   * Rekord. Blau heißt „anklickbar“: Verweise, Knöpfe, der gewählte Reiter.
+   * Ganz ohne Blau – nur Tinte und Unterstrich – sah die Seite ruhig aus,
+   * aber nichts hob sich ab, und man musste suchen, was man anklicken kann.
+   * 6,4:1 auf Weiß, 5,6:1 auf --band; dunkel 7,9:1.
+   */
+  --link: light-dark(#1757b8, #7cb0ff);
+  --link-strong: light-dark(#0f4796, #a5c8ff);
+  --link-line: light-dark(rgba(23, 87, 184, 0.35), rgba(124, 176, 255, 0.4));
+  --link-wash: light-dark(#e8f0fb, #182638);
+
+  /*
+   * Getönte Flächen gliedern die Seite: der Kopf jeder Seite mit seinen
+   * Kennzahlen, die Leiste über jedem Abschnitt, die Tabellenköpfe. So sieht
+   * man, wo ein Teil endet und der nächste beginnt, ohne Linien zu zählen.
+   */
+  --band: light-dark(#eef2f7, #1b2129);
+  --zebra: light-dark(#f7f9fb, #181c22);
 
   /* Gegenrichtung zum Rot: Plätze gewonnen, Auto hielt durch, Titel noch drin. */
   --good: light-dark(#0f7a52, #2fbf88);
@@ -219,7 +234,7 @@ input {
 
 /* Der Fokus in Tinte: Er zeigt, wo man ist, und soll nicht wie ein Rekord aussehen. */
 :where(button, select, a, input, summary, [tabindex]):focus-visible {
-  outline: 2px solid var(--ink);
+  outline: 2px solid var(--link);
   outline-offset: 2px;
   border-radius: var(--radius-s);
 }
@@ -243,15 +258,15 @@ html.js section:not(.alle-gezeigt) [data-weitere] { display: none; }
   font-size: 0.9rem;
   font-weight: 600;
   color: var(--plane);
-  background: var(--ink);
-  border: 1px solid var(--ink);
+  background: var(--link);
+  border: 1px solid var(--link);
   border-radius: var(--radius);
   text-decoration: none;
 }
 
-.knopf:hover { background: var(--ink-2); border-color: var(--ink-2); }
-.knopf.leise { color: var(--ink); background: var(--plane); border-color: var(--border-input); }
-.knopf.leise:hover { border-color: var(--ink); }
+.knopf:hover { background: var(--link-strong); border-color: var(--link-strong); }
+.knopf.leise { color: var(--link); background: var(--plane); border-color: var(--border-input); }
+.knopf.leise:hover { border-color: var(--link); }
 
 /* Nur für Hilfsmittel: erklärt, was ein Platzhalter gerade tut. */
 .sr-only {
@@ -377,7 +392,7 @@ html.js section:not(.alle-gezeigt) [data-weitere] { display: none; }
   right: 0.65rem;
   bottom: calc((var(--kopf-h) - 2.4rem) / -2 - 1px);
   height: 2px;
-  background: var(--ink);
+  background: var(--link);
 }
 
 /* Hell / dunkel / System. Ein Knopf, der reihum schaltet. */
@@ -439,8 +454,8 @@ html.js section:not(.alle-gezeigt) [data-weitere] { display: none; }
 .suche input::placeholder { color: var(--kopf-muted); }
 /* Fokus sichtbar wie überall: der Rahmen in Tinte, nicht nur ein Farbwechsel des Randes. */
 .suche input:focus-visible {
-  border-color: var(--ink);
-  outline: 2px solid var(--ink);
+  border-color: var(--link);
+  outline: 2px solid var(--link);
   outline-offset: 1px;
   background-color: var(--plane);
 }
@@ -554,7 +569,7 @@ html.js section:not(.alle-gezeigt) [data-weitere] { display: none; }
 .werkzeuge a:hover { background: var(--surface-2); }
 .werkzeuge b { color: var(--ink); font-size: 0.92rem; font-weight: 650; }
 .werkzeuge span { color: var(--muted); font-size: 0.8rem; }
-.werkzeuge a[aria-current='page'] { background: var(--surface-2); box-shadow: inset 2px 0 0 var(--ink); }
+.werkzeuge a[aria-current='page'] { background: var(--surface-2); box-shadow: inset 2px 0 0 var(--link); }
 
 /* Das Menü am schmalen Schirm: verborgen, bis es gebraucht wird. */
 .menue { display: none; }
@@ -616,7 +631,7 @@ html.js section:not(.alle-gezeigt) [data-weitere] { display: none; }
 }
 
 .menue-feld a:hover { background: var(--kopf-hover); }
-.menue-feld a[aria-current='page'] { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+.menue-feld a[aria-current='page'] { border-color: var(--link); box-shadow: inset 0 0 0 1px var(--link); }
 
 /* Mittlere Breite: die Suche als Knopf, ihr Feld klappt darunter auf. */
 @media (max-width: 72rem) {
@@ -692,6 +707,9 @@ main {
   padding-block: 2.25rem 4.5rem;
 }
 
+/* Beginnt die Seite mit ihrem Kopf, schließt dessen Fläche direkt an die Kopfleiste an. */
+main:has(> .wrap > :is(.seitenkopf, .start):first-child) { padding-top: 0; }
+
 /* --------------------------------------------------------- Seitenkopf */
 
 /*
@@ -703,10 +721,40 @@ main {
   display: flex;
   align-items: flex-start;
   gap: 1.1rem;
-  margin-bottom: 1.75rem;
+  margin-bottom: 2.25rem;
+  padding-block: 2rem 1.9rem;
 }
 
 .seitenkopf > div { min-width: 0; flex: 1; }
+
+/*
+ * Der Kopf liegt auf einer getönten Fläche über die volle Breite, und die
+ * Kennzahlen direkt darunter mit ihm: Oben steht die Zusammenfassung, darunter
+ * auf Weiß die Einzelheiten. Vorher stand beides auf demselben Weiß, und man
+ * sah nicht, wo die Übersicht aufhört.
+ *
+ * Die Fläche reicht über den Satzspiegel hinaus, ohne dass das Markup einen
+ * eigenen Rahmen braucht: Ein Schatten ohne Unschärfe färbt den Rand nach
+ * beiden Seiten, `clip-path` schneidet ihn oben und unten ab.
+ */
+.seitenkopf,
+.seitenkopf + .kacheln,
+.seitenkopf + .kacheln + .kacheln {
+  background: var(--band);
+  box-shadow: 0 0 0 100vmax var(--band);
+  clip-path: inset(0 -100vmax);
+}
+
+.seitenkopf:has(+ .kacheln) { margin-bottom: 0; padding-bottom: 1.5rem; }
+
+.seitenkopf + .kacheln,
+.seitenkopf + .kacheln + .kacheln {
+  --kachel: var(--plane);
+  margin-bottom: 2.25rem;
+  padding-bottom: 2rem;
+}
+
+.seitenkopf + .kacheln:has(+ .kacheln) { margin-bottom: 0; padding-bottom: 0.5rem; }
 
 /*
  * Die Oberzeile ist eine Brotkrume: wo die Seite liegt, in normaler
@@ -725,7 +773,7 @@ main {
 }
 
 .oberzeile a { color: var(--ink-2); text-decoration: underline; text-decoration-color: var(--link-line); }
-.oberzeile a:hover { color: var(--ink); text-decoration-color: currentColor; }
+.oberzeile a:hover { color: var(--link); text-decoration-color: currentColor; }
 .oberzeile .trenner { color: var(--border-input); }
 .oberzeile .still { color: var(--muted); }
 
@@ -847,8 +895,8 @@ h1 {
   border-bottom: 2px solid transparent;
 }
 
-.sprung a:hover { color: var(--ink); }
-.sprung a.an { color: var(--ink); font-weight: 650; border-bottom-color: var(--ink); }
+.sprung a:hover { color: var(--link); }
+.sprung a.an { color: var(--link); font-weight: 650; border-bottom-color: var(--link); }
 
 /* Unter 52rem bricht die Kopfleiste um und ist höher; dort klebt die
    Sprungleiste nicht, sonst deckten beide zusammen ein Drittel der Seite ab. */
@@ -868,20 +916,21 @@ h1 {
 .sprung + .abschnitt { margin-top: 0; }
 
 /*
- * Jeder Abschnitt beginnt unter einer Linie in Tinte über die ganze Breite.
- * Der Blick findet beim Scrollen den nächsten Abschnitt, ohne ihn zu suchen,
- * und die Überschrift braucht keinen eigenen Schmuck – auch kein rotes Stück
- * am Anfang der Linie.
+ * Jeder Abschnitt beginnt mit einer getönten Leiste, darin Überschrift und
+ * Satz dazu. Beim Scrollen findet der Blick den nächsten Abschnitt an der
+ * Fläche, nicht erst an einer Linie – auf einer langen Seite mit sieben
+ * Abschnitten war das der Unterschied zwischen Lesen und Suchen.
  */
 .abschnitt-kopf {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 0.35rem 1rem;
-  margin-bottom: 1.1rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid var(--ink);
+  margin-bottom: 1.25rem;
+  padding: 0.75rem 1rem 0.8rem;
+  background: var(--band);
+  border-radius: var(--radius);
 }
 
 .abschnitt-kopf > div { min-width: 0; flex: 1 1 24rem; }
@@ -941,7 +990,7 @@ a.karte {
 
 /* Beim Überfahren wird der Rahmen zur Tinte – die Karte springt nicht und färbt sich nicht. */
 a.karte:hover {
-  border-color: var(--ink);
+  border-color: var(--link);
 }
 
 .karte > h3:first-child { margin-bottom: 0.75rem; }
@@ -962,29 +1011,28 @@ a.karte:hover {
 /* ------------------------------------------------------- Kennzahlkacheln */
 
 /*
- * Die Kennzahlen als eine Zeile der Ergebnisliste: kein Rahmen, keine
- * Kästchen, nur Linien oben und unten und Haarlinien zwischen den Feldern.
- * Jedes Feld zieht seine Linie links und oben selbst; was über den Rand
- * hinausragt – vor der ersten Spalte, über der ersten Reihe –, schneidet
- * `overflow` ab. So stimmen die Linien auch dort, wo die Zeile umbricht.
+ * Die Kennzahlen als Kacheln: jede Zahl auf ihrer eigenen Fläche, damit das
+ * Auge sie einzeln greift. Auf der getönten Fläche des Seitenkopfs sind die
+ * Kacheln weiß, auf weißem Grund getönt – `--kachel` entscheidet.
  */
 .kacheln {
+  --kachel: var(--band);
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(8rem, 100%), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(7.25rem, 100%), 1fr));
+  gap: 0.5rem;
   margin: 0 0 2.5rem;
   padding: 0;
   list-style: none;
-  border-top: 2px solid var(--ink);
-  border-bottom: 1px solid var(--border-strong);
-  overflow: hidden;
 }
 
 .kacheln li {
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
-  padding: 0.85rem 1.1rem 1rem;
-  box-shadow: -1px 0 0 var(--border), 0 -1px 0 var(--border);
+  padding: 0.85rem 1rem 1rem;
+  background: var(--kachel);
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  border-radius: var(--radius);
 }
 
 /* Die große Zahl ist das eine laute Element der Seite: schwer, eng, mit Tabellenziffern. */
@@ -1022,7 +1070,7 @@ a.karte:hover {
 /* Kacheln mit einem Namen statt einer Zahl: Sieger, Pole, schnellste Runde. */
 .kacheln.namen b { font-size: 1.3rem; line-height: 1.2; letter-spacing: -0.02em; }
 .kacheln.namen b a { color: var(--ink); text-decoration: none; }
-.kacheln.namen b a:hover { text-decoration: underline; }
+.kacheln.namen b a:hover { color: var(--link); text-decoration: underline; }
 
 /* Zahlen und Zeilen neben einer Beschriftung, zweispaltig, direkt auf dem Papier. */
 .daten {
@@ -1059,7 +1107,7 @@ a.karte:hover {
   padding: 0.8rem 1rem;
   font-size: 0.92rem;
   color: var(--ink-2);
-  background: var(--surface-2);
+  background: var(--band);
   border-left: 3px solid var(--border-input);
   border-radius: 0 var(--radius-s) var(--radius-s) 0;
   text-wrap: pretty;
@@ -1154,8 +1202,8 @@ th {
   font-size: 0.82rem;
   font-weight: 600;
   color: var(--ink-2);
-  background: var(--surface);
-  border-bottom: 1.5px solid var(--ink);
+  background: var(--band);
+  border-bottom: 1px solid var(--border-strong);
 }
 
 td {
@@ -1184,7 +1232,12 @@ td.num {
   font-variant-numeric: tabular-nums;
 }
 
-tbody tr:hover { background: var(--surface-2); }
+/*
+ * Jede zweite Zeile leicht getönt: In einer Tabelle mit acht Spalten verliert
+ * das Auge sonst auf dem Weg vom Namen zu den Punkten die Zeile.
+ */
+tbody tr:nth-child(even) { background: var(--zebra); }
+tbody tr:hover { background: var(--link-wash); }
 
 /*
  * Am Telefon ist fast jede Tabelle breiter als der Schirm, und rechts brach
@@ -1231,7 +1284,8 @@ tbody tr:hover { background: var(--surface-2); }
   background: var(--surface);
 }
 
-tbody tr:hover th[scope='row'] { background: var(--surface-2); }
+tbody tr:nth-child(even) th[scope='row'] { background: var(--zebra); }
+tbody tr:hover th[scope='row'] { background: var(--link-wash); }
 
 
 /*
@@ -1262,6 +1316,7 @@ a.zeile {
 
 /* In einer Tabelle wäre jede Zeile unterstrichen; der Strich kommt erst unter dem Zeiger. */
 a.zeile:hover {
+  color: var(--link);
   text-decoration: underline;
   text-decoration-color: currentColor;
 }
@@ -1272,7 +1327,7 @@ a.leise {
   text-decoration: none;
 }
 
-a.leise:hover { color: var(--ink); text-decoration: underline; }
+a.leise:hover { color: var(--link); text-decoration: underline; }
 
 td .neben {
   display: block;
@@ -1282,7 +1337,7 @@ td .neben {
 }
 
 td .neben a { color: var(--muted); text-decoration: none; }
-td .neben a:hover { color: var(--ink); text-decoration: underline; }
+td .neben a:hover { color: var(--link); text-decoration: underline; }
 
 /*
  * Eine Zelle mit zweiter Zeile ist ein kleiner Absatz, keine Zahl. Am Telefon
@@ -1376,7 +1431,7 @@ td.verschoben { color: var(--warn); font-weight: 650; }
  * Astro jedem Element der Seite ein Bereichsattribut an, und bei 860 Zeilen
  * mal sieben Elementen waren das 170 KB für sechs Zeilen CSS.
  */
-thead button {
+thead button:not(.info) {
   /* Groß genug für einen Finger, ohne dass der Kopf höher aussieht. */
   min-height: 2.25rem;
   margin-block: -0.5rem;
@@ -1391,13 +1446,13 @@ thead button {
   cursor: pointer;
 }
 
-thead button:hover { color: var(--ink); }
+thead button:not(.info):hover { color: var(--link); }
 /* Die Pfeile mit leerem Alternativtext: Sie zeigen die Richtung, sind aber nicht
    Teil des Knopfnamens – die sagt aria-sort am Spaltenkopf. */
-thead button::after { content: ' ↕' / ''; opacity: 0.35; }
-thead button[data-aktiv='1'] { color: var(--ink); font-weight: 700; }
-thead button[data-aktiv='1']::after { content: ' ▾' / ''; opacity: 1; font-size: 0.8em; }
-thead button[data-aktiv='1'][data-richtung='auf']::after { content: ' ▴' / ''; }
+thead button:not(.info)::after { content: ' ↕' / ''; opacity: 0.35; }
+thead button:not(.info)[data-aktiv='1'] { color: var(--link); font-weight: 700; }
+thead button:not(.info)[data-aktiv='1']::after { content: ' ▾' / ''; opacity: 1; font-size: 0.8em; }
+thead button:not(.info)[data-aktiv='1'][data-richtung='auf']::after { content: ' ▴' / ''; }
 
 /* ---------------------------------------------------------- Filterleiste */
 
@@ -1430,7 +1485,7 @@ thead button[data-aktiv='1'][data-richtung='auf']::after { content: ' ▴' / '';
   appearance: none;
 }
 
-.filterleiste input[type='search']:focus { border-color: var(--ink); outline: none; }
+.filterleiste input[type='search']:focus { border-color: var(--link); outline: none; }
 .filterleiste output { font-size: 0.85rem; color: var(--muted); font-variant-numeric: tabular-nums; }
 
 /* Umschalter: „nur Weltmeister", „nur aktive". Der Name „Pillen“ ist geblieben, die Form nicht. */
@@ -1447,9 +1502,9 @@ thead button[data-aktiv='1'][data-richtung='auf']::after { content: ' ▴' / '';
   cursor: pointer;
 }
 
-.pillen button:hover { border-color: var(--ink); color: var(--ink); }
+.pillen button:hover { border-color: var(--link); color: var(--link); }
 /* Gewählt heißt Tinte, nicht rot: Bei acht gewählten Spalten war die Leiste sonst eine rote Fläche. */
-.pillen button[aria-pressed='true'] { color: var(--plane); background: var(--ink); border-color: var(--ink); }
+.pillen button[aria-pressed='true'] { color: var(--plane); background: var(--link); border-color: var(--link); }
 
 .leer-meldung {
   padding: 2rem 1rem;
@@ -1464,18 +1519,18 @@ thead button[data-aktiv='1'][data-richtung='auf']::after { content: ' ▴' / '';
   font: inherit;
   font-size: 0.86rem;
   font-weight: 600;
-  color: var(--ink);
+  color: var(--link);
   background: none;
   border: 1px dashed var(--border-input);
   border-radius: var(--radius);
   cursor: pointer;
 }
 
-.leise-knopf:hover { border-style: solid; border-color: var(--ink); }
+.leise-knopf:hover { border-style: solid; border-color: var(--link); }
 
 .pillen button { min-height: 2.25rem; }
 .filterleiste input[type='search'] { border-color: var(--border-input); }
-.filterleiste input[type='search']:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+.filterleiste input[type='search']:focus-visible { outline: 2px solid var(--link); outline-offset: 1px; }
 
 /*
  * Auswahl zwischen vorgerechneten Ansichten (Wahl.astro, What-if): echte
@@ -1501,9 +1556,9 @@ thead button[data-aktiv='1'][data-richtung='auf']::after { content: ' ▴' / '';
   border-radius: var(--radius);
 }
 
-.wahl-chip:hover span { border-color: var(--ink); color: var(--ink); }
-.wahl-chip input:checked + span { color: var(--plane); background: var(--ink); border-color: var(--ink); font-weight: 600; }
-.wahl-chip input:focus-visible + span { outline: 2px solid var(--ink); outline-offset: 2px; }
+.wahl-chip:hover span { border-color: var(--link); color: var(--link); }
+.wahl-chip input:checked + span { color: var(--plane); background: var(--link); border-color: var(--link); font-weight: 600; }
+.wahl-chip input:focus-visible + span { outline: 2px solid var(--link); outline-offset: 2px; }
 
 /* ============================================================ Ranglisten */
 
@@ -1587,7 +1642,7 @@ thead button[data-aktiv='1'][data-richtung='auf']::after { content: ' ▴' / '';
 }
 
 .rangliste > li > a { flex: 1; }
-.rangliste a:hover { text-decoration: underline; }
+.rangliste a:hover { color: var(--link); text-decoration: underline; }
 
 .rangliste i {
   font-style: normal;
@@ -1599,7 +1654,7 @@ thead button[data-aktiv='1'][data-richtung='auf']::after { content: ' ▴' / '';
 }
 
 .rangliste i a { color: var(--muted); font-weight: 400; }
-.rangliste i a:hover { color: var(--ink); text-decoration: underline; }
+.rangliste i a:hover { color: var(--link); text-decoration: underline; }
 
 .rangliste b {
   flex: none;
@@ -1641,9 +1696,92 @@ thead button[data-aktiv='1'][data-richtung='auf']::after { content: ' ▴' / '';
 .bild {
   margin: 0;
   padding: 1rem 0 0.85rem;
-  border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
 }
+
+/* ========================================================== Info-Knöpfe */
+
+/*
+ * Das „i“ neben einer Beschriftung (lib/info.js). Sichtbar ist ein kleiner
+ * Kreis, der Knopf selbst ist größer – 24 Pixel, damit ihn auch ein Finger
+ * trifft – und ragt mit negativem Rand über die Zeile, ohne sie höher zu machen.
+ */
+.info {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin: -0.3rem -0.25rem -0.3rem 0.05rem;
+  padding: 0;
+  vertical-align: middle;
+  color: var(--muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font: 700 0.68rem/1 var(--sans);
+}
+
+.info::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+  width: 0.95rem;
+  height: 0.95rem;
+  border: 1.25px solid currentColor;
+  border-radius: 50%;
+}
+
+.info:hover,
+.info[aria-expanded='true'] { color: var(--link); }
+.info:focus-visible { outline-offset: 0; border-radius: 50%; }
+
+.info-halt { white-space: nowrap; }
+
+/* Im Spaltenkopf und in einer Kachel ist die Schrift kleiner – der Kreis bleibt gleich groß. */
+th .info,
+.kacheln span .info { font-size: 0.68rem; }
+
+/* Die Box: ein Zettel neben dem Knopf. Ohne Skript zum Anlegen erscheint sie in der Mitte. */
+.info-box {
+  position: fixed;
+  inset: auto;
+  width: min(20rem, calc(100vw - 1rem));
+  margin: 0;
+  padding: 0.85rem 2.4rem 0.9rem 1rem;
+  color: var(--ink-2);
+  background: var(--plane);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.info-box b { display: block; margin-bottom: 0.25rem; color: var(--ink); font-size: 0.95rem; }
+.info-box p { margin: 0; text-wrap: pretty; }
+
+.info-zu {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.35rem;
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  color: var(--muted);
+  background: none;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.info-zu:hover { color: var(--ink); background: var(--surface-2); }
+.info-zu svg { width: 1rem; height: 1rem; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
 
 /* ============================================================= Fußzeile */
 
@@ -1656,7 +1794,7 @@ footer {
 }
 
 footer a { color: var(--ink-2); text-decoration: none; }
-footer a:hover { color: var(--ink); text-decoration: underline; }
+footer a:hover { color: var(--link); text-decoration: underline; }
 
 .fuss-raster {
   display: grid;

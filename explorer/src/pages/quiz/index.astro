@@ -114,7 +114,7 @@ const stand = eine(`
     cursor: pointer;
   }
 
-  .stufenwahl label:hover { border-color: var(--accent); }
+  .stufenwahl label:hover { border-color: var(--link); }
   .stufenwahl label.an { background: var(--surface-2); border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
   .stufenwahl b { color: var(--ink); font-weight: 700; }
   .stufenwahl span { font-size: 0.8rem; color: var(--ink-2); text-wrap: pretty; }
@@ -150,10 +150,10 @@ const stand = eine(`
   }
 
   .themenwahl button:hover,
-  .laengenwahl label:hover { border-color: var(--accent); color: var(--ink); }
+  .laengenwahl label:hover { border-color: var(--link); color: var(--ink); }
 
   .themenwahl button[aria-pressed='true'],
-  .laengenwahl label.an { color: var(--plane); background: var(--ink); border-color: var(--ink); }
+  .laengenwahl label.an { color: var(--plane); background: var(--link); border-color: var(--link); }
 
   .themenwahl button.alle {
     color: var(--muted);
@@ -163,7 +163,7 @@ const stand = eine(`
     text-underline-offset: 0.2em;
   }
 
-  .themenwahl button.alle:hover { color: var(--accent); border-color: transparent; }
+  .themenwahl button.alle:hover { color: var(--link); border-color: transparent; }
 
   .laengenwahl label { min-width: 3.2rem; text-align: center; font-variant-numeric: tabular-nums; }
 
@@ -180,17 +180,17 @@ const stand = eine(`
   .quiz-knopf {
     padding: 0.7rem 1.35rem;
     font-weight: 700;
-    color: var(--accent-ink);
-    background: var(--accent);
-    border: 1px solid var(--accent);
+    color: var(--plane);
+    background: var(--link);
+    border: 1px solid var(--link);
     border-radius: var(--radius-s);
     cursor: pointer;
   }
 
-  .quiz-knopf:hover { background: var(--accent-strong); border-color: var(--accent-strong); }
+  .quiz-knopf:hover { background: var(--link-strong); border-color: var(--link-strong); }
   .quiz-knopf:disabled { opacity: 0.55; cursor: progress; }
   .quiz-knopf.leise { color: var(--ink); background: var(--surface); border-color: var(--border-strong); }
-  .quiz-knopf.leise:hover { border-color: var(--accent); color: var(--accent); }
+  .quiz-knopf.leise:hover { border-color: var(--link); color: var(--link); }
 
   .quiz-fehler {
     padding: 0.8rem 1rem;
@@ -353,7 +353,7 @@ const stand = eine(`
     cursor: pointer;
   }
 
-  .quiz-abbruch:hover { color: var(--accent); }
+  .quiz-abbruch:hover { color: var(--link); }
 
   /* ----------------------------------------------------------- Ergebnis */
 
