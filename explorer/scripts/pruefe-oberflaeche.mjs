@@ -162,7 +162,7 @@ async function pruefeAlles() {
     pruefe('Vergleich zeigt beide Fahrer', inhalt.includes('Lewis Hamilton') && inhalt.includes('Michael Schumacher'))
     await p.locator('.karrieren svg').waitFor({ timeout: 5000 })
     pruefe('Vergleich zeichnet zwei Linien', (await p.locator('.karrieren polyline').count()) === 2)
-    await p.getByRole('button', { name: 'Podiums' }).click()
+    await p.getByRole('button', { name: 'Podiums', exact: true }).click()
     pruefe('Vergleich schaltet auf Podien', (await p.locator('.karrieren figcaption b').textContent()).startsWith('Podiums'))
   })
 
@@ -201,6 +201,26 @@ async function pruefeAlles() {
     const nachher = await p.locator('.whatif-variante:not([hidden]) tbody').textContent()
     pruefe('What-if schaltet das System um', vorher !== nachher)
     pruefe('genau eine Variante sichtbar', (await p.locator('.whatif-variante:not([hidden])').count()) === 1)
+  })
+
+  /*
+   * Info-Knöpfe: Das Skript findet die Beschriftungen im Glossar und setzt ein
+   * „i“ daneben; ein Klick öffnet die Box mit der Erklärung, Escape schließt
+   * sie. Auch im Vergleich, dessen Tabelle erst React zeichnet.
+   */
+  await schritt('Info-Knöpfe', '/drivers/lewis-hamilton/', {}, async (p) => {
+    const knopf = p.getByRole('button', { name: 'What does “Grand Slams” mean?' })
+    pruefe('Info-Knopf an der Kennzahl', (await knopf.count()) === 1)
+    await knopf.click()
+    const box = p.locator('#info-box')
+    pruefe('Info-Box geht auf', await box.isVisible())
+    pruefe('Info-Box erklärt den Begriff', ((await box.textContent()) ?? '').includes('leading every single lap'))
+    await p.keyboard.press('Escape')
+    pruefe('Info-Box schließt mit Escape', !(await box.isVisible()))
+  })
+  await schritt('Info-Knöpfe im Vergleich', '/comparison/?a=lewis-hamilton&b=michael-schumacher', {}, async (p) => {
+    await p.locator('table.gegen button.info').first().waitFor()
+    pruefe('Info-Knopf in der Vergleichstabelle', (await p.locator('table.gegen button.info').count()) > 5)
   })
 
   /*

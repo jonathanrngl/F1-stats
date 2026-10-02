@@ -73,8 +73,8 @@ import { pfad } from '../../lib/db.js'
   }
 
   .auswahl input { border-color: var(--border-input); }
-  .auswahl input:hover { border-color: var(--accent); }
-  .auswahl input:focus-visible { border-color: var(--accent); outline: 2px solid var(--accent); outline-offset: 1px; }
+  .auswahl input:hover { border-color: var(--link); }
+  .auswahl input:focus-visible { border-color: var(--link); outline: 2px solid var(--link); outline-offset: 1px; }
 
   .auswahl ul {
     position: absolute;
@@ -114,7 +114,7 @@ import { pfad } from '../../lib/db.js'
   }
 
   .auswahl .gewaehlt { border-color: var(--border-input); }
-  .auswahl .gewaehlt:hover { border-color: var(--accent); }
+  .auswahl .gewaehlt:hover { border-color: var(--link); }
   .auswahl li[aria-selected='true'] { background: var(--surface-3); }
   .auswahl .kein-treffer { padding: 0.6rem 0.65rem; font-size: 0.88rem; color: var(--muted); }
   .auswahl b { flex: 1; min-width: 0; color: var(--ink); font-weight: 600;
@@ -162,8 +162,8 @@ import { pfad } from '../../lib/db.js'
     cursor: pointer;
   }
 
-  .zeitwahl button:hover { border-color: var(--accent); }
-  .zeitwahl button[aria-pressed='true'] { color: var(--plane); background: var(--ink); border-color: var(--ink); }
+  .zeitwahl button:hover { border-color: var(--link); }
+  .zeitwahl button[aria-pressed='true'] { color: var(--plane); background: var(--link); border-color: var(--link); }
 
   .zeitwahl .regler { display: flex; gap: 0.75rem; margin-left: auto; }
   .zeitwahl .regler label { display: flex; align-items: center; gap: 0.35rem;
@@ -194,7 +194,7 @@ import { pfad } from '../../lib/db.js'
   .kopfkarte.s0 { border-top: 3px solid var(--accent); }
   .kopfkarte.s1 { border-top: 3px solid var(--s2); }
   .kopfkarte a { color: var(--ink); font-weight: 650; text-decoration: none; }
-  .kopfkarte a:hover { color: var(--accent); }
+  .kopfkarte a:hover { color: var(--link); }
   .kopfkarte i { font-style: normal; font-size: 0.76rem; color: var(--muted); }
   .kopfkarte .kuerzel { justify-self: start; margin-bottom: 0.25rem; }
 
@@ -331,7 +331,7 @@ import { pfad } from '../../lib/db.js'
     text-decoration: none;
   }
 
-  .vgl .paarungen a:hover { border-color: var(--accent); }
+  .vgl .paarungen a:hover { border-color: var(--link); }
   .vgl .paarungen b { display: block; color: var(--ink); font-weight: 650; }
   .vgl .paarungen span { font-size: 0.82rem; color: var(--muted); }
 
