@@ -58,6 +58,8 @@ const ZIEL = path.join(WURZEL, 'runden')
 const schlaf = (ms) => new Promise((r) => setTimeout(r, ms))
 
 let letzterStart = 0
+/** Verworfene Zeitnahmen ohne Position, über den ganzen Lauf. */
+let ohnePosition = 0
 
 /**
  * Eine Anfrage mit Mindestabstand und wachsender Wartezeit bei Drosselung.
@@ -103,6 +105,17 @@ async function rundenEinesRennens(jahr, runde) {
     for (const r of d.RaceTable.Races ?? []) {
       for (const lap of r.Laps ?? []) {
         for (const t of lap.Timings ?? []) {
+          /*
+           * Jolpica führt vereinzelt Zeitnahmen ohne Position – Phantome, die
+           * die Zeit eines anderen Fahrers tragen: Hartley in Monza 2018, in
+           * Runde 1 ausgefallen, steht in Runde 6 mit Alonsos 1:27.009. Ohne
+           * Position gehört die Zeile in keinen Verlauf. Früher landete sie
+           * als „NaN“ in der CSV, und der Import scheiterte am NOT NULL.
+           */
+          if (!/^[1-9]\d*$/.test(t.position ?? '')) {
+            ohnePosition++
+            continue
+          }
           zeilen.push({
             driverId: t.driverId,
             lap: Number(lap.number),
@@ -219,6 +232,7 @@ if (process.argv[1]?.endsWith('lade-runden.mjs')) {
   console.log(
     `\nFertig. ${geladen} Rennen gespeichert, ${zeilenGesamt.toLocaleString('de-DE')} Zeitnahmen` +
       (ohneDaten ? `, ${ohneDaten} ohne Daten` : '') +
+      (ohnePosition ? `, ${ohnePosition} Zeitnahmen ohne Position verworfen` : '') +
       (fehlerhafte.length ? `, ${fehlerhafte.length} nicht gespeichert` : '') +
       '. Der nächste Import spielt sie ein.',
   )
