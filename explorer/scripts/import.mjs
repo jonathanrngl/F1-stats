@@ -798,6 +798,10 @@ async function ladeRunden(db) {
         if (!fuhrMit.get(raceId, z.driver_id)) throw new Error(`runden/${datei}: ${z.driver_id} fuhr in diesem Rennen nicht`)
         geprueft.add(z.driver_id)
       }
+      // Sonst wird ein „NaN“ zu NULL und scheitert erst am Schema – ohne Dateinamen.
+      if (!/^[1-9]\d*$/.test(z.lap) || !/^[1-9]\d*$/.test(z.position)) {
+        throw new Error(`runden/${datei}: ${z.driver_id} Runde ${z.lap}: keine gültige Runde oder Position („${z.position}“)`)
+      }
       einfuegen.run(raceId, z.driver_id, Number(z.lap), Number(z.position), zahl(z.time_ms))
       zeilen++
     }

@@ -113,3 +113,25 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh workflow run deploy.yml --ref main
+
+  # Ein geplanter Lauf, der scheitert, fällt sonst niemandem auf: Die Seite
+  # bleibt beim letzten guten Stand, und genau das ist der Sinn. Vom 27.09.
+  # an scheiterten die Rundendaten so wochenlang. Ein offenes Issue genügt –
+  # steht schon eines da, kommt kein zweites dazu.
+  melden:
+    needs: [pruefen, festschreiben]
+    if: failure()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: write
+    steps:
+      - name: Issue anlegen
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TITEL: 'Workflow ${{ github.workflow }} schlägt fehl'
+          LAUF: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          offen=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "in:title \"$TITEL\"" --json number --jq length)
+          if [ "$offen" -gt 0 ]; then echo "Schon gemeldet."; exit 0; fi
+          gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITEL" --body "Der Lauf $LAUF ist fehlgeschlagen. Die Seite bleibt beim letzten guten Stand, bis das behoben ist. Dieses Issue schließen, wenn der Workflow wieder durchläuft."
