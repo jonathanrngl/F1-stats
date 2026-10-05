@@ -110,7 +110,7 @@ const WERKZEUGE = [
           <a href={pfad.fahrer(fuehrend.id)}>
             <span class="etikett-klein">Championship leader after round {stand.bezug.runde}</span>
             <b class="gross">{fuehrend.name}</b>
-            <span class="dazu">{fuehrend.team}</span>
+            <span class="dazu teampunkt" data-team={fuehrend.teamId}>{fuehrend.team}</span>
             <span class="zahlreihe">
               <span><b>{zahl(fuehrend.punkte)}</b> points</span>
               {zweiter && <span><b>+{zahl(fuehrend.punkte - zweiter.punkte)}</b> on {zweiter.name}</span>}
@@ -205,13 +205,13 @@ const WERKZEUGE = [
     </div>
     <ul class="saisons">
       {saisons.map((s) => (
-        <li>
+        <li data-team={s.teamMeisterId ?? undefined}>
           <a href={pfad.saison(s.jahr)}>
             <b class="jahr anzeige">{s.jahr}</b>
             {s.meister ? (
               <>
                 <span class="wer">{s.meister}</span>
-                {s.teamMeister && <span class="team">{s.teamMeister}</span>}
+                {s.teamMeister && <span class="team teampunkt">{s.teamMeister}</span>}
               </>
             ) : (
               <span class="laeuft">Season in progress</span>
@@ -641,6 +641,8 @@ const WERKZEUGE = [
   }
 
   .saisons li { box-shadow: -1px 0 0 var(--border), 0 -1px 0 var(--border); }
+  /* Oben eine Kante in der Farbe des Konstrukteursmeisters (teams.css) – sechs Jahre, auf einen Blick, wer dominierte. */
+  .saisons li[data-team] a { box-shadow: inset 0 4px 0 var(--team, transparent); padding-top: calc(0.4rem + 4px); }
 
   .saisons a {
     display: grid;

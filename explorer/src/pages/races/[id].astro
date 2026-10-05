@@ -48,6 +48,11 @@ const bewegung = (s) => {
   if (!s.vorher || !s.position || s.vorher === s.position) return ''
   return s.vorher > s.position ? `▲${s.vorher - s.position}` : `▼${s.position - s.vorher}`
 }
+/** Gewonnen grün, verloren rot – unverändert bleibt leer. */
+const bewegungsKlasse = (s) => {
+  const b = bewegung(s)
+  return `num ${b.startsWith('▲') ? 'gut' : b.startsWith('▼') ? 'schlecht' : 'leise'}`
+}
 
 const ziele = [
   d.gefahren && { id: 'ergebnis', label: 'Result' },
@@ -191,12 +196,12 @@ const ereignis = {
           </thead>
           <tbody>
             {ergebnisse.map((e) => (
-              <tr class={e.classified ? '' : 'raus'}>
+              <tr class={e.classified ? (e.points > 0 ? 'punkte' : '') : 'raus'}>
                 <td class="num"><span class={plakette(e.position)}>{e.position ?? e.position_text}</span></td>
                 <th scope="row">
                   <a class="zeile" href={pfad.fahrer(e.fahrerId)}>{e.fahrer}</a>
                   {e.shared_car === 1 && <span class="etikett" title="Shared car">shared</span>}
-                  {e.fastest_lap === 1 && <span class="etikett akzent" title="Fastest lap">fastest lap</span>}
+                  {e.fastest_lap === 1 && <span class="etikett lila" title="Fastest lap">fastest lap</span>}
                 </th>
                 <td class="num leise">{e.car_number ?? ''}</td>
                 <td class="leise">
@@ -239,7 +244,7 @@ const ereignis = {
           <thead><tr><th class="num" scope="col">Pos</th><th scope="col">Driver</th><th scope="col">Team</th><th class="num" scope="col">Grid</th><th class="num" scope="col">Points</th></tr></thead>
           <tbody>
             {sprint.map((s) => (
-              <tr class={s.gewertet ? '' : 'raus'}>
+              <tr class={s.gewertet ? (s.punkte > 0 ? 'punkte' : '') : 'raus'}>
                 <td class="num"><span class={plakette(s.position)}>{s.position ?? s.text}</span></td>
                 <th scope="row"><a class="zeile" href={pfad.fahrer(s.fahrerId)}>{s.fahrer}</a></th>
                 <td class="leise"><a class="leise" href={pfad.team(s.teamId)}>{s.team}</a></td>
@@ -392,7 +397,7 @@ const ereignis = {
                   <td class="num"><span class={plakette(s.position)}>{s.position ?? '–'}</span></td>
                   <th scope="row"><a class="zeile" href={pfad.fahrer(s.id)}>{s.name}</a></th>
                   <td class="num fett">{ein(s.punkte)}</td>
-                  <td class={`num ${bewegung(s).startsWith('▲') ? 'gut' : 'leise'}`}>{bewegung(s)}</td>
+                  <td class={bewegungsKlasse(s)}>{bewegung(s)}</td>
                 </tr>
               ))}
             </tbody>
@@ -409,7 +414,7 @@ const ereignis = {
                     <td class="num"><span class={plakette(s.position)}>{s.position ?? '–'}</span></td>
                     <th scope="row"><a class="zeile" href={pfad.team(s.id)}>{s.name}</a></th>
                     <td class="num fett">{ein(s.punkte)}</td>
-                    <td class={`num ${bewegung(s).startsWith('▲') ? 'gut' : 'leise'}`}>{bewegung(s)}</td>
+                    <td class={bewegungsKlasse(s)}>{bewegung(s)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -458,6 +463,8 @@ const ereignis = {
   .podium > .p1 { order: 2; padding-block: 1.5rem; border-top: 4px solid var(--gold); }
   .podium > .p2 { order: 1; border-top: 4px solid var(--silber); }
   .podium > .p3 { order: 3; border-top: 4px solid var(--bronze); }
+  /* Links die Teamfarbe (teams.css): Ein Doppelsieg zeigt sich als zweimal dieselbe Kante. */
+  .podium > li { border-left: 4px solid var(--team, var(--border)); }
 
   .podium .pos { margin-bottom: 0.3rem; }
   .podium .name {

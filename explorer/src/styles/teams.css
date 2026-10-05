@@ -1,0 +1,71 @@
+/*
+ * Teamfarben. Wer die Formel 1 schaut, liest ein Ergebnis an den Farben: Rot
+ * ist Ferrari, Papaya McLaren, Türkis Mercedes. Eine Liste in Schwarz und Weiß
+ * musste man Zeile für Zeile lesen, um zu sehen, wer für wen fuhr.
+ *
+ * Gesetzt wird nur die Variable `--team`, und zwar an drei Stellen:
+ *
+ *   a[href$='/teams/x/']   jeder Verweis auf das Team – sein Farbpunkt
+ *   tr/li mit so einem Verweis   die ganze Zeile – ihr Randstreifen
+ *   [data-team='x']        alles, was ein Team ohne Verweis trägt (Seitenkopf)
+ *
+ * Wie die Farbe erscheint, steht in theme.css („Teamfarben“). So kommen die
+ * Markierungen in jede Tabelle, die ein Team verlinkt, auch in die, die React
+ * erst im Browser zeichnet – ohne dass eine Seite davon wissen muss.
+ *
+ * Die Farben sind die bekannten Lackierungen, für hellen und dunklen Grund
+ * angepasst: Dunkelblau verschwand auf Asphaltgrau, Türkis auf Weiß. Teams
+ * ohne Eintrag bekommen einen grauen Punkt (`--s-rest`) – eine Farbe für
+ * jedes der 170 Teams seit 1950 wäre Rauschen, nicht Orientierung.
+ */
+
+:is(a[href$='/teams/ferrari/'], [data-team='ferrari'], :is(tr, li):has(a[href$='/teams/ferrari/'])) { --team: light-dark(#e8002d, #ff4055); }
+:is(a[href$='/teams/mercedes/'], [data-team='mercedes'], :is(tr, li):has(a[href$='/teams/mercedes/'])) { --team: light-dark(#00a19c, #27f4d2); }
+:is(a[href$='/teams/red-bull/'], [data-team='red-bull'], :is(tr, li):has(a[href$='/teams/red-bull/'])) { --team: light-dark(#3671c6, #5b8fe0); }
+:is(a[href$='/teams/mclaren/'], [data-team='mclaren'], :is(tr, li):has(a[href$='/teams/mclaren/'])) { --team: light-dark(#ff8000, #ff9933); }
+:is(a[href$='/teams/aston-martin/'], [data-team='aston-martin'], :is(tr, li):has(a[href$='/teams/aston-martin/'])) { --team: light-dark(#229971, #2fbf8f); }
+:is(a[href$='/teams/alpine/'], [data-team='alpine'], :is(tr, li):has(a[href$='/teams/alpine/'])) { --team: light-dark(#0093cc, #2db3f0); }
+:is(a[href$='/teams/williams/'], [data-team='williams'], :is(tr, li):has(a[href$='/teams/williams/'])) { --team: light-dark(#1868db, #64c4ff); }
+:is(a[href$='/teams/haas/'], [data-team='haas'], :is(tr, li):has(a[href$='/teams/haas/'])) { --team: light-dark(#8c9196, #b6babd); }
+:is(a[href$='/teams/rb/'], [data-team='rb'], :is(tr, li):has(a[href$='/teams/rb/'])) { --team: light-dark(#6692ff, #7fa4ff); }
+:is(a[href$='/teams/racing-bulls/'], [data-team='racing-bulls'], :is(tr, li):has(a[href$='/teams/racing-bulls/'])) { --team: light-dark(#6692ff, #7fa4ff); }
+:is(a[href$='/teams/alphatauri/'], [data-team='alphatauri'], :is(tr, li):has(a[href$='/teams/alphatauri/'])) { --team: light-dark(#2b4562, #7d9cc2); }
+:is(a[href$='/teams/toro-rosso/'], [data-team='toro-rosso'], :is(tr, li):has(a[href$='/teams/toro-rosso/'])) { --team: light-dark(#1e40a0, #6c87d8); }
+:is(a[href$='/teams/kick-sauber/'], [data-team='kick-sauber'], :is(tr, li):has(a[href$='/teams/kick-sauber/'])) { --team: light-dark(#2fb52f, #52e252); }
+:is(a[href$='/teams/sauber/'], [data-team='sauber'], :is(tr, li):has(a[href$='/teams/sauber/'])) { --team: light-dark(#1c5fbf, #6e9bf0); }
+:is(a[href$='/teams/alfa-romeo/'], [data-team='alfa-romeo'], :is(tr, li):has(a[href$='/teams/alfa-romeo/'])) { --team: light-dark(#a50f2d, #e0405e); }
+:is(a[href$='/teams/audi/'], [data-team='audi'], :is(tr, li):has(a[href$='/teams/audi/'])) { --team: light-dark(#bb0a30, #ff5470); }
+:is(a[href$='/teams/cadillac/'], [data-team='cadillac'], :is(tr, li):has(a[href$='/teams/cadillac/'])) { --team: light-dark(#3d4146, #c9ccce); }
+:is(a[href$='/teams/racing-point/'], [data-team='racing-point'], :is(tr, li):has(a[href$='/teams/racing-point/'])) { --team: light-dark(#e86fac, #f596c8); }
+:is(a[href$='/teams/force-india/'], [data-team='force-india'], :is(tr, li):has(a[href$='/teams/force-india/'])) { --team: light-dark(#e86fac, #f596c8); }
+:is(a[href$='/teams/renault/'], [data-team='renault'], :is(tr, li):has(a[href$='/teams/renault/'])) { --team: light-dark(#d9a400, #ffd800); }
+:is(a[href$='/teams/lotus-f1/'], [data-team='lotus-f1'], :is(tr, li):has(a[href$='/teams/lotus-f1/'])) { --team: light-dark(#a8862f, #d4b65e); }
+:is(a[href$='/teams/lotus/'], [data-team='lotus'], :is(tr, li):has(a[href$='/teams/lotus/'])) { --team: light-dark(#00664a, #2fa37a); }
+:is(a[href$='/teams/lotus-racing/'], [data-team='lotus-racing'], :is(tr, li):has(a[href$='/teams/lotus-racing/'])) { --team: light-dark(#00664a, #2fa37a); }
+:is(a[href$='/teams/brawn/'], [data-team='brawn'], :is(tr, li):has(a[href$='/teams/brawn/'])) { --team: light-dark(#6fb83a, #b8fd6e); }
+:is(a[href$='/teams/toyota/'], [data-team='toyota'], :is(tr, li):has(a[href$='/teams/toyota/'])) { --team: light-dark(#cc0000, #ff4d4d); }
+:is(a[href$='/teams/bmw-sauber/'], [data-team='bmw-sauber'], :is(tr, li):has(a[href$='/teams/bmw-sauber/'])) { --team: light-dark(#1f4e9a, #6a93d6); }
+:is(a[href$='/teams/jordan/'], [data-team='jordan'], :is(tr, li):has(a[href$='/teams/jordan/'])) { --team: light-dark(#e3b900, #ffd84d); }
+:is(a[href$='/teams/benetton/'], [data-team='benetton'], :is(tr, li):has(a[href$='/teams/benetton/'])) { --team: light-dark(#00a651, #34c77b); }
+:is(a[href$='/teams/tyrrell/'], [data-team='tyrrell'], :is(tr, li):has(a[href$='/teams/tyrrell/'])) { --team: light-dark(#00337f, #5b84c9); }
+:is(a[href$='/teams/brabham/'], [data-team='brabham'], :is(tr, li):has(a[href$='/teams/brabham/'])) { --team: light-dark(#1d3f8a, #6d8fd4); }
+:is(a[href$='/teams/minardi/'], [data-team='minardi'], :is(tr, li):has(a[href$='/teams/minardi/'])) { --team: light-dark(#2a2a2a, #c4c4c4); }
+:is(a[href$='/teams/jaguar/'], [data-team='jaguar'], :is(tr, li):has(a[href$='/teams/jaguar/'])) { --team: light-dark(#00573f, #2e9c75); }
+:is(a[href$='/teams/manor/'], [data-team='manor'], :is(tr, li):has(a[href$='/teams/manor/'])) { --team: light-dark(#ed1c24, #ff5a5f); }
+:is(a[href$='/teams/marussia/'], [data-team='marussia'], :is(tr, li):has(a[href$='/teams/marussia/'])) { --team: light-dark(#8b1a1a, #d05050); }
+:is(a[href$='/teams/virgin/'], [data-team='virgin'], :is(tr, li):has(a[href$='/teams/virgin/'])) { --team: light-dark(#c82e37, #f06068); }
+:is(a[href$='/teams/caterham/'], [data-team='caterham'], :is(tr, li):has(a[href$='/teams/caterham/'])) { --team: light-dark(#005030, #2fa06f); }
+:is(a[href$='/teams/ligier/'], [data-team='ligier'], :is(tr, li):has(a[href$='/teams/ligier/'])) { --team: light-dark(#0055a4, #5a95dc); }
+:is(a[href$='/teams/prost/'], [data-team='prost'], :is(tr, li):has(a[href$='/teams/prost/'])) { --team: light-dark(#0055a4, #5a95dc); }
+:is(a[href$='/teams/matra/'], [data-team='matra'], :is(tr, li):has(a[href$='/teams/matra/'])) { --team: light-dark(#0055a4, #5a95dc); }
+:is(a[href$='/teams/arrows/'], [data-team='arrows'], :is(tr, li):has(a[href$='/teams/arrows/'])) { --team: light-dark(#f47a20, #ff9a4d); }
+:is(a[href$='/teams/cooper/'], [data-team='cooper'], :is(tr, li):has(a[href$='/teams/cooper/'])) { --team: light-dark(#00523b, #3aa37c); }
+:is(a[href$='/teams/brm/'], [data-team='brm'], :is(tr, li):has(a[href$='/teams/brm/'])) { --team: light-dark(#1d4d2f, #4f9b6c); }
+:is(a[href$='/teams/vanwall/'], [data-team='vanwall'], :is(tr, li):has(a[href$='/teams/vanwall/'])) { --team: light-dark(#00563f, #3a9e7c); }
+:is(a[href$='/teams/maserati/'], [data-team='maserati'], :is(tr, li):has(a[href$='/teams/maserati/'])) { --team: light-dark(#b0001e, #ff4f5f); }
+:is(a[href$='/teams/lancia/'], [data-team='lancia'], :is(tr, li):has(a[href$='/teams/lancia/'])) { --team: light-dark(#b0001e, #ff4f5f); }
+:is(a[href$='/teams/honda/'], [data-team='honda'], :is(tr, li):has(a[href$='/teams/honda/'])) { --team: light-dark(#c8102e, #ff5c6f); }
+:is(a[href$='/teams/bar/'], [data-team='bar'], :is(tr, li):has(a[href$='/teams/bar/'])) { --team: light-dark(#6b6f73, #b0b4b8); }
+:is(a[href$='/teams/stewart/'], [data-team='stewart'], :is(tr, li):has(a[href$='/teams/stewart/'])) { --team: light-dark(#3d4146, #e6e8ea); }
+:is(a[href$='/teams/march/'], [data-team='march'], :is(tr, li):has(a[href$='/teams/march/'])) { --team: light-dark(#d4002a, #ff5c74); }
+:is(a[href$='/teams/shadow/'], [data-team='shadow'], :is(tr, li):has(a[href$='/teams/shadow/'])) { --team: light-dark(#1a1a1a, #bdbdbd); }

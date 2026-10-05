@@ -100,6 +100,8 @@ const spannen = (jahre) => {
   return teile.join(', ')
 }
 const teams = [...proTeam.values()].sort((a, b) => Math.min(...a.jahre) - Math.min(...b.jahre))
+/** Das Team der letzten Saison – seine Farbe trägt der Kopf der Seite (teams.css). */
+const letztesTeam = teams.reduce((a, b) => (Math.max(...b.jahre) >= Math.max(...a.jahre) ? b : a), teams[0])?.id
 
 /** Zeigt den Wert, oder den Grund, warum es keinen gibt. */
 const wert = (m, f = (v) => zahl(v)) => (m.value === null ? '–' : f(m.value))
@@ -182,7 +184,7 @@ const person = {
   strukturiert={[person]}
   brotkrumen={[{ name: 'Drivers', pfad: '/drivers/' }]}
 >
-  <header class="seitenkopf">
+  <header class="seitenkopf" data-team={letztesTeam}>
     <span class="wappen" title={heimat.name}>{heimat.code}</span>
     <div>
       <p class="oberzeile">
@@ -382,7 +384,7 @@ const person = {
                   <th scope="row">
                     <a class="zeile" href={pfad.rennen(r.id)}>{r.name}</a>
                     {r.pole === 1 && <span class="etikett" title="Pole position">pole</span>}
-                    {r.schnellste === 1 && <span class="etikett akzent" title="Fastest lap">fastest lap</span>}
+                    {r.schnellste === 1 && <span class="etikett lila" title="Fastest lap">fastest lap</span>}
                     {r.geteilt === 1 && <span class="etikett" title="Shared car">shared</span>}
                   </th>
                   <td class="leise"><a class="leise" href={pfad.team(r.teamId)}>{r.team}</a></td>

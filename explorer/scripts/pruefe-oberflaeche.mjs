@@ -217,6 +217,14 @@ async function pruefeAlles() {
     pruefe('Info-Box erklärt den Begriff', ((await box.textContent()) ?? '').includes('leading every single lap'))
     await p.keyboard.press('Escape')
     pruefe('Info-Box schließt mit Escape', !(await box.isVisible()))
+    /* Mit der Maus genügt das Darüberfahren; weg von Knopf und Box, und sie geht wieder zu. */
+    await p.mouse.move(0, 0)
+    await knopf.hover()
+    await box.waitFor({ state: 'visible', timeout: 2000 }).catch(() => {})
+    pruefe('Info-Box geht beim Darüberfahren auf', await box.isVisible())
+    await p.mouse.move(5, 5)
+    await box.waitFor({ state: 'hidden', timeout: 2000 }).catch(() => {})
+    pruefe('Info-Box schließt beim Verlassen', !(await box.isVisible()))
   })
   await schritt('Info-Knöpfe im Vergleich', '/comparison/?a=lewis-hamilton&b=michael-schumacher', {}, async (p) => {
     await p.locator('table.gegen button.info').first().waitFor()

@@ -9,6 +9,13 @@
  * `popovertargetaction="show"` verhindert, dass derselbe Klick sie wieder
  * schließt.
  *
+ * Mit der Maus genügt es, über das „i“ zu fahren: Die Box geht auf, und sie
+ * schließt sich, sobald die Maus weder auf dem Knopf noch auf der Box steht.
+ * Ein kurzer Aufschub in beide Richtungen sorgt dafür, dass ein Zeiger, der
+ * nur über eine Tabelle voller „i“ hinwegzieht, nicht jede Box aufblitzen
+ * lässt, und dass man vom Knopf in die Box hinüberfahren kann. Finger und
+ * Tastatur tippen weiterhin – für sie gibt es kein Darüberfahren.
+ *
  * Die Knöpfe entstehen erst im Browser. Ohne Skript gibt es keine – die
  * Erklärungen am Ende jeder Seite bleiben dann der Weg zur Bedeutung.
  */
@@ -118,15 +125,57 @@ export function starte() {
   const titel = box.querySelector('[data-info-titel]')
   const text = box.querySelector('[data-info-text]')
   let aktiv = null
+  /* Die beiden Aufschübe beim Darüberfahren, siehe unten. */
+  let auf = 0
+  let zu = 0
+
+  const fuelle = (b) => {
+    titel.textContent = b.dataset.titel
+    text.textContent = b.dataset.text
+    aktiv = b
+  }
 
   document.addEventListener('click', (e) => {
     const b = e.target instanceof Element ? e.target.closest('button.info') : null
     if (!b) return
-    titel.textContent = b.dataset.titel
-    text.textContent = b.dataset.text
-    aktiv = b
+    clearTimeout(auf)
+    clearTimeout(zu)
+    fuelle(b)
     /* Erst nach dem Klick ist die Box offen und hat ihre Größe. */
     requestAnimationFrame(() => lege(b))
+  })
+
+  /* Darüberfahren mit der Maus: öffnen nach kurzem Verweilen, schließen nach kurzem Verlassen. */
+  const istMaus = (e) => e.pointerType === 'mouse'
+  const infoKnopf = (el) => (el instanceof Element ? el.closest('button.info') : null)
+
+  const schliesseBald = () => {
+    clearTimeout(auf)
+    clearTimeout(zu)
+    zu = setTimeout(() => { if (box.matches(':popover-open')) box.hidePopover() }, 250)
+  }
+
+  document.addEventListener('pointerover', (e) => {
+    const b = infoKnopf(e.target)
+    if (!b || !istMaus(e)) return
+    clearTimeout(zu)
+    clearTimeout(auf)
+    auf = setTimeout(() => {
+      fuelle(b)
+      if (!box.matches(':popover-open')) box.showPopover()
+      lege(b)
+    }, 120)
+  })
+
+  document.addEventListener('pointerout', (e) => {
+    const b = infoKnopf(e.target)
+    if (!b || !istMaus(e) || b.contains(e.relatedTarget) || box.contains(e.relatedTarget)) return
+    schliesseBald()
+  })
+
+  box.addEventListener('pointerenter', (e) => { if (istMaus(e)) clearTimeout(zu) })
+  box.addEventListener('pointerleave', (e) => {
+    if (istMaus(e) && !infoKnopf(e.relatedTarget)) schliesseBald()
   })
 
   /* Beim Scrollen und Umbrechen klebt die Box am Knopf, statt stehen zu bleiben. */

@@ -15,6 +15,7 @@
  */
 import '@fontsource-variable/libre-franklin/wght.css'
 import '../styles/theme.css'
+import '../styles/teams.css'
 import Suche from '../components/Suche.astro'
 import { MODUS_SKRIPT } from '../lib/modus.js'
 import { herkunft } from '../lib/db.js'
@@ -285,7 +286,8 @@ const ldText = ld.length ? JSON.stringify(ld.length === 1 ? ld[0] : ld).replace(
 
     {/*
       * Die Infobox hinter den „i“-Knöpfen (lib/info.js). Eine für die ganze
-      * Seite: Das Skript füllt sie mit dem Begriff, dessen Knopf gedrückt wurde.
+      * Seite: Das Skript füllt sie mit dem Begriff, über dem die Maus steht
+      * oder dessen Knopf gedrückt wurde.
       */}
     <div id="info-box" class="info-box" popover role="dialog" aria-labelledby="info-box-titel">
       <b id="info-box-titel" data-info-titel></b>

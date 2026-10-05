@@ -4,6 +4,11 @@
  * jeder Überschrift, jeder Oberzeile, jeder Kartenkante, und weil es überall
  * war, sagte es nirgends etwas.
  *
+ * Nur Schwarz und Weiß war das andere Extrem: Man musste jede Zeile lesen.
+ * Farbe steht deshalb dort, wo sie eine Bedeutung trägt, die man schon kennt –
+ * die Teamfarben (teams.css), Gold, Silber und Bronze fürs Podium, Grün für
+ * Punkte, Rot für Ausfälle, Lila für die schnellste Runde.
+ *
  * Alle Farben stehen als Token hier – die Seiten und die Graphen greifen nur
  * über die Rollen darauf zu. Jede Rolle ist einmal notiert, hell und dunkel in
  * einem `light-dark()`. Welcher der beiden Werte gilt, entscheidet
@@ -81,6 +86,13 @@
   --silber: #c6c9ce;
   --bronze: #d49563;
   --podest-ink: #1a1a1a;
+  /* Die Zeile eines Meisters: golden unterlegt, deckend – die Namensspalte
+     klebt beim Scrollen und braucht einen Grund, der nichts durchscheinen lässt. */
+  --gold-wash: light-dark(#fdf5dc, #2b2513);
+
+  /* Lila heißt in der Formel 1 „schnellste Zeit“ – so steht es auf jedem
+     Zeitenmonitor, und so steht es hier an der schnellsten Runde. */
+  --lila: light-dark(#7b2fbe, #c49bff);
 
   /* Die Kopfleiste gehört zum Papier: gleicher Grund, eine Linie darunter.
      Ein schwarzer Balken mit roter Kante war das Lauteste auf jeder Seite,
@@ -1064,7 +1076,8 @@ a.karte:hover {
   text-wrap: pretty;
 }
 
-/* Eine Kachel, die die Aussage der Seite trägt – der Titel, der Sieg: die Zahl in Rot. */
+/* Eine Kachel, die die Aussage der Seite trägt – der Titel, der Sieg: die Zahl in Rot, oben eine goldene Kante. */
+.kacheln li.stark { box-shadow: inset 0 3px 0 var(--gold); }
 .kacheln li.stark b { color: var(--accent); }
 
 /* Kacheln mit einem Namen statt einer Zahl: Sieger, Pole, schnellste Runde. */
@@ -1348,17 +1361,21 @@ td .neben a:hover { color: var(--link); text-decoration: underline; }
 td:has(> .neben) { min-width: 9.5rem; }
 
 /*
- * Zeile des Meisters, des Siegers, des gerade gezeigten Eintrags: ein roter
- * Strich vor der Zeile, wie eine Markierung am Rand einer Ergebnisliste. Eine
- * rosa unterlegte Zeile färbte bei Hamilton sieben von zwanzig Zeilen ein.
+ * Zeile des Meisters: golden unterlegt. Der Rand links gehört jetzt der
+ * Teamfarbe (unten, „Teamfarben“) – ein roter Strich dort hätte mit Ferrari
+ * verwechselt werden können.
  */
-tr.meister > :first-child { box-shadow: inset 3px 0 0 var(--accent); }
+tbody tr.meister,
+tbody tr.meister th[scope='row'] { background: var(--gold-wash); }
+tbody tr.meister:hover,
+tbody tr.meister:hover th[scope='row'] { background: var(--link-wash); }
 tr.meister a.zeile { font-weight: 700; }
 tr.raus td { color: var(--muted); }
 tr.raus a.zeile { color: var(--muted); font-weight: 500; }
 
 td.meister { color: var(--accent); font-weight: 750; }
 td.gut { color: var(--good); font-weight: 650; }
+td.schlecht { color: var(--danger-fg); font-weight: 650; }
 td.verschoben { color: var(--warn); font-weight: 650; }
 
 /*
@@ -1382,7 +1399,10 @@ td.verschoben { color: var(--warn); font-weight: 650; }
 .pos.p1 { color: var(--podest-ink); background: var(--gold); }
 .pos.p2 { color: var(--podest-ink); background: var(--silber); }
 .pos.p3 { color: var(--podest-ink); background: var(--bronze); }
-.pos.aus { font-size: 0.75rem; letter-spacing: 0.02em; color: var(--muted); background: none; border: 1px solid var(--border); }
+/* In den Punkten, aber nicht auf dem Podium: grün. Die Seite setzt `punkte` an die Zeile. */
+tr.punkte .pos:not(.p1, .p2, .p3, .aus) { color: var(--good); background: var(--good-wash); }
+/* Ausgefallen, nicht qualifiziert, nicht gestartet: rot gerahmt, damit man die Ausfälle zählt, ohne zu lesen. */
+.pos.aus { font-size: 0.75rem; letter-spacing: 0.02em; color: var(--danger-fg); background: var(--danger-bg); border: 1px solid var(--danger-border); }
 
 .kuerzel {
   display: inline-block;
@@ -1420,6 +1440,57 @@ td.verschoben { color: var(--warn); font-weight: 650; }
 
 .etikett.akzent { color: var(--accent); border-color: currentColor; }
 .etikett.gut { color: var(--good); border-color: currentColor; }
+.etikett.warn { color: var(--warn); border-color: currentColor; }
+.etikett.lila { color: #fff; background: var(--lila); border-color: var(--lila); }
+:root[data-theme='dark'] .etikett.lila { color: #15181d; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) .etikett.lila { color: #15181d; } }
+
+/* ------------------------------------------------------------ Teamfarben */
+
+/*
+ * Die Farben selbst stehen in teams.css. Hier steht, wie sie erscheinen: als
+ * Streifen am linken Rand jeder Zeile, die ein Team nennt, und als Punkt vor
+ * dem Teamnamen. Beides liest man beim Überfliegen, ohne den Namen zu lesen –
+ * zwei McLaren vorn, ein Ferrari dazwischen.
+ */
+tbody tr:has(a[href*='/teams/']) > :first-child {
+  box-shadow: inset 4px 0 0 var(--team, transparent);
+}
+
+:is(td, th) a[href*='/teams/']::before,
+.podium .team::before,
+.teampunkt::before {
+  content: '';
+  display: inline-block;
+  width: 0.62em;
+  height: 0.62em;
+  margin-right: 0.4em;
+  vertical-align: 0.04em;
+  background: var(--team, var(--s-rest));
+  border-radius: 2px;
+}
+
+/*
+ * Der Kopf einer Team- oder Fahrerseite nimmt die Farbe des Teams an: Die
+ * getönte Fläche wird zu einem Hauch der Lackierung, unter dem Namen steht ein
+ * Balken in voller Farbe. Ein Fahrer trägt die Farbe seines letzten Teams.
+ */
+.seitenkopf[data-team],
+.seitenkopf[data-team] + .kacheln,
+.seitenkopf[data-team] + .kacheln + .kacheln {
+  /* Ein Team ohne eigene Farbe in teams.css behält die gewohnte, blaugraue Tönung. */
+  --band: color-mix(in srgb, var(--team, #8b9bb0) 9%, var(--plane));
+}
+
+.seitenkopf[data-team] h1::after {
+  content: '';
+  display: block;
+  width: 3.5rem;
+  height: 5px;
+  margin-top: 0.7rem;
+  background: var(--team, var(--border-strong));
+  border-radius: 3px;
+}
 
 /* --------------------------------------------------- sortierbare Tabellen */
 
