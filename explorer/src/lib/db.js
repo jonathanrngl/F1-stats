@@ -165,7 +165,9 @@ export function saisonListe() {
              WHERE sds.year = s.year AND sds.championship_won = 1 LIMIT 1) AS meisterId,
            (SELECT k.name FROM season_constructor_standing scs
               JOIN constructor k ON k.id = scs.constructor_id
-             WHERE scs.year = s.year AND scs.championship_won = 1 LIMIT 1) AS teamMeister
+             WHERE scs.year = s.year AND scs.championship_won = 1 LIMIT 1) AS teamMeister,
+           (SELECT scs.constructor_id FROM season_constructor_standing scs
+             WHERE scs.year = s.year AND scs.championship_won = 1 LIMIT 1) AS teamMeisterId
       FROM season s
      ORDER BY s.year DESC`)
 }
