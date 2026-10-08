@@ -2,6 +2,7 @@
 import { datum, zahl } from '../lib/format.js'
 import Seite from '../layouts/Seite.astro'
 import Countdown from '../components/Countdown.astro'
+import Gefolgt from '../components/Gefolgt.astro'
 import { db, eine, saisonListe, pfad } from '../lib/db.js'
 import { naechstesRennen, standVorRennen } from '../engine/vorschau.js'
 import { datenstand, juengsteAenderungen, rekordVerlaeufe, zahlwort } from '../engine/aenderungen.js'
@@ -141,6 +142,8 @@ const WERKZEUGE = [
       </div>
     </section>
   )}
+
+  <Gefolgt />
 
   {/*
     * „On this day": welcher Tag heute ist, weiß nur der Browser. Ohne Skript

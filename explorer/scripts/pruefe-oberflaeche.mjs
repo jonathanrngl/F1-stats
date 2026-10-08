@@ -174,6 +174,26 @@ async function pruefeAlles() {
     pruefe('Explorer zeichnet die Spitze', (await p.locator('.ergebnisbild .balken').count()) === 12)
   })
 
+  /*
+   * Folgen: auf der Seite eines Fahrers und eines Teams, danach auf der
+   * Startseite. Senna fährt nicht mehr (Kachel aus der API), Ferrari schon
+   * (Kachel aus aktuell.json) – beide Wege. Ein Kontext, damit der Speicher
+   * des Browsers zwischen den Seiten bleibt.
+   */
+  await schritt('Folgen', '/', {}, async (p) => {
+    pruefe('ohne Folgen: Erklärung statt Kacheln', await p.locator('[data-gefolgt-leer]').isVisible())
+    for (const weg of ['/drivers/ayrton-senna/', '/teams/ferrari/']) {
+      await p.goto(`${WURZEL}${weg}`, { waitUntil: 'networkidle' })
+      await p.locator('[data-folgen-id]').click()
+      pruefe(`${weg} Knopf zeigt „Following“`, (await p.locator('[data-folgen-id]').getAttribute('aria-pressed')) === 'true')
+    }
+    await p.goto(`${WURZEL}/`, { waitUntil: 'networkidle' })
+    await p.locator('[data-gefolgt-liste] li').nth(1).waitFor({ timeout: 5000 })
+    const text = await p.locator('[data-gefolgt-liste]').textContent()
+    pruefe('Startseite zeigt Senna mit Karriere', text.includes('Ayrton Senna') && text.includes('World Champion'), text)
+    pruefe('Startseite zeigt Ferrari mit WM-Stand', text.includes('Ferrari') && text.includes('championship'), text)
+  })
+
   // On this day: der Tag des Besuchers, und das Blättern.
   await schritt('On this day', '/', {}, async (p) => {
     await p.locator('[data-heute-inhalt] .heute-spalte').first().waitFor({ timeout: 5000 })

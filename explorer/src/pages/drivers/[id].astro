@@ -12,6 +12,7 @@ import Seite from '../../layouts/Seite.astro'
 import Karriere from '../../components/Karriere.astro'
 import Sprung from '../../components/Sprung.astro'
 import MehrZeigen from '../../components/MehrZeigen.astro'
+import Folgen from '../../components/Folgen.astro'
 import { alle, eine, fahrerListe, pfad } from '../../lib/db.js'
 import { land } from '../../lib/laender.js'
 import { db } from '../../lib/db.js'
@@ -226,6 +227,7 @@ const person = {
         </p>
       )}
       <p class="aktionen">
+        <Folgen art="f" id={fahrer.id} name={fahrer.display_name} />
         <a class="knopf" href={`${pfad.seite('/comparison/')}?a=${fahrer.id}`}>Compare with another driver</a>
         <a class="knopf leise" href={`${pfad.seite('/explorer/')}?fahrer=${fahrer.id}&d=saison&s=punkte`}>Season by season in the Explorer</a>
       </p>
