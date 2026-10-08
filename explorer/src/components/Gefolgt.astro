@@ -1,0 +1,161 @@
+---
+/**
+ * „Following“ auf der Startseite: die Fahrer und Teams, denen der Besucher
+ * folgt (lib/folgen.js), mit ihrem Stand.
+ *
+ * Wer in der laufenden Saison fährt, steht in /data/aktuell.json – WM-Platz,
+ * Punkte, das letzte Rennen. Für alle anderen liest die Seite die Datei der
+ * Karriere aus der API. Beides erst, wenn der Besucher jemandem folgt: Wer
+ * niemandem folgt, lädt nichts und sieht nur, dass es das gibt.
+ *
+ * Ohne Skript fehlt der Abschnitt ganz – ohne Skript gibt es keine Liste.
+ */
+---
+
+<section class="abschnitt gefolgt nur-mit-js" data-gefolgt aria-labelledby="gefolgt-titel">
+  <div class="abschnitt-kopf">
+    <div>
+      <h2 id="gefolgt-titel">Following</h2>
+      <p data-gefolgt-dazu>Drivers and teams you follow, as of the latest race.</p>
+    </div>
+  </div>
+  <p class="gefolgt-leer" data-gefolgt-leer hidden>
+    Follow a driver or a team with the <b>Follow</b> button on their page, and they appear here.
+    It is kept in this browser only.
+  </p>
+  <ul class="kacheln-liste" data-gefolgt-liste aria-live="polite"></ul>
+</section>
+
+<script>
+  import { lies } from '../lib/folgen.js'
+
+  const BASIS = import.meta.env.BASE_URL.replace(/\/$/, '')
+  const abschnitt = document.querySelector<HTMLElement>('[data-gefolgt]')
+
+  type Aktuell = {
+    jahr: number
+    letztes: { id: string; name: string; runde: number }
+    fahrer: Record<string, [string, string | null, string | null, number, number, string | null]>
+    teams: Record<string, [string, number, number, string | null]>
+  }
+
+  const json = (weg: string) => fetch(`${BASIS}${weg}`).then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+  const zahl = (n: number) => n.toLocaleString('en-GB', { maximumFractionDigits: 1 })
+  /** „1“ → „P1“; „DNF“ bleibt, wie es ist. */
+  const platz = (text: string | null) => (text === null ? '–' : /^\d+$/.test(text) ? `P${text}` : text)
+  const mehrzahl = (n: number, wort: string) => `${n} ${wort}${n === 1 ? '' : 's'}`
+
+  function kachel(href: string, name: string, art: string, zeilen: string[]) {
+    const li = document.createElement('li')
+    const a = document.createElement('a')
+    a.href = href
+    const etikett = document.createElement('span')
+    etikett.className = 'etikett-klein'
+    etikett.textContent = art
+    const b = document.createElement('b')
+    b.className = 'gross'
+    b.textContent = name
+    a.append(etikett, b)
+    for (const z of zeilen) {
+      const s = document.createElement('span')
+      s.className = 'dazu'
+      s.textContent = z
+      a.append(s)
+    }
+    li.append(a)
+    return li
+  }
+
+  async function fahrerKachel(id: string, a: Aktuell | null) {
+    const href = `${BASIS}/drivers/${id}/`
+    const jetzt = a?.fahrer[id]
+    if (jetzt) {
+      const [name, team, , pos, punkte, letzt] = jetzt
+      return kachel(href, name, team ? `Driver · ${team}` : 'Driver', [
+        `P${pos} in the ${a.jahr} championship, ${zahl(punkte)} points`,
+        `${a.letztes.name}: ${platz(letzt)}`,
+      ])
+    }
+    const k = await json(`/api/v1/drivers/${id}.json`)
+    const siege = (k.saisons ?? []).reduce((n: number, s: { siege: number }) => n + (s.siege ?? 0), 0)
+    return kachel(href, k.name, 'Driver', [
+      k.von === k.bis ? String(k.von) : `${k.von}–${k.bis}`,
+      [k.titel > 0 && `${k.titel}× World Champion`, mehrzahl(siege, 'win')].filter(Boolean).join(', '),
+    ])
+  }
+
+  async function teamKachel(id: string, a: Aktuell | null) {
+    const href = `${BASIS}/teams/${id}/`
+    const jetzt = a?.teams[id]
+    if (jetzt) {
+      const [name, pos, punkte, bestes] = jetzt
+      return kachel(href, name, 'Team', [
+        `P${pos} in the ${a.jahr} constructors' championship, ${zahl(punkte)} points`,
+        `${a.letztes.name}: best car ${platz(bestes)}`,
+      ])
+    }
+    const k = await json(`/api/v1/constructors/${id}.json`)
+    const jahre = (k.seasons ?? []).map((s: { year: number }) => s.year)
+    return kachel(href, k.name, 'Team', [
+      jahre.length ? `${Math.min(...jahre)}–${Math.max(...jahre)}` : '',
+      [k.titles > 0 && `${k.titles}× Constructors' Champion`, mehrzahl(k.wins ?? 0, 'win'), mehrzahl(k.races ?? 0, 'race')].filter(Boolean).join(', '),
+    ].filter(Boolean))
+  }
+
+  async function zeige() {
+    if (!abschnitt) return
+    const liste = abschnitt.querySelector<HTMLElement>('[data-gefolgt-liste]')!
+    const leer = abschnitt.querySelector<HTMLElement>('[data-gefolgt-leer]')!
+    const dazu = abschnitt.querySelector<HTMLElement>('[data-gefolgt-dazu]')!
+    const { f, t } = lies()
+    if (!f.length && !t.length) {
+      leer.hidden = false
+      dazu.hidden = true
+      return
+    }
+    // Ohne den Stand geht es trotzdem: Dann zeigt jede Kachel die Karriere.
+    const aktuell: Aktuell | null = await json('/data/aktuell.json').catch(() => null)
+    const kacheln = await Promise.all([
+      ...f.map((id) => fahrerKachel(id, aktuell).catch(() => null)),
+      ...t.map((id) => teamKachel(id, aktuell).catch(() => null)),
+    ])
+    // Eine Kennung, deren Seite es nicht mehr gibt, fällt still weg.
+    liste.replaceChildren(...kacheln.filter((k): k is HTMLLIElement => k !== null))
+    if (aktuell) dazu.textContent = `As of round ${aktuell.letztes.runde} of ${aktuell.jahr}, the ${aktuell.letztes.name}.`
+  }
+
+  zeige()
+</script>
+
+<style>
+  .gefolgt-leer { margin: 0; font-size: 0.92rem; color: var(--muted); max-width: 60ch; }
+  .gefolgt-leer b { color: var(--ink-2); }
+
+  .kacheln-liste {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(16rem, 100%), 1fr));
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .kacheln-liste:empty { display: none; }
+
+  .kacheln-liste :global(a) {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    height: 100%;
+    padding: 0.85rem 1rem;
+    color: inherit;
+    text-decoration: none;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-s);
+  }
+  .kacheln-liste :global(a:hover) { border-color: var(--link); }
+  .kacheln-liste :global(a:hover .gross) { text-decoration: underline; }
+  .kacheln-liste :global(.etikett-klein) { font-size: 0.8rem; color: var(--muted); }
+  .kacheln-liste :global(.gross) { font-size: 1.1rem; font-weight: 700; }
+  .kacheln-liste :global(.dazu) { font-size: 0.86rem; color: var(--ink-2); }
+</style>
