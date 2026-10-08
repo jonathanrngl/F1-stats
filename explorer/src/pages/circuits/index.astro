@@ -1,9 +1,10 @@
 ---
-import { km } from '../../lib/format.js'
+import { km, prozent as proz } from '../../lib/format.js'
 import Seite from '../../layouts/Seite.astro'
 import Filter from '../../components/Filter.astro'
 import Sortierung from '../../components/Sortierung.astro'
-import { alle, eine, streckenListe, pfad } from '../../lib/db.js'
+import { alle, db, eine, streckenListe, pfad } from '../../lib/db.js'
+import { startplatzGewicht } from '../../engine/circuit.js'
 import Weltkarte from '../../components/Weltkarte.astro'
 
 const strecken = streckenListe()
@@ -22,6 +23,10 @@ for (const r of alle('SELECT DISTINCT circuit_id AS id, year AS jahr FROM race O
  */
 const neuestesJahr = eine('SELECT MAX(year) AS jahr FROM race').jahr
 const aktuellAb = neuestesJahr - 4
+
+const GEWICHT_AB = 2000
+const GEWICHT_MIN = 8
+const gewicht = startplatzGewicht(db(), { ab: GEWICHT_AB, minRennen: GEWICHT_MIN })
 ---
 
 <Seite
@@ -79,6 +84,49 @@ const aktuellAb = neuestesJahr - 4
         </tbody>
       </table>
     </div>
+  </section>
+
+  <section class="abschnitt" id="startplatz">
+    <div class="abschnitt-kopf">
+      <div>
+        <h2>Where the grid decides</h2>
+        <p>
+          Since {GEWICHT_AB}, circuits with at least {GEWICHT_MIN} races: how often pole won, where
+          the winner started on average, and how much the order changed between start and finish –
+          the closest thing in the results to how hard it is to overtake.
+        </p>
+      </div>
+    </div>
+    <div class="tabelle">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Circuit</th>
+            <th class="num" scope="col">Races</th>
+            <th class="num" scope="col">Pole won</th>
+            <th class="num" scope="col">Winner started</th>
+            <th class="num" scope="col">Places changed</th>
+          </tr>
+        </thead>
+        <tbody>
+          {gewicht.map((g) => (
+            <tr>
+              <th scope="row"><a class="zeile" href={pfad.strecke(g.id)}>{g.name}</a></th>
+              <td class="num">{g.rennen}</td>
+              <td class="num">{proz(g.poleQuote)}</td>
+              <td class="num">P{g.siegerStart.toFixed(1)}</td>
+              <td class="num">{g.platzwechsel.toFixed(1)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+    <p class="fussnote">
+      Pole is the fastest time in qualifying, even where a penalty moved that driver back. Places
+      changed: among the drivers who were classified, how far each one's finishing position was
+      from their order on the grid, either way. Retirements do not count – moving up past a car
+      that stopped is not an overtake.
+    </p>
   </section>
 
   <Sortierung vorsortiert={3} gleichstand={3} />

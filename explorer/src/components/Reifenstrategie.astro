@@ -1,0 +1,202 @@
+---
+/**
+ * Die Reifenstrategie eines Rennens: je Fahrer ein Balken über die Runden,
+ * eingefärbt nach Mischung.
+ *
+ * Ein SVG wie die Verläufe, mit zwei Zeichnungen für zwei Breiten. Zeilen
+ * aus HTML mit Breiten in Prozent wären einfacher gewesen, brauchen aber
+ * style-Attribute – und die verbietet die Inhaltsrichtlinie, in der Astro
+ * nur Hashes einträgt. Attribute eines SVG (x, width) sind keine Stile.
+ *
+ * Die Farben sind die der Formel 1 selbst – rot weich, gelb mittel, weiß
+ * hart, grün Intermediate, blau Regen –, weil jeder, der Rennen schaut, sie
+ * so liest. Weiß bekommt einen Rand, sonst verschwände es auf hellem Grund.
+ * Die Mischung steht zusätzlich als Buchstabe im Balken und in der Tabelle
+ * darunter: Farbe allein trägt keine Information.
+ */
+interface Stint {
+  von: number
+  bis: number
+  mischung: string
+  alter: number | null
+}
+
+interface Props {
+  fahrer: { id: string; name: string; ziel: number | null; stints: Stint[] }[]
+  anzahl: number
+}
+
+const { fahrer, anzahl } = Astro.props
+
+const MISCHUNG = {
+  SOFT: { kurz: 'S', name: 'Soft' },
+  MEDIUM: { kurz: 'M', name: 'Medium' },
+  HARD: { kurz: 'H', name: 'Hard' },
+  INTERMEDIATE: { kurz: 'I', name: 'Intermediate' },
+  WET: { kurz: 'W', name: 'Wet' },
+}
+const benutzt = Object.keys(MISCHUNG).filter((m) => fahrer.some((f) => f.stints.some((s) => s.mischung === m)))
+
+/*
+ * Ein Stint deckt die Runden von–bis ab. Beginnt er in derselben Runde, in der
+ * der vorige endete (Wechsel unter roter Flagge), wird er ab der nächsten
+ * gezeichnet – sonst lägen zwei Balken übereinander.
+ */
+const balken = (stints: Stint[]) => {
+  let belegt = 0
+  return stints
+    .map((s) => {
+      const von = Math.max(s.von, belegt + 1)
+      belegt = Math.max(belegt, s.bis)
+      return { ...s, ab: von }
+    })
+    .filter((b) => b.bis >= b.ab)
+}
+
+const nachname = (n: string) => n.split(' ').slice(1).join(' ') || n
+
+function zeichnung({ W, namen, zeile, rundenJe, kurz }) {
+  const PAD = { oben: 18, rechts: 8, unten: 6, links: namen }
+  const PLOT_B = W - PAD.links - PAD.rechts
+  const H = PAD.oben + fahrer.length * zeile + PAD.unten
+  const x = (runde) => PAD.links + ((runde - 1) / anzahl) * PLOT_B
+  const breite = (von, bis) => ((bis - von + 1) / anzahl) * PLOT_B
+  const jede = Math.max(1, Math.ceil(anzahl / rundenJe / 5) * 5)
+  const marken = []
+  for (let r = jede; r < anzahl; r += jede) marken.push(r)
+  return { W, H, PAD, PLOT_B, x, breite, marken, zeile, kurz }
+}
+
+const FASSUNGEN = [
+  { klasse: 'breit', ...zeichnung({ W: 900, namen: 170, zeile: 20, rundenJe: 12, kurz: false }) },
+  { klasse: 'schmal', ...zeichnung({ W: 380, namen: 92, zeile: 18, rundenJe: 5, kurz: true }) },
+]
+
+const stintText = (s: Stint) =>
+  `${MISCHUNG[s.mischung]?.name ?? s.mischung} ${s.von}–${s.bis}${s.alter ? ` (used, ${s.alter} laps)` : ''}`
+
+const BASIS = import.meta.env.BASE_URL.replace(/\/$/, '')
+---
+
+<figure class="strategie">
+  {FASSUNGEN.map((z) => (
+    <svg class={z.klasse} viewBox={`0 0 ${z.W} ${z.H}`} role="img"
+      aria-label={`Tyre stints of every driver over the ${anzahl} laps, in finishing order. The same information is in the table below.`}>
+      {z.marken.map((r) => (
+        <g>
+          <line class="gitter" x1={z.x(r + 1)} x2={z.x(r + 1)} y1={z.PAD.oben - 4} y2={z.H - z.PAD.unten} />
+          <text class="achse" x={z.x(r + 1)} y={z.PAD.oben - 7} text-anchor="middle">{r}</text>
+        </g>
+      ))}
+      {fahrer.map((f, i) => {
+        const y = z.PAD.oben + i * z.zeile
+        return (
+          <g>
+            <a href={`${BASIS}/drivers/${f.id}/`}>
+              <text class="name" x={z.PAD.links - 8} y={y + z.zeile / 2} text-anchor="end" dominant-baseline="middle">
+                {z.kurz ? nachname(f.name) : `${f.ziel ?? '–'}  ${f.name}`}
+              </text>
+            </a>
+            {balken(f.stints).map((b) => {
+              const bx = z.x(b.ab)
+              const bb = z.breite(b.ab, b.bis)
+              return (
+                <g class={`stint ${b.mischung.toLowerCase()}${b.alter ? ' gebraucht' : ''}`}>
+                  <title>{`${f.name}: ${stintText(b)}`}</title>
+                  <rect x={bx + 0.5} y={y + 3} width={Math.max(bb - 1, 1)} height={z.zeile - 6} rx="2" />
+                  {bb > 16 && <text x={bx + bb / 2} y={y + z.zeile / 2} text-anchor="middle" dominant-baseline="central">{MISCHUNG[b.mischung]?.kurz}</text>}
+                </g>
+              )
+            })}
+          </g>
+        )
+      })}
+    </svg>
+  ))}
+
+  <ul class="legende">
+    {benutzt.map((m) => (
+      <li><svg class={`muster stint ${m.toLowerCase()}`} viewBox="0 0 22 14" aria-hidden="true"><rect x="0.5" y="0.5" width="21" height="13" rx="2" /></svg>{MISCHUNG[m].name}</li>
+    ))}
+    <li><svg class="muster stint medium gebraucht" viewBox="0 0 22 14" aria-hidden="true"><rect x="0.5" y="0.5" width="21" height="13" rx="2" /></svg>Pale: a set used before the race</li>
+  </ul>
+
+  <figcaption>
+    Laps on each set of tyres, in finishing order. Tyre data from OpenF1; it exists from 2023 on.
+  </figcaption>
+
+  <details class="als-tabelle">
+    <summary>Show as a table</summary>
+    <div class="tabelle">
+      <table>
+        <thead><tr><th scope="col">Driver</th><th class="num" scope="col">Stops</th><th scope="col">Stints</th></tr></thead>
+        <tbody>
+          {fahrer.map((f) => (
+            <tr>
+              <th scope="row"><a class="zeile" href={`${BASIS}/drivers/${f.id}/`}>{f.name}</a></th>
+              <td class="num">{f.stints.length - 1}</td>
+              <td class="leise">{f.stints.map(stintText).join(' · ')}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </details>
+</figure>
+
+<style>
+  .strategie {
+    --soft: #e8002d;
+    --medium: #ffd12e;
+    --hard: #f4f4f2;
+    --inter: #43b02a;
+    --wet: #0067ad;
+    margin: 0;
+    padding: 1rem 0 0.85rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  svg { display: block; width: 100%; height: auto; }
+  svg.schmal { display: none; }
+
+  @media (max-width: 40rem) {
+    svg.breit { display: none; }
+    svg.schmal { display: block; }
+  }
+
+  .gitter { stroke: var(--grid); stroke-width: 1; shape-rendering: crispEdges; }
+  .achse { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+  .name { fill: var(--ink-2); font-size: 12px; font-variant-numeric: tabular-nums; }
+  a:hover .name { fill: var(--link); text-decoration: underline; }
+
+  .stint text { font-size: 10px; font-weight: 800; fill: #15181d; pointer-events: none; }
+  .soft rect { fill: var(--soft); }
+  .soft text { fill: #fff; }
+  .medium rect { fill: var(--medium); }
+  .hard rect { fill: var(--hard); stroke: var(--border); stroke-width: 1; }
+  .intermediate rect { fill: var(--inter); }
+  .intermediate text { fill: #fff; }
+  .wet rect { fill: var(--wet); }
+  .wet text { fill: #fff; }
+  /* Ein gebrauchter Satz: blasser, damit man frische und alte Sätze unterscheidet. */
+  .gebraucht rect { opacity: 0.5; }
+
+  .legende {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1.1rem;
+    margin: 0.9rem 0 0;
+    padding: 0.85rem 0 0;
+    border-top: 1px solid var(--border);
+    list-style: none;
+    font-size: 0.84rem;
+    color: var(--ink-2);
+  }
+  .legende li { display: flex; align-items: center; gap: 0.45rem; }
+  .legende .muster { width: 1.4rem; height: auto; flex: none; }
+
+  figcaption { margin-top: 0.85rem; font-size: 0.84rem; color: var(--muted); text-wrap: pretty; }
+  .als-tabelle { margin-top: 0.75rem; }
+  .als-tabelle summary { cursor: pointer; min-height: 2.25rem; font-size: 0.86rem; font-weight: 600; color: var(--ink); }
+  .als-tabelle .tabelle { margin-top: 0.5rem; box-shadow: none; }
+</style>

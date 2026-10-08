@@ -26,7 +26,7 @@ nur in einem eigenen Job, der nichts davon ausführt.
 |---|---|---|
 | `deploy.yml` | jeder Push auf `main`, oder angestoßen | Import der gepinnten F1DB-Fassung, Lint, Tests, Bau mit Link­prüfung, Browserprüfung, dann GitHub Pages |
 | `f1db-update.yml` | viermal täglich | eine neuere F1DB-Fassung prüfen und bauen; nur wenn alles besteht, `explorer/f1db-version.txt` festschreiben und den Deploy anstoßen |
-| `runden.yml` | alle vier Stunden | Rundendaten von Jolpica nachladen, prüfen, committen |
+| `runden.yml` | alle vier Stunden | Rundendaten von Jolpica und Reifenstints von OpenF1 nachladen, prüfen, committen |
 
 Dazu hält Dependabot (`.github/dependabot.yml`) die per Commit gepinnten
 Aktionen und die npm-Abhängigkeiten aktuell.

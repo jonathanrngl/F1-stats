@@ -12,6 +12,7 @@ export const ARTEN = {
   t: { label: 'Team', pfad: 'teams' },
   s: { label: 'Circuit', pfad: 'circuits' },
   m: { label: 'Engine', pfad: 'engines' },
+  y: { label: 'Tyres', pfad: 'tyres' },
   j: { label: 'Season', pfad: 'seasons' },
   r: { label: 'Race', pfad: 'races' },
 }

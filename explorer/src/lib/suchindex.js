@@ -64,6 +64,17 @@ export function suchindex() {
      GROUP BY m.id
      ORDER BY g DESC`)
 
+  const reifen = alle(`
+    SELECT t.id, t.name AS n, c.ioc AS l,
+           MIN(r.year) AS von, MAX(r.year) AS bis,
+           COUNT(DISTINCT rr.race_id) AS g
+      FROM tyre_manufacturer t
+      LEFT JOIN country c ON c.id = t.country_id
+      JOIN race_result rr ON rr.tyre_id = t.id
+      JOIN race r ON r.id = rr.race_id
+     GROUP BY t.id
+     ORDER BY g DESC`)
+
   const rennen = alle(`
     SELECT r.id, COALESCE(g.full_name, g.name || ' Grand Prix') || ' ' || r.year AS n,
            c.ioc AS l, r.year AS von, r.year AS bis, r.year AS g, z.name AS o
@@ -76,7 +87,8 @@ export function suchindex() {
   const saisons = alle(`SELECT year AS id, year || ' season' AS n, year AS von, year AS bis, year AS g FROM season ORDER BY year DESC`)
 
   /**
-   * `a` ist die Art: f(ahrer), t(eam), s(trecke), m(otor), r(ennen), j(ahr) –
+   * `a` ist die Art: f(ahrer), t(eam), s(trecke), m(otor), y (tyres – r ist
+   * vergeben), r(ennen), j(ahr) –
    * ein Buchstabe statt eines Wortes je Eintrag. `o` ist ein Ort, der
    * mitgesucht wird: „Spa“ findet Spa-Francorchamps, „Suzuka“ das Rennen in
    * Japan.
@@ -99,6 +111,7 @@ export function suchindex() {
     ...formen(teams, 't'),
     ...formen(strecken, 's'),
     ...formen(motoren, 'm'),
+    ...formen(reifen, 'y'),
     ...formen(saisons, 'j'),
     ...formen(rennen, 'r'),
   ]

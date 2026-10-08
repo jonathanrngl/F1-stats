@@ -1,0 +1,207 @@
+---
+/**
+ * Der Abstand zum Führenden, Runde für Runde.
+ *
+ * Der Positionsverlauf zeigt, wer vorn lag – nicht, wie knapp. Hier sieht man
+ * es: wie ein Safety-Car das Feld zusammenschiebt, wo ein Boxenstopp zwanzig
+ * Sekunden kostet, wer am Ende heranfuhr. Gerechnet wird aus den Rundenzeiten
+ * (abstandZumFuehrenden in lib/rennen.js); der Abstand des Zweiten nach der
+ * letzten Runde stimmt in fast jedem Rennen auf die Millisekunde mit dem
+ * amtlichen Zielabstand überein, und die Tests halten das fest.
+ *
+ * Dieselben Farben wie der Positionsverlauf darüber, an denselben Fahrern:
+ * Die beiden Bilder lassen sich Linie für Linie nebeneinander lesen.
+ *
+ * Die Achse reicht so weit, wie die ersten acht zurücklagen, höchstens eine
+ * Rundenlänge. Sonst bestimmte ein Überrundeter oder ein Auto, das zehn
+ * Minuten an der Box stand, den Maßstab, und die Spitze läge als ein Strich
+ * auf der Nulllinie. Was darüber hinausgeht, schneidet der Rand ab.
+ */
+interface Fahrer {
+  id: string
+  name: string
+  kuerzel: string
+  ziel: number | null
+  /** Millisekunden hinter dem Führenden nach jeder Runde, null wo er nicht mehr fuhr. */
+  abstaende: (number | null)[]
+}
+
+interface Props {
+  fahrer: Fahrer[]
+  anzahl: number
+  /** Eine typische Runde des Siegers – mehr Abstand ist Überrundung und sprengt die Achse. */
+  rundeMs: number | null
+}
+
+const { fahrer, anzahl, rundeMs } = Astro.props
+const BENANNT = 8
+
+const benannt = fahrer.slice(0, BENANNT)
+const rest = fahrer.slice(BENANNT)
+
+const werte = (f: Fahrer) => f.abstaende.filter((a): a is number => a !== null)
+const maxBenannt = Math.max(1000, ...benannt.flatMap(werte))
+const grenze = Math.min(maxBenannt, rundeMs ?? Infinity)
+
+// Achsenschritte in Sekunden, die auf runde Zahlen fallen.
+const SCHRITTE = [1, 2, 5, 10, 15, 20, 30, 60, 120]
+const schritt = SCHRITTE.find((s) => s >= grenze / 1000 / 5) ?? 300
+const obergrenze = Math.ceil(grenze / 1000 / schritt) * schritt * 1000
+const abgeschnitten = fahrer.some((f) => werte(f).some((a) => a > obergrenze))
+
+const letzte = (f: Fahrer) => {
+  for (let i = f.abstaende.length - 1; i >= 0; i--) if (f.abstaende[i] !== null) return { runde: i + 1, ms: f.abstaende[i] }
+  return null
+}
+
+function zeichnung({ W, H, rechts, rundenJe, klasse }) {
+  const PAD = { oben: 12, rechts, unten: 34, links: 40 }
+  const PLOT_B = W - PAD.links - PAD.rechts
+  const PLOT_H = H - PAD.oben - PAD.unten
+  const x = (runde) => PAD.links + ((runde - 1) / Math.max(anzahl - 1, 1)) * PLOT_B
+  // Null oben, wie Platz 1 im Positionsverlauf: Wer vorn ist, steht oben.
+  const y = (ms) => PAD.oben + (Math.min(ms, obergrenze * 1.04) / obergrenze) * PLOT_H
+  const pfad = (abst) => {
+    let d = ''
+    let an = false
+    abst.forEach((a, i) => {
+      if (a === null) {
+        an = false
+        return
+      }
+      d += `${an ? 'L' : 'M'}${x(i + 1).toFixed(1)},${y(a).toFixed(1)} `
+      an = true
+    })
+    return d.trim()
+  }
+  const jede = Math.max(1, Math.ceil(anzahl / rundenJe))
+  const xWerte = []
+  for (let r = jede; r <= anzahl; r += jede) xWerte.push(r)
+  const yWerte = []
+  for (let s = 0; s * 1000 <= obergrenze; s += schritt) yWerte.push(s)
+
+  /*
+   * Namen am Linienende. Anders als bei Positionen können hier drei Fahrer
+   * auf eine Zehntelsekunde zusammen ankommen (Monaco 2024: Piastri, Sainz,
+   * Norris) – dann lägen die Kürzel übereinander. Von oben nach unten
+   * gelesen, rückt jedes so weit nach unten, dass es das vorige nicht berührt.
+   */
+  const ABSTAND = 12
+  const marken = benannt
+    .map((f) => ({ f, l: letzte(f) }))
+    .filter(({ l }) => l && l.ms <= obergrenze)
+    .map(({ f, l }) => ({ kuerzel: f.kuerzel, x: x(l.runde) + 6, y: y(l.ms) }))
+    .sort((a, b) => a.y - b.y)
+  marken.forEach((m, i) => {
+    if (i > 0) m.y = Math.max(m.y, marken[i - 1].y + ABSTAND)
+  })
+  return { W, H, PAD, PLOT_B, PLOT_H, x, y, pfad, xWerte, yWerte, rechts, marken, schnitt: `abstand-${klasse}` }
+}
+
+const FASSUNGEN = [
+  { klasse: 'breit', ...zeichnung({ W: 900, H: 340, rechts: 50, rundenJe: 12, klasse: 'breit' }) },
+  { klasse: 'schmal', ...zeichnung({ W: 380, H: 280, rechts: 12, rundenJe: 5, klasse: 'schmal' }) },
+]
+
+const zwischen = [0.25, 0.5, 0.75].map((a) => Math.max(1, Math.round(anzahl * a)))
+const sek = (ms: number | null) => (ms === null ? '–' : ms === 0 ? '0.0' : `+${(ms / 1000).toFixed(1)}`)
+
+const BASIS = import.meta.env.BASE_URL.replace(/\/$/, '')
+---
+
+<figure class="abstandsverlauf">
+  {FASSUNGEN.map((z) => (
+    <svg class={z.klasse} viewBox={`0 0 ${z.W} ${z.H}`} role="img"
+      aria-label={`Gap to the leader in seconds after each of the ${anzahl} laps. The values are in the table below the chart.`}>
+      <defs>
+        <clipPath id={z.schnitt}>
+          <rect x={z.PAD.links - 2} y={z.PAD.oben - 4} width={z.PLOT_B + z.PAD.rechts} height={z.PLOT_H + 8} />
+        </clipPath>
+      </defs>
+      {z.yWerte.map((s) => (
+        <g>
+          <line class="gitter" x1={z.PAD.links} x2={z.W - z.PAD.rechts} y1={z.y(s * 1000)} y2={z.y(s * 1000)} />
+          <text class="achse" x={z.PAD.links - 6} y={z.y(s * 1000)} text-anchor="end" dominant-baseline="middle">{s === 0 ? '0' : `+${s}`}</text>
+        </g>
+      ))}
+      {z.xWerte.map((r) => (
+        <text class="achse" x={z.x(r)} y={z.H - 18} text-anchor="middle">{r}</text>
+      ))}
+      <text class="achse" x={z.PAD.links + z.PLOT_B / 2} y={z.H - 3} text-anchor="middle">Lap</text>
+
+      <g clip-path={`url(#${z.schnitt})`}>
+        {rest.map((f) => <path class="linie grau" d={z.pfad(f.abstaende)} />)}
+        {benannt.map((f, i) => <path class={`linie f${i + 1}`} d={z.pfad(f.abstaende)} />)}
+      </g>
+      {z.rechts > 30 && z.marken.map((m) => (
+        <text class="marke" x={m.x} y={m.y} dominant-baseline="middle">{m.kuerzel}</text>
+      ))}
+    </svg>
+  ))}
+
+  <figcaption>
+    Seconds behind the leader as each lap ends, from the lap times. A line that flattens
+    out together with the others is a safety car; a sudden step down is a pit stop.
+    {abgeschnitten && <> Gaps beyond {obergrenze / 1000} seconds run off the bottom edge.</>}
+    {' '}This is the gap on the road: time penalties given after the flag are not in it.
+  </figcaption>
+
+  <details class="als-tabelle">
+    <summary>Show as a table</summary>
+    <div class="tabelle">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Driver</th>
+            {zwischen.map((r) => <th class="num" scope="col">Lap {r}</th>)}
+            <th class="num" scope="col">Last lap</th>
+          </tr>
+        </thead>
+        <tbody>
+          {fahrer.map((f) => (
+            <tr>
+              <th scope="row"><a class="zeile" href={`${BASIS}/drivers/${f.id}/`}>{f.name}</a></th>
+              {zwischen.map((r) => <td class="num">{sek(f.abstaende[r - 1])}</td>)}
+              <td class="num">{f.ziel ? sek(letzte(f)?.ms ?? null) : 'out'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </details>
+</figure>
+
+<style>
+  .abstandsverlauf {
+    margin: 0;
+    padding: 1rem 0 0.85rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  svg { display: block; width: 100%; height: auto; }
+  svg.schmal { display: none; }
+
+  @media (max-width: 40rem) {
+    svg.breit { display: none; }
+    svg.schmal { display: block; }
+  }
+
+  .gitter { stroke: var(--grid); stroke-width: 1; shape-rendering: crispEdges; }
+  .achse { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+  .f1 { --farbe: var(--s1); }
+  .f2 { --farbe: var(--s2); }
+  .f3 { --farbe: var(--s3); }
+  .f4 { --farbe: var(--s4); }
+  .f5 { --farbe: var(--s5); }
+  .f6 { --farbe: var(--s6); }
+  .f7 { --farbe: var(--s7); }
+  .f8 { --farbe: var(--s8); }
+  .linie { fill: none; stroke: var(--farbe); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .linie.grau { stroke: var(--s-rest); stroke-width: 1.25; opacity: 0.5; }
+  .marke { fill: var(--ink-2); font-size: 11px; font-weight: 700; }
+
+  figcaption { margin-top: 0.85rem; font-size: 0.84rem; color: var(--muted); text-wrap: pretty; }
+  .als-tabelle { margin-top: 0.75rem; }
+  .als-tabelle summary { cursor: pointer; min-height: 2.25rem; font-size: 0.86rem; font-weight: 600; color: var(--ink); }
+  .als-tabelle .tabelle { margin-top: 0.5rem; box-shadow: none; }
+</style>

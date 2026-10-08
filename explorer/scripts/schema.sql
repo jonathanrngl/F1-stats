@@ -451,6 +451,21 @@ CREATE TABLE lap_position (
   PRIMARY KEY (race_id, driver_id, lap)
 );
 
+-- Reifenstints, ebenfalls nicht aus F1DB: von OpenF1, ab 2023. Je Fahrer und
+-- Stint die erste und letzte Runde, die Mischung und das Alter des Satzes.
+-- Zwei Stints dürfen sich in einer Runde überschneiden – unter roter Flagge
+-- wird gewechselt, ohne dass eine Runde vergeht (Monaco 2024, Runde 1).
+CREATE TABLE tyre_stint (
+  race_id         TEXT NOT NULL REFERENCES race(id),
+  driver_id       TEXT NOT NULL REFERENCES driver(id),
+  stint           INTEGER NOT NULL,
+  lap_start       INTEGER NOT NULL,
+  lap_end         INTEGER NOT NULL,
+  compound        TEXT NOT NULL CHECK (compound IN ('SOFT', 'MEDIUM', 'HARD', 'INTERMEDIATE', 'WET')),
+  tyre_age        INTEGER,
+  PRIMARY KEY (race_id, driver_id, stint)
+);
+
 -- -------------------------------------------------------------- Wertungen
 
 -- Zwischenstand nach jeder Runde. Einzige Quelle, die Streichresultate kennt:

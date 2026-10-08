@@ -149,17 +149,23 @@ export function rennDaten(id) {
    * null für Runden, in denen er nicht mehr fuhr.
    */
   const rundenZeilen = alle(
-    'SELECT driver_id AS id, lap AS runde, position FROM lap_position WHERE race_id = ? ORDER BY lap',
+    'SELECT driver_id AS id, lap AS runde, position, time_ms AS zeit FROM lap_position WHERE race_id = ? ORDER BY lap',
     id,
   )
   let runden = null
   if (rundenZeilen.length) {
     const letzte = Math.max(...rundenZeilen.map((z) => z.runde))
     const jeFahrer = new Map()
+    const zeitJeFahrer = new Map()
     for (const z of rundenZeilen) {
-      if (!jeFahrer.has(z.id)) jeFahrer.set(z.id, new Array(letzte).fill(null))
+      if (!jeFahrer.has(z.id)) {
+        jeFahrer.set(z.id, new Array(letzte).fill(null))
+        zeitJeFahrer.set(z.id, new Array(letzte).fill(null))
+      }
       jeFahrer.get(z.id)[z.runde - 1] = z.position
+      zeitJeFahrer.get(z.id)[z.runde - 1] = z.zeit
     }
+    const abstaende = abstandZumFuehrenden(jeFahrer, zeitJeFahrer, letzte)
     const inReihenfolge = [...new Set(ergebnisse.map((e) => e.fahrerId))].filter((f) => jeFahrer.has(f))
     runden = {
       anzahl: letzte,
@@ -173,8 +179,38 @@ export function rennDaten(id) {
           start: e.grid_position,
           ziel: e.position,
           positionen: pos,
+          abstaende: abstaende?.get(f) ?? null,
           gefuehrt: pos.filter((p) => p === 1).length,
         }
+      }),
+      mitAbstand: abstaende !== null,
+      /** Median der Rundenzeiten des Siegers: Runde 1, Boxenstopps und Safety-Car verschieben ihn kaum. */
+      rundeMs: median(zeitJeFahrer.get(inReihenfolge[0])?.filter((t) => t !== null) ?? []),
+    }
+  }
+
+  /*
+   * Reifenstints von OpenF1, ab 2023 – je Fahrer in der Reihenfolge des
+   * Ergebnisses, damit die Strategie neben dem Ergebnis gelesen werden kann.
+   */
+  const stintZeilen = alle(
+    `SELECT driver_id AS id, stint, lap_start AS von, lap_end AS bis, compound AS mischung, tyre_age AS satzalter
+       FROM tyre_stint WHERE race_id = ? ORDER BY driver_id, stint`,
+    id,
+  )
+  let reifen = null
+  if (stintZeilen.length) {
+    const jeFahrer = new Map()
+    for (const s of stintZeilen) {
+      if (!jeFahrer.has(s.id)) jeFahrer.set(s.id, [])
+      jeFahrer.get(s.id).push({ von: s.von, bis: s.bis, mischung: s.mischung, alter: s.satzalter })
+    }
+    const reihenfolge = [...new Set(ergebnisse.map((e) => e.fahrerId))].filter((f) => jeFahrer.has(f))
+    reifen = {
+      anzahl: Math.max(...stintZeilen.map((s) => s.bis)),
+      fahrer: reihenfolge.map((f) => {
+        const e = ergebnisse.find((x) => x.fahrerId === f)
+        return { id: f, name: e.fahrer, ziel: e.position, stints: jeFahrer.get(f) }
       }),
     }
   }
@@ -182,6 +218,7 @@ export function rennDaten(id) {
   return {
     rennen,
     runden,
+    reifen,
     gefahren: ergebnisse.length > 0,
     ergebnisse,
     qualifying,
@@ -198,4 +235,49 @@ export function rennDaten(id) {
     vorher: nachbarn.find((n) => n.round === rennen.round - 1) ?? null,
     nachher: nachbarn.find((n) => n.round === rennen.round + 1) ?? null,
   }
+}
+
+/**
+ * Abstand zum Führenden nach jeder Runde, in Millisekunden – je Fahrer eine
+ * Liste wie die Positionen, null wo er nicht mehr fuhr.
+ *
+ * Gerechnet aus den Rundenzeiten: Wer nach Runde n mehr Zeit seit dem Start
+ * gebraucht hat als der Führende nach Runde n, liegt um die Differenz zurück.
+ * Das ist der Abstand an der Ziellinie, auch für Überrundete – deren Linie
+ * läuft dann über eine Rundenlänge hinaus.
+ *
+ * Fehlt eine Rundenzeit, fehlt sie fast immer dem ganzen Feld zugleich: in
+ * der Runde einer roten Flagge (Kanada 2011, Silverstone 2014). Der Fahrer
+ * bekommt dann die Zeit des Führenden, und sein Abstand bleibt stehen wie die
+ * Reihenfolge hinter dem Safety-Car. Ohne Ersatz wäre jeder Abstand ab dort
+ * falsch, mit einem Abbruch das halbe Rennen leer.
+ *
+ * null, wenn das Rennen gar keine Zeiten führt.
+ */
+export function abstandZumFuehrenden(positionen, zeiten, anzahl) {
+  const ids = [...positionen.keys()]
+  if (!ids.some((f) => zeiten.get(f).some((t) => t !== null))) return null
+
+  const summe = new Map(ids.map((f) => [f, 0]))
+  const ergebnis = new Map(ids.map((f) => [f, new Array(anzahl).fill(null)]))
+
+  for (let i = 0; i < anzahl; i++) {
+    const imRennen = ids.filter((f) => positionen.get(f)[i] !== null)
+    if (!imRennen.length) continue
+    const fuehrender = imRennen.find((f) => positionen.get(f)[i] === 1)
+    const bekannt = imRennen.map((f) => zeiten.get(f)[i]).filter((t) => t !== null)
+    // Der Führende ohne Zeit: die schnellste bekannte, sonst keine – dann bleibt jeder Abstand stehen.
+    const ersatz = (fuehrender && zeiten.get(fuehrender)[i]) ?? (bekannt.length ? Math.min(...bekannt) : 0)
+    for (const f of imRennen) summe.set(f, summe.get(f) + (zeiten.get(f)[i] ?? ersatz))
+    if (!fuehrender) continue
+    const vorn = summe.get(fuehrender)
+    for (const f of imRennen) ergebnis.get(f)[i] = Math.max(0, summe.get(f) - vorn)
+  }
+  return ergebnis
+}
+
+function median(werte) {
+  if (!werte.length) return null
+  const s = [...werte].sort((a, b) => a - b)
+  return s[s.length >> 1]
 }

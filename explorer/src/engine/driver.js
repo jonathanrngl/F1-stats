@@ -344,6 +344,56 @@ export function calculateTeamMateComparison(db, driverId, filter = {}) {
 }
 
 /**
+ * Der Abstand im Qualifying zu jedem Teamkollegen, in Prozent der Zeit.
+ *
+ * Das Duell oben zählt nur, wer vorn war – 10:8 kann ein Hundertstel je
+ * Wochenende sein oder eine halbe Sekunde. Prozent statt Sekunden, weil eine
+ * Runde in Monaco 70 Sekunden dauert und in Spa 105.
+ *
+ * Verglichen wird je Rennen die letzte Session, in der beide eine Zeit
+ * setzten: Q3, wenn beide dort waren, sonst Q2 oder Q1, vor 2006 die eine
+ * Qualifying-Zeit. Je Teamkollege steht der Median: Ein Unfall in Q1 oder
+ * eine gestrichene Runde ergibt sonst einen Ausreißer von fünf Prozent, der
+ * eine ganze Saison überdeckt. Negativ heißt: schneller als der Teamkollege.
+ *
+ * Map Teamkollege → { median, anzahl }; nur wer mindestens drei Vergleiche hat.
+ */
+export function qualifyingAbstand(db, driverId) {
+  const zeilen = db
+    .prepare(
+      `SELECT ich.race_id AS rennen,
+              ander.driver_id AS gegner,
+              ich.time_ms AS t, ich.q1_ms AS q1, ich.q2_ms AS q2, ich.q3_ms AS q3,
+              ander.time_ms AS gt, ander.q1_ms AS gq1, ander.q2_ms AS gq2, ander.q3_ms AS gq3
+         FROM qualifying_result ich
+         JOIN qualifying_result ander
+           ON ander.race_id = ich.race_id AND ander.constructor_id = ich.constructor_id
+          AND ander.driver_id <> ich.driver_id
+        WHERE ich.driver_id = ?`,
+    )
+    .all(driverId)
+
+  const jeGegner = new Map()
+  for (const z of zeilen) {
+    const paar = [[z.q3, z.gq3], [z.q2, z.gq2], [z.q1, z.gq1], [z.t, z.gt]].find(([a, b]) => a && b)
+    if (!paar) continue
+    const [mein, sein] = paar
+    if (!jeGegner.has(z.gegner)) jeGegner.set(z.gegner, [])
+    jeGegner.get(z.gegner).push(((mein - sein) / sein) * 100)
+  }
+
+  const ergebnis = new Map()
+  for (const [gegner, werte] of jeGegner) {
+    if (werte.length < 3) continue
+    const s = werte.sort((a, b) => a - b)
+    const mitte = s.length >> 1
+    const median = s.length % 2 ? s[mitte] : (s[mitte - 1] + s[mitte]) / 2
+    ergebnis.set(gegner, { median, anzahl: s.length })
+  }
+  return ergebnis
+}
+
+/**
  * Leistung je Strecke – die Grundlage für „Track Specialists".
  *
  * Strecken mit ein oder zwei Starts werden mitgeliefert, aber über

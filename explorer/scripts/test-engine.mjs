@@ -20,7 +20,7 @@ import {
   calculateDNFRate, calculateEntries, calculateFastestLaps, calculatePodiums,
   calculatePoints, calculatePoles, calculatePoleToWinRate, calculatePositionsGained,
   calculatePolesF1DB, calculateStarts, calculateStartsFromPole, calculateStreaks, calculateTeamMateComparison,
-  calculateTrackPerformance, calculateWinRate, calculateWins, driverRaces,
+  calculateTrackPerformance, calculateWinRate, calculateWins, driverRaces, qualifyingAbstand,
 } from '../src/engine/driver.js'
 import { longestStreak, mean, rate } from '../src/engine/metric.js'
 import {
@@ -31,7 +31,7 @@ import {
   grandSlams, zielabstand, groessteAufholjagden, meistePlaetzeGutgemacht, altersrekord,
 } from '../src/engine/records.js'
 import {
-  motorProfil, motorTeams, motorTitel, motorenListe,
+  motorProfil, motorTeams, motorTitel, motorenListe, reifenkriege, reifenListe, reifenProfil,
 } from '../src/engine/motor.js'
 import { fahrerWertung, rangliste, zusammenhang } from '../src/engine/duell.js'
 import { BEREICHE, erzeugeFragen, quizFragen, quizUebersicht } from '../src/engine/quiz.js'
@@ -45,6 +45,9 @@ import { uebersetze } from '../src/lib/frage.js'
 import { alsAdresse, ausAdresse, rechne, verzeichnis } from '../src/lib/abfrage.js'
 import { wuerfel } from '../src/lib/wuerfel.js'
 import { ordneZu } from './lade-runden.mjs'
+import { passendeSession, stintZeilen } from './lade-reifen.mjs'
+import { abstandZumFuehrenden, rennDaten } from '../src/lib/rennen.js'
+import { startplatzGewicht } from '../src/engine/circuit.js'
 import { anfrageAusPfad, vorschlaege } from '../src/lib/suche.js'
 import { suchindex } from '../src/lib/suchindex.js'
 import { falte, ics, kalenderEintraege } from '../src/lib/kalender.js'
@@ -457,6 +460,30 @@ console.log(`   ✓ Ferrari: ${ferrariMotor.siege} Siege als Motor, ${ferrariTea
 /* Der Ford-Cosworth belieferte ein halbes Feld - das ist die Geschichte. */
 const fordTeams = motorTeams(db, 'ford', 200)
 pruefe('Ford belieferte mehr als fuenfzig Teams', fordTeams.length > 50, `${fordTeams.length}`)
+
+/*
+ * Reifen laufen durch dieselben Abfragen, mit anderer Spalte. Derselbe
+ * Abgleich: Siege und Starts gegen die Zahlen, die F1DB je Reifenhersteller
+ * mitliefert.
+ */
+const reifen = reifenListe(db)
+gleich(
+  'jeder Reifenhersteller mit Rennen steht in der Liste',
+  reifen.length,
+  db.prepare('SELECT COUNT(DISTINCT tyre_id) AS n FROM race_result WHERE tyre_id IS NOT NULL').get().n,
+)
+const reifenAbweichungen = reifen
+  .map((r) => reifenProfil(db, r.id))
+  .filter((p) => p.siege !== p.f1dbSiege || p.starts !== p.f1dbStarts)
+  .map((p) => `${p.name}: ${p.siege}/${p.starts} statt ${p.f1dbSiege}/${p.f1dbStarts}`)
+pruefe('Siege und Starts stimmen fuer alle Reifenhersteller mit F1DB ueberein', reifenAbweichungen.length === 0, reifenAbweichungen.join(', '))
+
+/* 2005, der letzte große Reifenkrieg: Michelin gewann alles außer Indianapolis. */
+const krieg2005 = reifenkriege(db).find((k) => k.jahr === 2005)
+gleich('Reifenkrieg 2005: Michelin vorn', krieg2005?.hersteller[0].id, 'michelin')
+gleich('Reifenkrieg 2005: Bridgestone ein Sieg', krieg2005?.hersteller.find((h) => h.id === 'bridgestone')?.siege, 1)
+gleich('seit 2007 kein Reifenkrieg mehr', reifenkriege(db).some((k) => k.jahr >= 2007), false)
+console.log(`   ✓ ${reifen.length} Reifenhersteller gegen F1DB abgeglichen, ${reifenkriege(db).length} Saisons mit Reifenkrieg`)
 pruefe('Ford-Titel ueber mehrere Konstrukteure', new Set(motorTitel(db, 'ford').map((t) => t.team)).size >= 5)
 console.log(`   ✓ Ford: ${fordTeams.length} Teams, ${motorTitel(db, 'ford').length} Fahrertitel`)
 
@@ -481,7 +508,34 @@ console.log(`   ✓ Grand Slams: ${slamListe.map((s) => `${s.name} ${s.wert}`).j
 
 // -------------------------------------------------- 8. Teamkollegen-Wertung
 
+/*
+ * Wo der Startplatz entscheidet. Monaco muss zu den Strecken mit den
+ * wenigsten Platzwechseln gehören – die erste Fassung des Maßes zählte die
+ * Ausfälle mit und stellte Monaco ins Mittelfeld.
+ */
+{
+  const gewicht = startplatzGewicht(db).sort((a, b) => a.platzwechsel - b.platzwechsel)
+  const monaco = gewicht.findIndex((g) => g.id === 'monaco')
+  pruefe('Monaco im unteren Drittel der Platzwechsel', monaco >= 0 && monaco < gewicht.length / 3, `Rang ${monaco + 1} von ${gewicht.length}`)
+  pruefe('Pole-Quote zwischen 0 und 1', gewicht.every((g) => g.poleQuote >= 0 && g.poleQuote <= 1))
+  console.log(`   ✓ Startplatz-Gewicht für ${gewicht.length} Strecken, Monaco Rang ${monaco + 1} der wenigsten Platzwechsel`)
+}
+
 console.log('\n8. Teamkollegen-Wertung')
+
+/*
+ * Der Abstand im Qualifying. Er muss aus beiden Richtungen dasselbe sagen –
+ * nur mit umgekehrtem Vorzeichen – und an einem Paar stimmen, über das kein
+ * Zweifel besteht.
+ */
+{
+  const vp = qualifyingAbstand(db, 'max-verstappen').get('sergio-perez')
+  const pv = qualifyingAbstand(db, 'sergio-perez').get('max-verstappen')
+  pruefe('Verstappen im Qualifying schneller als Pérez', vp?.median < -0.2, `${vp?.median}`)
+  pruefe('Qualifying-Abstand symmetrisch', vp && pv && Math.abs(vp.median + pv.median) < 0.02 && vp.anzahl === pv.anzahl,
+    `${vp?.median} / ${pv?.median}`)
+  console.log(`   ✓ Qualifying-Abstand Verstappen–Pérez ${vp.median.toFixed(2)}% bei ${vp.anzahl} Sessions`)
+}
 
 const netz = zusammenhang(db, 'rennen')
 pruefe('die Kette haengt weitgehend zusammen', netz.groessteGruppe / netz.fahrer > 0.9,
@@ -1077,7 +1131,71 @@ if (mitRunden.length) {
     .all()
   pruefe('wer die letzte Runde führte, gewann (fast immer)',
     ende.filter((e) => e.sieger).length >= ende.length * 0.95, `${ende.filter((e) => e.sieger).length}/${ende.length}`)
-  console.log(`   ✓ ${mitRunden.length} Rennen mit Rundendaten geprüft`)
+
+  /*
+   * Der Abstand zum Führenden, aus den Rundenzeiten aufsummiert, gegen den
+   * amtlichen Zielabstand des Zweiten. Zwei unabhängige Quellen – Jolpica
+   * und F1DB. Abweichen dürfen nur Rennen mit nachträglicher Strafe oder
+   * roter Flagge (Singapur 2022: Pérez' fünf Sekunden), und die sind selten.
+   */
+  const zweiter = db.prepare(
+    'SELECT driver_id AS id, gap_ms FROM race_result WHERE race_id = ? AND position = 2 AND gap_ms IS NOT NULL AND time_penalty_ms IS NULL',
+  )
+  let verglichen = 0
+  let genau = 0
+  for (const id of mitRunden) {
+    const p2 = zweiter.get(id)
+    const a = rennDaten(id).runden?.fahrer.find((f) => f.id === p2?.id)?.abstaende
+    if (!p2 || !a) continue
+    verglichen++
+    if (Math.abs(a.at(-1) - p2.gap_ms) <= 1) genau++
+  }
+  pruefe('Abstand des Zweiten nach der letzten Runde = amtlicher Zielabstand (fast immer)',
+    verglichen > 0 && genau >= verglichen * 0.97, `${genau}/${verglichen}`)
+
+  // Rote Flagge: Ohne Zeit bleibt der Abstand stehen, statt zu springen oder abzureißen.
+  {
+    const pos = new Map([['a', [1, 1, 1]], ['b', [2, 2, 2]]])
+    const zeit = new Map([['a', [90000, null, 90000]], ['b', [91000, null, 90500]]])
+    const ab = abstandZumFuehrenden(pos, zeit, 3)
+    gleich('Abstand ohne Rundenzeit bleibt stehen', ab.get('b').join(), '1000,1000,1500')
+    gleich('Führender hat Abstand 0', ab.get('a').join(), '0,0,0')
+  }
+  console.log(`   ✓ ${mitRunden.length} Rennen mit Rundendaten geprüft, ${genau}/${verglichen} Zielabstände auf die Millisekunde`)
+
+  /*
+   * Reifenstints: die beiden Zuordnungen des Laders. Las Vegas startet am
+   * Samstagabend Ortszeit, in UTC am Sonntag; Imola 2023 wurde abgesagt und
+   * steht bei OpenF1 trotzdem als Session.
+   */
+  const sessions = [
+    { session_key: 1, date_start: '2023-11-19T06:00:00+00:00', is_cancelled: false },
+    { session_key: 2, date_start: '2023-05-21T13:00:00+00:00', is_cancelled: true },
+    { session_key: 3, date_start: '2023-05-28T13:00:00+00:00', is_cancelled: false },
+  ]
+  gleich('Las Vegas: Session am UTC-Folgetag gefunden', passendeSession(sessions, '2023-11-18')?.session_key, 1)
+  gleich('abgesagte Session zählt nicht', passendeSession(sessions, '2023-05-21'), null)
+  gleich('Monaco eine Woche später', passendeSession(sessions, '2023-05-28')?.session_key, 3)
+  const nummern = new Map([['1', 'max-verstappen'], ['44', 'lewis-hamilton']])
+  gleich('unbekannte Startnummer: Rennen wird nicht gespeichert',
+    stintZeilen([{ driver_number: 99, stint_number: 1, lap_start: 1, lap_end: 10, compound: 'SOFT' }], nummern).fehler !== undefined, true)
+  gleich('Stint ohne Mischung fällt weg',
+    stintZeilen([{ driver_number: 1, stint_number: 1, lap_start: 1, lap_end: 10, compound: 'UNKNOWN' }], nummern).zeilen.length, 0)
+
+  const stintRennen = db.prepare('SELECT DISTINCT race_id AS id FROM tyre_stint').all().map((z) => z.id)
+  if (stintRennen.length) {
+    // Wer ins Ziel kam, hat Reifen bis zur letzten Runde – sonst fehlt ein Stint.
+    const luecken = db
+      .prepare(
+        `SELECT rr.race_id, rr.driver_id FROM race_result rr
+          WHERE rr.race_id IN (SELECT race_id FROM tyre_stint) AND rr.classified = 1 AND rr.laps > 0
+            AND (SELECT MAX(lap_end) FROM tyre_stint t WHERE t.race_id = rr.race_id AND t.driver_id = rr.driver_id) < rr.laps`,
+      )
+      .all()
+    pruefe('gewertete Fahrer haben Stints bis zur letzten Runde (fast immer)',
+      luecken.length <= stintRennen.length * 0.05, `${luecken.length} Lücken, z. B. ${luecken.slice(0, 2).map((l) => `${l.race_id}/${l.driver_id}`).join(', ')}`)
+    console.log(`   ✓ ${stintRennen.length} Rennen mit Reifenstints, ${luecken.length} Fahrer mit Lücke am Ende`)
+  }
 } else {
   console.log('   – noch keine Rundendaten geladen')
 }
