@@ -109,7 +109,8 @@ async function pruefeAlles() {
   const OHNE_FEHLER = [
     '/', '/preview/', '/seasons/', '/seasons/1988/', '/seasons/2024/', '/races/',
     '/races/monaco-grand-prix-1988/', '/drivers/', '/drivers/ayrton-senna/', '/teams/ferrari/',
-    '/circuits/', '/circuits/monaco/', '/engines/ford/', '/records/', '/changes/', '/teammates/',
+    '/circuits/', '/circuits/monaco/', '/engines/ford/', '/tyres/', '/tyres/michelin/',
+    '/races/abu-dhabi-grand-prix-2021/', '/records/', '/changes/', '/teammates/',
     '/comparison/?a=lewis-hamilton&b=michael-schumacher', '/explorer/', '/quiz/',
   ]
   for (const weg of OHNE_FEHLER) {

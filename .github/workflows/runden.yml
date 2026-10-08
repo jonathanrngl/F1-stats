@@ -1,4 +1,5 @@
-# Lädt die Rundendaten nach, Stück für Stück, und legt sie im Repo ab.
+# Lädt die Rundendaten nach, Stück für Stück, und legt sie im Repo ab –
+# dazu die Reifenstints von OpenF1 (ab 2023, je Rennen eine Anfrage).
 #
 # Jolpica ist die einzige Quelle für Positionen je Runde (ab 1996). Der ganze
 # Bestand sind rund 7.000 Anfragen bei 500 je Stunde – kein Lauf, sondern
@@ -59,7 +60,9 @@ jobs:
         run: |
           case "$MAX" in (*[!0-9]*|'') echo "max muss eine Zahl sein" >&2; exit 1;; esac
           node scripts/lade-runden.mjs --max "$MAX"
-          if [ -n "$(git status --porcelain runden)" ]; then echo "neu=true" >> "$GITHUB_OUTPUT"; fi
+          # Reifen: wenige Anfragen; ein Ausfall von OpenF1 soll die Rundendaten nicht aufhalten.
+          node scripts/lade-reifen.mjs || echo "::warning::Reifenstints nicht geladen"
+          if [ -n "$(git status --porcelain runden reifen)" ]; then echo "neu=true" >> "$GITHUB_OUTPUT"; fi
 
       # Dieselben Prüfungen wie beim Deploy: Der Import lehnt eine Datei ab,
       # deren Fahrer im Rennen nicht vorkommen, und die Tests prüfen den Rest.
@@ -75,7 +78,9 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: runden
-          path: explorer/runden/
+          path: |
+            explorer/runden/
+            explorer/reifen/
           retention-days: 1
 
   festschreiben:
@@ -91,18 +96,18 @@ jobs:
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: runden
-          path: explorer/runden/
+          path: explorer/
       - name: Committen
         run: |
           # Nur CSV-Dateien mit sauberem Namen – das Artefakt ist Ausgabe eines
           # Jobs, der fremden Code ausführte.
-          if find explorer/runden -type f ! -regex '.*/[a-z0-9-]*\.csv' | grep -q .; then
+          if find explorer/runden explorer/reifen -type f ! -regex '.*/[a-z0-9-]*\.csv' | grep -q .; then
             echo "Unerwartete Datei im Artefakt" >&2; exit 1
           fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add explorer/runden
-          git commit -m "Rundendaten: $(git diff --cached --name-only | wc -l) Rennen"
+          git add explorer/runden explorer/reifen
+          git commit -m "Rundendaten: $(git diff --cached --name-only -- explorer/runden | wc -l) Rennen, Reifen: $(git diff --cached --name-only -- explorer/reifen | wc -l)"
           git pull --rebase --quiet
           git push
       - name: Deploy anstossen

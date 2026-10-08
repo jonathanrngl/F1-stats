@@ -1,0 +1,231 @@
+---
+/**
+ * Ein Reifenhersteller.
+ *
+ * Gebaut wie die Motorenseite, mit einem Unterschied: Saison für Saison steht
+ * dabei, gegen wen der Hersteller antrat. Bridgestones 175 Siege zerfallen in
+ * Jahre als Alleinlieferant, in denen jeder Sieg ohnehin seiner war, und in
+ * den Krieg mit Michelin bis 2006 – nur dort sagt die Zahl etwas über den
+ * Reifen.
+ */
+import Seite from '../../layouts/Seite.astro'
+import Karriere from '../../components/Karriere.astro'
+import Sprung from '../../components/Sprung.astro'
+import { prozent, raenge, zahl } from '../../lib/format.js'
+import { db, pfad } from '../../lib/db.js'
+import { land } from '../../lib/laender.js'
+import {
+  reifenListe, reifenProSaison, reifenProfil, reifenSieger, reifenTeams, reifenTitel,
+} from '../../engine/motor.js'
+
+export async function getStaticPaths() {
+  return reifenListe(db()).map((r) => ({ params: { id: r.id } }))
+}
+
+const { id } = Astro.params
+const reifen = reifenProfil(db(), id)
+const heimat = land(null, reifen.landName, reifen.land)
+// Ohne Grenze holen, erst zum Anzeigen kürzen – die Zahl im Text gilt allen.
+const alleTeams = reifenTeams(db(), id, 1000)
+const teams = alleTeams.slice(0, 25)
+const sieger = reifenSieger(db(), id)
+const titel = reifenTitel(db(), id)
+const saisons = reifenProSaison(db(), id)
+
+const zeitraum = reifen.von === reifen.bis ? String(reifen.von) : `${reifen.von}–${reifen.bis}`
+const imKrieg = saisons.filter((s) => s.gegner.length > 0)
+const allein = saisons.length - imKrieg.length
+const siegeImKrieg = imKrieg.reduce((n, s) => n + s.siege, 0)
+
+const bild = saisons.map((s) => ({
+  jahr: s.jahr,
+  starts: s.rennen,
+  siege: s.siege,
+  podien: s.podien,
+  wmPlatz: null,
+  meister: false,
+}))
+
+const beschreibung =
+  `${reifen.name} tyres in Formula 1: ${zahl(reifen.rennen)} races, ${reifen.siege} wins, ` +
+  `${reifen.titel} drivers' titles (${zeitraum}).`
+
+const ziele = [
+  bild.length > 1 && { id: 'verlauf', label: 'Season by season' },
+  imKrieg.length > 0 && { id: 'kriege', label: 'Tyre wars' },
+  titel.length > 0 && { id: 'titel', label: 'Titles' },
+  { id: 'teams', label: 'Teams' },
+  sieger.length > 0 && { id: 'sieger', label: 'Winners' },
+].filter(Boolean)
+---
+
+<Seite titel={`${reifen.name} – Formula 1 tyre statistics`} beschreibung={beschreibung} brotkrumen={[{ name: 'Tyres', pfad: '/tyres/' }]}>
+  <header class="seitenkopf">
+    <span class="wappen" title={heimat.name}>{heimat.code}</span>
+    <div>
+      <p class="oberzeile">
+        <a href={pfad.seite('/tyres/')}>Tyres</a>
+        <span class="trenner">/</span>
+        <span class="still">{heimat.name}</span>
+      </p>
+      <h1>{reifen.name}</h1>
+      <ul class="eckdaten">
+        <li>Tyre manufacturer</li>
+        <li>{zeitraum}</li>
+        <li>{alleTeams.length} {alleTeams.length === 1 ? 'team' : 'teams'}</li>
+      </ul>
+    </div>
+  </header>
+
+  <ul class="kacheln">
+    <li><span>Races</span><b>{zahl(reifen.rennen)}</b></li>
+    <li class={reifen.siege > 0 ? 'stark' : undefined}><span>Wins</span><b>{reifen.siege}</b>
+      {reifen.rennen > 0 && <i>{prozent(reifen.siege / reifen.rennen)} of races</i>}</li>
+    <li><span>Podiums</span><b>{reifen.podien}</b></li>
+    <li><span>Pole positions</span><b>{reifen.poles}</b></li>
+    <li><span>Fastest laps</span><b>{reifen.schnellsteRunden}</b></li>
+    <li><span>Drivers' titles</span><b>{reifen.titel}</b></li>
+  </ul>
+
+  <p class="fussnote">
+    {imKrieg.length === 0
+      ? `${reifen.name} never raced against another tyre maker: every season was a single-make season.`
+      : allein > 0
+        ? `${allein} of ${saisons.length} seasons as the only supplier, when every win was a ${reifen.name} win. In the other ${imKrieg.length}, against at least one rival, it won ${siegeImKrieg} races.`
+        : `Every one of its ${saisons.length} seasons was against at least one rival make.`}
+  </p>
+
+  <Sprung ziele={ziele} />
+
+  {bild.length > 1 && (
+    <section class="abschnitt" id="verlauf">
+      <div class="abschnitt-kopf"><div><h2>Season by season</h2></div></div>
+      <Karriere saisons={bild} name={reifen.name} />
+    </section>
+  )}
+
+  {imKrieg.length > 0 && (
+    <section class="abschnitt" id="kriege">
+      <div class="abschnitt-kopf">
+        <div>
+          <h2>Against the other makes</h2>
+          <p>Only the seasons with a rival supplier, and the share of that season's races won on {reifen.name} tyres.</p>
+        </div>
+      </div>
+      <div class="tabelle">
+        <table>
+          <thead>
+            <tr><th scope="col">Season</th><th scope="col">Rivals</th><th class="num" scope="col">Races</th><th class="num" scope="col">Wins</th><th class="num" scope="col">Share of wins</th></tr>
+          </thead>
+          <tbody>
+            {imKrieg.map((s) => (
+              <tr>
+                <th scope="row"><a class="zeile" href={pfad.seite(`/seasons/${s.jahr}/`)}>{s.jahr}</a></th>
+                <td class="leise">
+                  {s.gegner.map((g, i) => <>{i > 0 && ', '}<a class="leise" href={pfad.seite(`/tyres/${g.id}/`)}>{g.name}</a></>)}
+                </td>
+                <td class="num">{s.rennen}</td>
+                <td class="num">{s.siege || ''}</td>
+                <td class="num">{s.anteil === null ? '–' : prozent(s.anteil)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  )}
+
+  {titel.length > 0 && (
+    <section class="abschnitt" id="titel">
+      <div class="abschnitt-kopf">
+        <div>
+          <h2>Drivers' titles won on these tyres</h2>
+          <p>Seasons in which the champion raced on {reifen.name} tyres at least once.</p>
+        </div>
+      </div>
+      <ul class="titelliste">
+        {titel.map((t) => (
+          <li>
+            <b>{t.jahr}</b>
+            <a class="zeile" href={pfad.fahrer(t.fahrerId)}>{t.fahrer}</a>
+            <span>{t.teamId ? <a class="leise" href={pfad.team(t.teamId)}>{t.team}</a> : t.team}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )}
+
+  <section class="abschnitt" id="teams">
+    <div class="abschnitt-kopf">
+      <div>
+        <h2>Teams on these tyres</h2>
+        <p>
+          {alleTeams.length === 1 ? 'One team.' : `${alleTeams.length} teams.`}
+          {alleTeams.length > teams.length && ` The ${teams.length} most successful are listed.`}
+        </p>
+      </div>
+    </div>
+    <div class="tabelle">
+      <table>
+        <thead>
+          <tr><th>Team</th><th>Period</th><th class="num">Races</th><th class="num">Wins</th></tr>
+        </thead>
+        <tbody>
+          {teams.map((t) => (
+            <tr>
+              <td><a class="zeile" href={pfad.team(t.id)}>{t.name}</a></td>
+              <td class="leise">{t.von === t.bis ? t.von : `${t.von}–${t.bis}`}</td>
+              <td class="num">{t.rennen}</td>
+              <td class="num">{t.siege || ''}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  {sieger.length > 0 && (
+    <section class="abschnitt" id="sieger">
+      <div class="abschnitt-kopf"><div><h2>Drivers who won on them</h2></div></div>
+      <div class="rangkarte sieger">
+        <ol class="rangliste">
+          {raenge(sieger, (f) => f.siege).map((f) => (
+            <li data-rang={f.rang} class={f.vorn ? 'vorn' : undefined}>
+              <a href={pfad.fahrer(f.id)}>{f.name}</a>
+              <b>{f.siege}</b>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </section>
+  )}
+</Seite>
+
+<style>
+  .titelliste {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(16rem, 100%), 1fr));
+    gap: 0.6rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .titelliste li {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: baseline;
+    gap: 0 0.7rem;
+    padding: 0.7rem 0.95rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-s);
+    box-shadow: var(--shadow-s);
+  }
+
+  .titelliste b { grid-row: span 2; font-size: 1.15rem; font-weight: 800; color: var(--accent); font-variant-numeric: tabular-nums; }
+  .titelliste span { font-size: 0.8rem; color: var(--muted); }
+
+  .sieger .rangliste { columns: 2 16rem; column-gap: 2rem; }
+  .sieger .rangliste li { break-inside: avoid; }
+</style>

@@ -1,0 +1,114 @@
+---
+/**
+ * Alle Reifenhersteller, und die Reifenkriege.
+ *
+ * Neun Hersteller in der ganzen Geschichte – die Liste allein wäre schnell
+ * gelesen. Was sie trägt, sind die 45 Saisons, in denen mehrere zugleich
+ * lieferten: Dort gewann nicht nur ein Auto, sondern auch ein Reifen gegen
+ * einen anderen. In den übrigen Jahren war einer Alleinlieferant und gewann
+ * jedes Rennen, und diese Siege sagen über ihn wenig.
+ */
+import Seite from '../../layouts/Seite.astro'
+import Sortierung from '../../components/Sortierung.astro'
+import { zahl } from '../../lib/format.js'
+import { db, pfad } from '../../lib/db.js'
+import { reifenkriege, reifenListe } from '../../engine/motor.js'
+
+const reifen = reifenListe(db())
+const kriege = reifenkriege(db()).reverse()
+const letzterKrieg = kriege[0]
+---
+
+<Seite
+  titel="Formula 1 tyre manufacturers"
+  beschreibung={`${reifen.length} tyre manufacturers since 1950, with races, wins, titles and every tyre war.`}
+>
+  <header class="seitenkopf">
+    <div>
+      <p class="oberzeile">Tyres</p>
+      <h1>Tyre manufacturers</h1>
+      <p class="lead">
+        {reifen.length} manufacturers have supplied tyres for a World Championship race since 1950.
+        {' '}In {kriege.length} seasons more than one of them raced at once
+        {letzterKrieg && <>, the last time in {letzterKrieg.jahr}</>}.
+      </p>
+    </div>
+  </header>
+
+  <div class="tabelle">
+    <table>
+      <thead>
+        <tr>
+          <th><button type="button" data-spalte="0" data-art="name">Tyres</button></th>
+          <th><button type="button" data-spalte="1" data-art="jahr">Period</button></th>
+          <th class="num"><button type="button" data-spalte="2" data-art="zahl">Races</button></th>
+          <th class="num"><button type="button" data-spalte="3" data-art="zahl" data-aktiv="1">Wins</button></th>
+          <th class="num"><button type="button" data-spalte="4" data-art="zahl">Poles</button></th>
+          <th class="num"><button type="button" data-spalte="5" data-art="zahl">Drivers' titles</button></th>
+        </tr>
+      </thead>
+      <tbody>
+        {reifen.map((r) => (
+          <tr data-name={r.name}>
+            <td>
+              <span class="kuerzel" title={r.landName ?? ''}>{r.land ?? '—'}</span>
+              <a class="zeile" href={pfad.seite(`/tyres/${r.id}/`)}>{r.name}</a>
+            </td>
+            <td class="leise">{r.von === r.bis ? r.von : `${r.von}–${r.bis}`}</td>
+            <td class="num">{zahl(r.rennen)}</td>
+            <td class="num">{r.siege || ''}</td>
+            <td class="num">{r.poles || ''}</td>
+            <td class="num meister">{r.titel || ''}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  <p class="fussnote">
+    Counted per race, not per car. A title counts for every make the champion raced on that
+    season – in the 1950s some switched, so the titles add up to more than the seasons.
+  </p>
+
+  <section class="abschnitt" id="kriege">
+    <div class="abschnitt-kopf">
+      <div>
+        <h2>Tyre wars</h2>
+        <p>Every season with more than one supplier, and how the wins were shared. The rest were single-make seasons.</p>
+      </div>
+    </div>
+    <div class="tabelle">
+      <table>
+        <thead>
+          <tr><th scope="col">Season</th><th scope="col">Wins per make</th></tr>
+        </thead>
+        <tbody>
+          {kriege.map((k) => (
+            <tr>
+              <th scope="row"><a class="zeile" href={pfad.seite(`/seasons/${k.jahr}/`)}>{k.jahr}</a></th>
+              <td>
+                <ul class="krieg">
+                  {k.hersteller.map((h) => (
+                    <li class={h.siege > 0 && h === k.hersteller[0] ? 'vorn' : undefined}>
+                      <a href={pfad.seite(`/tyres/${h.id}/`)}>{h.name}</a> <b>{h.siege}</b>
+                    </li>
+                  ))}
+                </ul>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <Sortierung vorsortiert={3} gleichstand={2} />
+</Seite>
+
+<style>
+  .krieg { display: flex; flex-wrap: wrap; gap: 0.25rem 1.2rem; margin: 0; padding: 0; list-style: none; }
+  .krieg li { color: var(--muted); }
+  .krieg a { color: var(--ink-2); }
+  .krieg b { font-variant-numeric: tabular-nums; color: var(--ink-2); }
+  .krieg .vorn b { color: var(--accent); }
+</style>

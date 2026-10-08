@@ -810,6 +810,53 @@ async function ladeRunden(db) {
   return { rennen: dateien.length, zeilen }
 }
 
+/**
+ * Die Reifenstints aus reifen/ einspielen – eine CSV je Rennen, von
+ * lade-reifen.mjs geschrieben. Geprüft wie die Rundendaten: Rennen und
+ * Fahrer müssen zusammenpassen, Runden ganze Zahlen sein, die Mischung eine
+ * der fünf, und jeder Stint beginnt nicht vor dem Ende des vorigen – eine
+ * Runde Überschneidung erlaubt, das ist der Wechsel unter roter Flagge.
+ */
+async function ladeReifen(db) {
+  const ordner = path.join(WURZEL, 'reifen')
+  let dateien = []
+  try {
+    dateien = (await fs.readdir(ordner)).filter((d) => d.endsWith('.csv'))
+  } catch {
+    return { rennen: 0, zeilen: 0 }
+  }
+  const gibtRennen = db.prepare('SELECT 1 FROM race WHERE id = ?')
+  const fuhrMit = db.prepare('SELECT 1 FROM race_result WHERE race_id = ? AND driver_id = ? LIMIT 1')
+  const einfuegen = db.prepare(
+    'INSERT INTO tyre_stint (race_id, driver_id, stint, lap_start, lap_end, compound, tyre_age) VALUES (?, ?, ?, ?, ?, ?, ?)',
+  )
+  const ganz = (v) => /^\d+$/.test(v)
+  let zeilen = 0
+  db.exec('BEGIN')
+  for (const datei of dateien) {
+    const raceId = kennung(datei.replace(/\.csv$/, ''), `reifen/${datei}`)
+    if (!gibtRennen.get(raceId)) throw new Error(`reifen/${datei}: kein solches Rennen`)
+    const { kopf, krumm, zeilen: roh } = parseCSV(await fs.readFile(path.join(ordner, datei), 'utf8'))
+    if (krumm || kopf.join() !== 'driver_id,stint,lap_start,lap_end,compound,tyre_age') throw new Error(`reifen/${datei}: unerwartetes Format`)
+    const letzterBis = new Map()
+    for (const z of roh) {
+      const wo = `reifen/${datei}: ${z.driver_id} Stint ${z.stint}`
+      if (!letzterBis.has(z.driver_id) && !fuhrMit.get(raceId, z.driver_id)) throw new Error(`reifen/${datei}: ${z.driver_id} fuhr in diesem Rennen nicht`)
+      if (![z.stint, z.lap_start, z.lap_end].every(ganz) || Number(z.lap_end) < Number(z.lap_start) || Number(z.lap_start) < 1) {
+        throw new Error(`${wo}: keine gültigen Runden`)
+      }
+      if (z.tyre_age !== '' && !ganz(z.tyre_age)) throw new Error(`${wo}: ungültiges Reifenalter`)
+      if ((letzterBis.get(z.driver_id) ?? 0) > Number(z.lap_start)) throw new Error(`${wo}: beginnt vor dem Ende des vorigen`)
+      letzterBis.set(z.driver_id, Number(z.lap_end))
+      // Die Mischung prüft das Schema (CHECK); ein Fehler dort bricht ebenfalls ab.
+      einfuegen.run(raceId, z.driver_id, Number(z.stint), Number(z.lap_start), Number(z.lap_end), z.compound, zahl(z.tyre_age))
+      zeilen++
+    }
+  }
+  db.exec('COMMIT')
+  return { rennen: dateien.length, zeilen }
+}
+
 function markiereSprints(db) {
   db.exec('UPDATE race SET had_sprint = 1 WHERE id IN (SELECT DISTINCT race_id FROM sprint_result)')
   return db.prepare('SELECT COUNT(*) AS n FROM race WHERE had_sprint = 1').get().n
@@ -856,6 +903,7 @@ function zaehleDeckung(db) {
     ['pit_stop', 'Boxenstopps', 'SELECT MIN(r.year) a, MAX(r.year) b, COUNT(DISTINCT p.race_id) n FROM pit_stop p JOIN race r ON r.id=p.race_id', 'F1DB'],
     ['driver_of_the_day', 'Fahrer des Tages', 'SELECT MIN(r.year) a, MAX(r.year) b, COUNT(DISTINCT rr.race_id) n FROM race_result rr JOIN race r ON r.id=rr.race_id WHERE rr.driver_of_the_day=1', 'F1DB'],
     ['lap_position', 'Positionsverlauf je Runde', 'SELECT MIN(r.year) a, MAX(r.year) b, COUNT(DISTINCT l.race_id) n FROM lap_position l JOIN race r ON r.id=l.race_id', 'Jolpica'],
+    ['tyre_stint', 'Reifenstints', 'SELECT MIN(r.year) a, MAX(r.year) b, COUNT(DISTINCT t.race_id) n FROM tyre_stint t JOIN race r ON r.id=t.race_id', 'OpenF1'],
   ]
 
   const setze = db.prepare(
@@ -1041,6 +1089,15 @@ try {
   console.error(`\nRUNDENDATEN ABGELEHNT: ${e.message}`)
   process.exit(1)
 }
+let stints
+try {
+  stints = await ladeReifen(db)
+} catch (e) {
+  db.close()
+  await verwerfen()
+  console.error(`\nREIFENDATEN ABGELEHNT: ${e.message}`)
+  process.exit(1)
+}
 const deckung = zaehleDeckung(db)
 const fehler = pruefe(db)
 
@@ -1050,6 +1107,7 @@ for (const [t, n] of Object.entries(zaehler)) console.log(`  ${t.padEnd(28)} ${S
 console.log('\nSaisons mit Streichresultaten:', streich.length ? `${streich.length} (${streich[0]}–${streich.at(-1)})` : 'keine')
 console.log('Sprint-Wochenenden:', sprintWochenenden)
 console.log('Rundendaten:', runden.rennen ? `${runden.rennen} Rennen, ${runden.zeilen} Zeitnahmen` : 'keine')
+console.log('Reifenstints:', stints.rennen ? `${stints.rennen} Rennen, ${stints.zeilen} Stints` : 'keine')
 
 console.log('\nDeckung:')
 for (const d of deckung) {

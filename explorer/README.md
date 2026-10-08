@@ -91,10 +91,32 @@ lässt sich teilen, ebenso jeder Vergleich (`/comparison/?a=…&b=…&von=…&bi
 F1DB führt keine Rundendaten. `scripts/lade-runden.mjs` holt sie von Jolpica
 (ab 1996) und legt je Rennen eine CSV nach `runden/`; der Import spielt sie ein
 und lehnt jede Datei ab, deren Fahrer im Rennen nicht vorkommen. Die
-Rennseite zeigt dann den Positionsverlauf und die Führungsrunden.
+Rennseite zeigt dann den Positionsverlauf, die Führungsrunden und den
+Abstand zum Führenden.
+
+Der Abstand ist aus den Rundenzeiten aufsummiert, nicht übernommen. Der
+Test hält ihn gegen F1DBs amtlichen Zielabstand des Zweiten: In 472 von 480
+Rennen stimmt er auf die Millisekunde; die übrigen haben eine nachträgliche
+Strafe oder eine rote Flagge. Fehlt einer Runde die Zeit (rote Flagge), bleibt
+der Abstand stehen, statt zu springen.
+
+Jolpica führt vereinzelt Zeitnahmen ohne Position – Phantome mit der Zeit
+eines anderen Fahrers (Monza 2018). Der Lader verwirft sie; der Import lehnt
+eine Datei mit ungültiger Runde oder Position mit Dateinamen ab.
 
 Der ganze Bestand sind rund 7.000 Anfragen bei 500 je Stunde. Den holt
 `.github/workflows/runden.yml` in Portionen nach, jüngste Rennen zuerst.
+
+## Reifenstints
+
+Welche Mischung wer wie lange fuhr, führen weder F1DB noch Jolpica.
+`scripts/lade-reifen.mjs` holt es von [OpenF1](https://openf1.org) (ab 2023)
+nach `reifen/`, im selben Lauf wie die Rundendaten. Zwei Zuordnungen, die
+nicht raten dürfen: das Rennen über die Rennsession höchstens einen Tag vom
+Datum entfernt (Las Vegas startet samstags Ortszeit, in UTC sonntags;
+abgesagte Sessions wie Imola 2023 zählen nicht), und der Fahrer über die
+Startnummer in genau diesem Rennen. Passt eine Nummer nicht, wird das Rennen
+nicht gespeichert. Die Rennseite zeigt daraus die Strategie.
 
 ## Tests
 
@@ -214,10 +236,12 @@ einen Gedankenstrich statt einer Null.
 | Fahrer des Tages | 2016 |
 | Sprints | 2021 |
 | Positionsverlauf je Runde, Führungsrunden | 1996 · für die Rennen in `runden/` |
-| Reifenstints, Safety-Car, Wetter | 2023 · nicht geladen |
+| Reifenstints | 2023 · für die Rennen in `reifen/` |
+| Safety-Car, Wetter | 2023 · nicht geladen |
 
 ## Datenquelle
 
 [F1DB](https://github.com/f1db/f1db), Creative Commons BY 4.0, neue Fassung nach
-jedem Rennen. Rundendaten von [Jolpica-F1](https://api.jolpi.ca). Kein
+jedem Rennen. Rundendaten von [Jolpica-F1](https://api.jolpi.ca), Reifenstints von
+[OpenF1](https://openf1.org). Kein
 offizielles Angebot der Formel 1.

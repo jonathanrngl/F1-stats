@@ -22,7 +22,7 @@ import {
   calculatePodiums, calculatePoints, calculatePoles, calculatePoleToWinRate,
   calculatePositionsGained, calculateStarts, calculateStartsFromPole,
   calculateStreaks, calculateTeamMateComparison, calculateTrackPerformance,
-  calculateWinRate, calculateWins, driverRaces,
+  calculateWinRate, calculateWins, driverRaces, qualifyingAbstand,
 } from '../../engine/driver.js'
 
 export async function getStaticPaths() {
@@ -63,6 +63,9 @@ const serien = calculateStreaks(rennen)
  * nicht vorn stand, einfach.
  */
 const duelle = calculateTeamMateComparison(db(), id)
+const qualiAbstand = qualifyingAbstand(db(), id)
+/** „−0.25%“ – das Minus als echtes Minuszeichen, wie in einer Zeitentabelle. */
+const abstandText = (a) => (a ? `${a.median > 0 ? '+' : a.median < 0 ? '−' : '±'}${Math.abs(a.median).toFixed(2)}%` : '–')
 const strecken = calculateTrackPerformance(db(), id, 2)
 const zusatz = fahrerZusatz(id)
 
@@ -416,7 +419,9 @@ const person = {
           <thead>
             <tr>
               <th>Team-mate</th><th>Years</th>
-              <th class="num">Races</th><th class="num">Qualifying</th><th class="num">Points</th><th></th>
+              <th class="num">Races</th><th class="num">Qualifying</th>
+              <th class="num"><abbr title="Median gap in qualifying, as a share of the lap time">Quali gap</abbr></th>
+              <th class="num">Points</th><th></th>
             </tr>
           </thead>
           <tbody>
@@ -428,6 +433,7 @@ const person = {
                 </td>
                 <td class={`num${d.raceWins * 2 > d.raceDuels ? ' gut' : ''}`}>{d.raceWins}:{d.raceDuels - d.raceWins}</td>
                 <td class={`num${d.qualiWins * 2 > d.qualiDuels ? ' gut' : ''}`}>{d.qualiWins}:{d.qualiDuels - d.qualiWins}</td>
+                <td class={`num${(qualiAbstand.get(d.driverId)?.median ?? 0) < 0 ? ' gut' : ''}`}>{abstandText(qualiAbstand.get(d.driverId))}</td>
                 <td class="num">{ein(d.pointsSelf)} : {ein(d.pointsOther)}</td>
                 {/* Der Gedanke "und wer war besser?" entsteht genau hier.
                     Die Vergleichsseite liest a und b aus der Adresse. */}
@@ -445,7 +451,11 @@ const person = {
         </table>
       </div>
       {duelle.length > 8 && <MehrZeigen anzahl={duelle.length - 8} wort="team-mates" />}
-      <p class="fussnote">Green: {fahrer.display_name} came out ahead in that duel.</p>
+      <p class="fussnote">
+        Green: {fahrer.display_name} came out ahead in that duel. Quali gap: the median difference
+        in the last session both set a time in, as a share of the lap – minus is faster. At least
+        three sessions; a dash where there were fewer.
+      </p>
     </section>
   )}
 

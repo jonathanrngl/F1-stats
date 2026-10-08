@@ -209,3 +209,68 @@ export function circuitLapRecords(db, circuitId) {
 
 export const ausfallquote = (db, circuitId) => circuitStats(db, circuitId).ausfallquote
 export const streckenMetrik = metric
+
+/**
+ * Wie sehr der Startplatz auf jeder Strecke entscheidet – ein Vergleich der
+ * Strecken untereinander, ab `ab` und mit mindestens `minRennen` Rennen.
+ *
+ * Drei Maße, weil keines allein genügt: wie oft die Pole gewann, von wo der
+ * Sieger im Mittel losfuhr, und wie stark sich die Reihenfolge im Rennen
+ * änderte. Das letzte ist das Maß fürs Überholen, und es zählt nur die
+ * Fahrer, die ins Ziel kamen, untereinander: Ihre Reihenfolge am Start
+ * gegen die im Ziel. Die erste Fassung nahm Startplatz gegen Zielplatz und
+ * setzte Monaco ins Mittelfeld – wer dort ankommt, rückt an den vielen
+ * Ausfällen vorbei auf, ohne je überholt zu haben.
+ *
+ * Ab 2000 statt seit 1950, weil eine Startaufstellung mit 30 Autos und der
+ * Hälfte Ausfällen etwas anderes ist; sonst verglichen sich Epochen statt
+ * Strecken. Die Pole ist die schnellste Zeit im Qualifying, wie überall.
+ */
+export function startplatzGewicht(db, { ab = 2000, minRennen = 8 } = {}) {
+  const zeilen = db
+    .prepare(
+      `SELECT r.circuit_id AS id, z.name, r.id AS rennen,
+              rr.qualifying_position AS quali, rr.grid_position AS start,
+              rr.position AS ziel, rr.classified AS gewertet
+         FROM race r
+         JOIN circuit z ON z.id = r.circuit_id
+         JOIN race_result rr ON rr.race_id = r.id
+        WHERE r.year >= ? AND rr.started = 1`,
+    )
+    .all(ab)
+
+  const jeRennen = new Map()
+  for (const z of zeilen) {
+    if (!jeRennen.has(z.rennen)) jeRennen.set(z.rennen, [])
+    jeRennen.get(z.rennen).push(z)
+  }
+
+  const jeStrecke = new Map()
+  for (const feld of jeRennen.values()) {
+    const { id, name } = feld[0]
+    const s = jeStrecke.get(id) ?? { id, name, rennen: 0, poles: 0, poleSiege: 0, siegerStarts: [], wechsel: [] }
+    s.rennen++
+    const pole = feld.find((z) => z.quali === 1)
+    if (pole) {
+      s.poles++
+      if (pole.ziel === 1) s.poleSiege++
+    }
+    const sieger = feld.find((z) => z.ziel === 1)
+    if (sieger?.start) s.siegerStarts.push(sieger.start)
+    // Die Angekommenen, nach Startplatz durchnummeriert – Platz im Ziel ist schon lückenlos.
+    const angekommen = feld.filter((z) => z.gewertet && z.start && z.ziel).sort((a, b) => a.start - b.start)
+    angekommen.forEach((z, i) => s.wechsel.push(Math.abs(i + 1 - z.ziel)))
+    jeStrecke.set(id, s)
+  }
+
+  const mittel = (w) => (w.length ? w.reduce((a, b) => a + b, 0) / w.length : null)
+  return [...jeStrecke.values()]
+    .filter((s) => s.rennen >= minRennen)
+    .map(({ siegerStarts, wechsel, ...s }) => ({
+      ...s,
+      poleQuote: s.poles ? s.poleSiege / s.poles : null,
+      siegerStart: mittel(siegerStarts),
+      platzwechsel: mittel(wechsel),
+    }))
+    .sort((a, b) => (b.poleQuote ?? 0) - (a.poleQuote ?? 0) || a.siegerStart - b.siegerStart)
+}
