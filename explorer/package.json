@@ -19,12 +19,12 @@
     "vorschau": "node scripts/pruefe-oberflaeche.mjs --nur-server"
   },
   "devDependencies": {
-    "@astrojs/react": "^7.0.0",
+    "@astrojs/react": "^7.1.1",
     "@fontsource-variable/libre-franklin": "^5.3.0",
-    "astro": "^7.3.5",
-    "oxlint": "^1.86.0",
-    "playwright-core": "^1.63.0",
-    "react": "^19.3.0",
-    "react-dom": "^19.3.0"
+    "astro": "^7.4.2",
+    "oxlint": "^1.89.0",
+    "playwright-core": "^1.64.1",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
   }
 }
