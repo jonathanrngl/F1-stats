@@ -39,7 +39,7 @@ import {
   STREICHRESULTATE, maxRennpunkte, maxSprintpunkte, punkteFuer, rennFaktoren, streiche, streichregel,
   systemFuer, systemNachId,
 } from '../src/engine/punkte.js'
-import { amtlicherEndstand, saisonNeuRechnen, systemDesJahres } from '../src/engine/whatif.js'
+import { amtlicherEndstand, rohdatenDerSaison, saisonNeuRechnen, systemDesJahres, tabelleAusDaten } from '../src/engine/whatif.js'
 import { naechstesRennen, standVorRennen, titelKannFallen } from '../src/engine/vorschau.js'
 import { uebersetze } from '../src/lib/frage.js'
 import { alsAdresse, ausAdresse, rechne, verzeichnis } from '../src/lib/abfrage.js'
@@ -903,6 +903,47 @@ pruefe('Streichresultate lassen sich auf ein neues System anwenden',
 pruefe('Gleichstand teilt den Rang',
   saisonNeuRechnen(db, 1950, '2025').tabelle.every((e, i, a) => i === 0 || e.platz >= a[i - 1].platz))
 console.log(`   ✓ ${db.prepare('SELECT COUNT(*) n FROM season').get().n - 1} Endstände nachgerechnet`)
+
+/*
+ * Das eigene Punktesystem rechnet im Browser – auf denselben Zeilen, aber
+ * nach dem Weg durch JSON (/data/ergebnisse/<jahr>.json), mit Maps als
+ * Objekten und einer Kennung, die keines der eingebauten Systeme trägt. Ein
+ * eigenes System mit den Punkten von heute muss dann in jeder Saison genau
+ * das ergeben, was der Bau mit dem eingebauten rechnet.
+ */
+const browserWeg = (jahr, system, regel = null) => {
+  const json = JSON.parse(JSON.stringify(rohdatenDerSaison(db, jahr), (_, w) => (w instanceof Map ? Object.fromEntries(w) : w)))
+  return tabelleAusDaten(
+    {
+      ...json,
+      sprintPunkte: new Map(Object.entries(json.sprintPunkte)),
+      faktoren: new Map(Object.entries(json.faktoren)),
+      eigenesSystem: systemFuer(jahr),
+    },
+    system,
+    { regel },
+  )
+}
+const heute = systemNachId('2025')
+const nachgebaut = { id: 'eigen-test', name: 'Test', rennen: [...heute.rennen] }
+const browserAbweichung = []
+for (const { year: jahr } of db.prepare('SELECT year FROM season').all()) {
+  if (systemFuer(jahr).id === '2025') continue
+  for (const streich of [false, true]) {
+    const bau = saisonNeuRechnen(db, jahr, '2025', { streichresultate: streich })
+    const browser = browserWeg(jahr, nachgebaut, streich ? streichregel(jahr) : null)
+    if (JSON.stringify(browser.tabelle) !== JSON.stringify(bau.tabelle)) browserAbweichung.push(`${jahr}${streich ? ' mit Streichung' : ''}`)
+  }
+}
+pruefe('eigenes System im Browser = eingebautes beim Bauen, jede Saison',
+  browserAbweichung.length === 0, browserAbweichung.slice(0, 5).join(', '))
+
+// Ein frei erfundenes System: nur der Sieger punktet. Wer nie gewann, steht nicht in der Tabelle.
+const nurSieg = browserWeg(2023, { id: 'eigen-sieg', name: 'Winner takes all', rennen: [1] })
+gleich('2023, nur Siege zählen: Verstappen vorn', nurSieg.tabelle[0]?.driverId, 'max-verstappen')
+pruefe('nur Siege zählen: Punkte = Siege, Sprints dazu',
+  nurSieg.tabelle.every((e) => Math.abs(e.punkte - e.sprintPunkte - e.siege) < 1e-9))
+console.log('   ✓ eigenes Punktesystem: Browserweg gegen Bauweg geprüft')
 
 // -------------------------------------------------- 14. Vorschau und Titelrechner
 

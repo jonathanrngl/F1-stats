@@ -51,45 +51,33 @@ function vergleiche(a, b) {
 }
 
 /**
- * Eine Saison nach einem anderen Punktesystem neu rechnen.
+ * Die reine Rechnung: Ergebniszeilen einer Saison nach einem Punktesystem
+ * bewerten. Kennt weder Datenbank noch Browser – `saisonNeuRechnen` speist sie
+ * mit Zeilen aus SQLite, die Insel für ein selbst gebautes System speist sie
+ * mit denselben Zeilen aus einer beim Bauen erzeugten Datei
+ * (`/data/ergebnisse/<jahr>.json`). So gilt für ein eigenes System dieselbe
+ * Regel wie für eines aus PUNKTESYSTEME – geteilte Fahrzeuge, die schnellste
+ * Runde, Punkteberechtigung und Streichresultate eingeschlossen.
  *
- * @param {object} db
- * @param {number} jahr
- * @param {string} systemId Kennung aus PUNKTESYSTEME
- * @param {{ streichresultate?: boolean }} [optionen]
- *   streichresultate: die Streichregel der Saison auch auf das neue System
- *   anwenden. Wirkt nur in Saisons, die eine hatten.
+ * @param {object} daten
+ * @param {object[]} daten.zeilen Ergebniszeilen (raceId, driverId, name,
+ *   position, classified, geteilt, schnellste, echtePunkte)
+ * @param {Map<string, number>} daten.sprintPunkte Fahrer → Sprintpunkte
+ * @param {string[]} daten.kalenderIds Rennen der Saison in Kalenderreihenfolge
+ * @param {Map<string, number>} daten.faktoren Rennen → Punktefaktor (0,5 oder 2),
+ *   nur für Rennen mit halben oder doppelten Punkten
+ * @param {{driverId: string, name: string}[]} daten.ausgeschlossen
+ * @param {object} daten.eigenesSystem Das tatsächlich geltende System des
+ *   Jahres (`systemFuer(jahr)`) – entscheidet, wann die echten Punkte gelten
+ *   und wer damals nicht punkteberechtigt war.
+ * @param {object} system Das anzuwendende System: `{ id, name, rennen,
+ *   schnellsteRunde?, schnellsteRundeBis? }`
+ * @param {{ regel?: number | {rennen?: number, beste: number}[] | null }} [optionen]
  */
-export function saisonNeuRechnen(db, jahr, systemId, optionen = {}) {
-  const system = systemNachId(systemId)
-  if (!system) throw new Error(`Unknown points system: ${systemId}`)
-  const eigenes = systemFuer(jahr)
-  const regel = optionen.streichresultate ? streichregel(jahr) : null
-
-  const kalender = db.prepare('SELECT id FROM race WHERE year = ? ORDER BY round').all(jahr)
-  const stelle = new Map(kalender.map((r, i) => [r.id, i]))
-
-  const zeilen = db
-    .prepare(
-      `SELECT rr.race_id AS raceId, rr.driver_id AS driverId, d.display_name AS name,
-              rr.position, rr.classified, rr.shared_car AS geteilt, rr.fastest_lap AS schnellste,
-              rr.points AS echtePunkte
-         FROM race_result rr
-         JOIN race r ON r.id = rr.race_id
-         JOIN driver d ON d.id = rr.driver_id
-        WHERE r.year = ?
-        ORDER BY r.round`,
-    )
-    .all(jahr)
-
-  const sprints = db
-    .prepare(
-      `SELECT sr.driver_id AS driverId, SUM(sr.points) AS punkte
-         FROM sprint_result sr JOIN race r ON r.id = sr.race_id
-        WHERE r.year = ? GROUP BY sr.driver_id`,
-    )
-    .all(jahr)
-  const sprintPunkte = new Map(sprints.map((s) => [s.driverId, s.punkte]))
+export function tabelleAusDaten(daten, system, optionen = {}) {
+  const { zeilen, sprintPunkte, kalenderIds, faktoren: f, ausgeschlossen = [], eigenesSystem } = daten
+  const regel = optionen.regel ?? null
+  const stelle = new Map(kalenderIds.map((id, i) => [id, i]))
 
   /*
    * Wie viele Fahrer teilen sich einen Platz, wie viele die schnellste Runde?
@@ -107,15 +95,14 @@ export function saisonNeuRechnen(db, jahr, systemId, optionen = {}) {
     if (z.schnellste) jeSchnellste.set(z.raceId, (jeSchnellste.get(z.raceId) ?? 0) + 1)
   }
 
-  const f = faktoren(db)
-  const gleichesSystem = system.id === eigenes.id
+  const gleichesSystem = system.id === eigenesSystem.id
   const proFahrer = new Map()
 
   for (const z of zeilen) {
     const e = proFahrer.get(z.driverId) ?? {
       driverId: z.driverId,
       name: z.name,
-      jeRennen: new Array(kalender.length).fill(0),
+      jeRennen: new Array(kalenderIds.length).fill(0),
       plaetze: [],
       siege: 0,
       geteilteFahrten: 0,
@@ -134,7 +121,7 @@ export function saisonNeuRechnen(db, jahr, systemId, optionen = {}) {
     if (gleichesSystem) p = z.echtePunkte
     else {
       const ohneBerechtigung =
-        z.classified && z.position !== null && z.position <= eigenes.rennen.length &&
+        z.classified && z.position !== null && z.position <= eigenesSystem.rennen.length &&
         z.echtePunkte === 0 && !z.geteilt
       p = ohneBerechtigung
         ? 0
@@ -153,19 +140,6 @@ export function saisonNeuRechnen(db, jahr, systemId, optionen = {}) {
     }
   }
 
-  /*
-   * Wer aus der Meisterschaft genommen wurde, bleibt es auch unter einem
-   * anderen System: Schumachers Ausschluss 1997 war eine sportliche
-   * Entscheidung, keine Frage der Punkteverteilung. Er steht nicht in der
-   * Tabelle, aber die Seite kann ihn nennen.
-   */
-  const ausgeschlossen = db
-    .prepare(
-      `SELECT sds.driver_id AS driverId, d.display_name AS name
-         FROM season_driver_standing sds JOIN driver d ON d.id = sds.driver_id
-        WHERE sds.year = ? AND sds.position IS NULL AND sds.position_text = 'DSQ'`,
-    )
-    .all(jahr)
   const raus = new Set(ausgeschlossen.map((a) => a.driverId))
 
   // Sprintpunkte unverändert übernehmen: Ein Rennsystem gilt nicht für sie.
@@ -198,7 +172,6 @@ export function saisonNeuRechnen(db, jahr, systemId, optionen = {}) {
 
   return {
     system,
-    jahr,
     tabelle: tabelle.map(({ plaetze: _plaetze, ...rest }) => rest),
     sprintPunkte: sprintSumme,
     streichresultate: regel !== null,
@@ -206,6 +179,79 @@ export function saisonNeuRechnen(db, jahr, systemId, optionen = {}) {
     /** Fahrer, deren Punkte wegen geteilter Fahrzeuge aufgeteilt wurden. */
     mitGeteiltenFahrten: tabelle.filter((e) => e.geteilteFahrten > 0).length,
   }
+}
+
+/**
+ * Was `tabelleAusDaten` über eine Saison wissen muss, aus der Datenbank.
+ *
+ * Eine Stelle für beide Wege: Die Saisonseite rechnet damit beim Bauen, und
+ * `/data/ergebnisse/<jahr>.json` schreibt dasselbe für den Browser. Ohne
+ * `eigenesSystem` – das ergibt sich aus dem Jahr, auch im Browser.
+ */
+export function rohdatenDerSaison(db, jahr) {
+  const kalenderIds = db
+    .prepare('SELECT id FROM race WHERE year = ? ORDER BY round')
+    .all(jahr)
+    .map((r) => r.id)
+
+  const zeilen = db
+    .prepare(
+      `SELECT rr.race_id AS raceId, rr.driver_id AS driverId, d.display_name AS name,
+              rr.position, rr.classified, rr.shared_car AS geteilt, rr.fastest_lap AS schnellste,
+              rr.points AS echtePunkte
+         FROM race_result rr
+         JOIN race r ON r.id = rr.race_id
+         JOIN driver d ON d.id = rr.driver_id
+        WHERE r.year = ?
+        ORDER BY r.round`,
+    )
+    .all(jahr)
+
+  const sprints = db
+    .prepare(
+      `SELECT sr.driver_id AS driverId, SUM(sr.points) AS punkte
+         FROM sprint_result sr JOIN race r ON r.id = sr.race_id
+        WHERE r.year = ? GROUP BY sr.driver_id`,
+    )
+    .all(jahr)
+  const sprintPunkte = new Map(sprints.map((s) => [s.driverId, s.punkte]))
+
+  /*
+   * Wer aus der Meisterschaft genommen wurde, bleibt es auch unter einem
+   * anderen System: Schumachers Ausschluss 1997 war eine sportliche
+   * Entscheidung, keine Frage der Punkteverteilung. Er steht nicht in der
+   * Tabelle, aber die Seite kann ihn nennen.
+   */
+  const ausgeschlossen = db
+    .prepare(
+      `SELECT sds.driver_id AS driverId, d.display_name AS name
+         FROM season_driver_standing sds JOIN driver d ON d.id = sds.driver_id
+        WHERE sds.year = ? AND sds.position IS NULL AND sds.position_text = 'DSQ'`,
+    )
+    .all(jahr)
+
+  const dieseSaison = new Set(kalenderIds)
+  const faktorenDerSaison = new Map([...faktoren(db)].filter(([id]) => dieseSaison.has(id)))
+
+  return { kalenderIds, zeilen, sprintPunkte, ausgeschlossen, faktoren: faktorenDerSaison }
+}
+
+/**
+ * Eine Saison nach einem anderen Punktesystem neu rechnen.
+ *
+ * @param {object} db
+ * @param {number} jahr
+ * @param {string} systemId Kennung aus PUNKTESYSTEME
+ * @param {{ streichresultate?: boolean }} [optionen]
+ *   streichresultate: die Streichregel der Saison auch auf das neue System
+ *   anwenden. Wirkt nur in Saisons, die eine hatten.
+ */
+export function saisonNeuRechnen(db, jahr, systemId, optionen = {}) {
+  const system = systemNachId(systemId)
+  if (!system) throw new Error(`Unknown points system: ${systemId}`)
+  const regel = optionen.streichresultate ? streichregel(jahr) : null
+  const daten = { ...rohdatenDerSaison(db, jahr), eigenesSystem: systemFuer(jahr) }
+  return { ...tabelleAusDaten(daten, system, { regel }), jahr }
 }
 
 /**

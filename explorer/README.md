@@ -74,6 +74,30 @@ Titelentscheidungen seit 1991 nachgeprüft) und der „Anteil der möglichen
 Punkte“ im Vergleich und im Explorer – der einzige Punktevergleich über
 Epochen, der nicht an der Größe der Zahlen hängt.
 
+### Das eigene Punktesystem
+
+Unter den eingebauten Systemen lässt sich auf jeder Saisonseite ein eigenes
+anlegen: Punkte je Platz, beliebig viele Plätze, abschicken, und die Saison
+steht nach diesem System da – mit Titelwechsel, amtlichem Vergleich und, bis
+1990, wahlweise der Streichregel der Zeit. Gespeichert wird im Browser
+(`localStorage`), nicht je Saison: Ein System von der Seite 1988 steht auf
+jeder anderen Saisonseite zur Wahl.
+
+Die eingebauten Varianten rechnet der Bau vor. Ein eigenes kennt er nicht, es
+wird deshalb im Browser gerechnet – mit derselben Funktion. `tabelleAusDaten`
+in `src/engine/whatif.js` kennt weder Datenbank noch Browser; der Bau speist
+sie über `rohdatenDerSaison` aus SQLite, die Insel (`EigenesSystem.jsx`) mit
+denselben Zeilen aus `/data/ergebnisse/<jahr>.json`. Geteilte Autos, halbe
+und doppelte Punkte, fehlende Punkteberechtigung und Ausschlüsse gelten so
+für ein eigenes System genauso. Der Test hält beide Wege gegeneinander: Ein
+selbst gebautes System mit den Punkten von heute muss in jeder Saison, mit und
+ohne Streichung, genau die Tabelle des eingebauten ergeben – nach dem Weg
+durch JSON und unter einer Kennung, die keines der eingebauten trägt.
+
+Die Datei je Saison wiegt 80–100 KB und wird erst geladen, wenn jemand ein
+eigenes System anwendet. Gelesen wird der Speicher erst nach dem Hydrieren;
+im ersten Render sähen Server und Browser sonst verschieden aus.
+
 ## Der Explorer und die Fragen
 
 `src/lib/abfrage.js` rechnet Abfragen über den Datenwürfel, im Browser und in
@@ -138,7 +162,8 @@ zusammengeklebter Text und jeder seiteninterne Verweis, der ins Leere zeigt.
 
 `npm run test:oberflaeche` öffnet die gebaute Seite in Chrome: keine
 Konsolenfehler (auch keine Verletzung der Inhaltsrichtlinie), Suche,
-Vergleich, Explorer und What-if funktionieren, Menü und Suche am Telefon,
+Vergleich, Explorer und What-if funktionieren, ein eigenes Punktesystem lässt
+sich anlegen, auf einer anderen Saison wiederfinden und löschen, Menü und Suche am Telefon,
 Sprunglink, 404-Seite und die Umleitung alter Adressen.
 
 ## Pole-Position ist nicht Startplatz 1

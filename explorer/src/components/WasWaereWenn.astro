@@ -19,6 +19,7 @@ import { ein, plakette } from '../lib/format.js'
 import { db, pfad } from '../lib/db.js'
 import { PUNKTESYSTEME, streichregel, systemFuer } from '../engine/punkte.js'
 import { saisonNeuRechnen } from '../engine/whatif.js'
+import EigenesSystem from './EigenesSystem.jsx'
 
 interface Props {
   jahr: number
@@ -58,6 +59,9 @@ const vorwahl =
   varianten[0]
 
 const amtlichNach = new Map(amtlich.map((f) => [f.id, f]))
+
+/* Die Insel bekommt nur, was sie zum Vergleichen braucht – nicht die ganze Wertungszeile. */
+const amtlichKurz = amtlich.map(({ id, name, position, points, meister }) => ({ id, name, position, points, meister }))
 ---
 
 {vorwahl && (
@@ -157,6 +161,15 @@ const amtlichNach = new Map(amtlich.map((f) => [f.id, f]))
         </div>
       )
     })}
+
+    <section class="eigenes-abschnitt nur-mit-js" aria-labelledby={`eigenes-${jahr}`}>
+      <h3 id={`eigenes-${jahr}`}>Your own points system</h3>
+      <p class="whatif-text">
+        Set the points for each position yourself. Your systems stay in this browser and can be
+        applied to any season since 1950.
+      </p>
+      <EigenesSystem jahr={jahr} amtlich={amtlichKurz} mitStreichung={mitStreichung} client:visible />
+    </section>
   </div>
 )}
 
@@ -185,7 +198,9 @@ const amtlichNach = new Map(amtlich.map((f) => [f.id, f]))
   }
 </script>
 
-<style>
+<!-- Global, weil die Insel (EigenesSystem.jsx) dieselben Chips und Schalter
+     zeichnet und Astros Bereichsmarken ihr Markup nicht erreichen. -->
+<style is:global>
   .whatif-wahl {
     display: grid;
     gap: 0.6rem;
@@ -219,4 +234,63 @@ const amtlichNach = new Map(amtlich.map((f) => [f.id, f]))
   .schalter input { width: 1.15rem; height: 1.15rem; accent-color: var(--accent); }
 
   .whatif-text { margin: 0 0 0.75rem; }
+
+  /* ------------------------------------------------- Eigenes Punktesystem */
+
+  .eigenes-abschnitt {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .eigenes-abschnitt h3 { margin-bottom: 0.4rem; }
+  .eigenes { display: grid; gap: 0.9rem; }
+  .eigenes .whatif-wahl { margin: 0; }
+  .eigenes-zeile { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+  .eigenes .knopf { cursor: pointer; }
+  .eigenes .leise-knopf:disabled { opacity: 0.45; cursor: not-allowed; }
+  .eigenes-weg { color: var(--danger-fg); }
+  .eigenes-hilfe { margin: 0; font-size: 0.88rem; color: var(--muted); text-wrap: pretty; }
+
+  .eigenes-entwurf {
+    display: grid;
+    gap: 0.6rem;
+    max-width: 40rem;
+    padding: 1rem 1.1rem 1.1rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-s);
+  }
+
+  .eigenes-name { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+
+  .eigenes-entwurf input[type='text'],
+  .eigenes-plaetze input {
+    min-height: 2.25rem;
+    padding: 0.35rem 0.6rem;
+    color: var(--ink);
+    background: var(--plane);
+    border: 1px solid var(--border-input);
+    border-radius: var(--radius-s);
+  }
+
+  .eigenes-entwurf input[type='text'] { max-width: 22rem; }
+
+  .eigenes-plaetze {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(6.5rem, 1fr));
+    gap: 0.45rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .eigenes-plaetze label { display: flex; align-items: center; gap: 0.4rem; }
+  .eigenes-plaetze span { min-width: 2rem; font-size: 0.8rem; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .eigenes-plaetze input { width: 100%; min-width: 0; text-align: right; font-variant-numeric: tabular-nums; }
+  .eigenes-ergebnis { display: grid; gap: 0.75rem; }
+  .eigenes-ergebnis .whatif-text,
+  .eigenes-ergebnis .hinweis,
+  .eigenes-ergebnis .fussnote { margin: 0; }
 </style>

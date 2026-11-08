@@ -225,6 +225,45 @@ async function pruefeAlles() {
   })
 
   /*
+   * Das eigene Punktesystem: anlegen, abschicken, auf einer anderen Saison
+   * wiederfinden, löschen. Die Insel hydriert erst beim Hineinscrollen und
+   * liest den Speicher erst danach – ein Fehler beim Hydrieren landet in der
+   * Konsole und zählt hier mit.
+   */
+  {
+    const { p, kontext, meldungen } = await seite('/seasons/1988/')
+    try {
+      const eigen = p.locator('.eigenes')
+      await eigen.scrollIntoViewIfNeeded()
+      await eigen.getByRole('button', { name: '+ New points system' }).click()
+      await eigen.getByLabel('Name').fill('Sieg zählt doppelt')
+      await eigen.getByLabel('Points for position 1', { exact: true }).fill('50')
+      await eigen.getByRole('button', { name: 'Save and apply' }).click()
+      const erste = eigen.locator('.eigenes-ergebnis tbody tr').first()
+      await erste.waitFor()
+      pruefe('eigenes System 1988: Prost vorn', (await erste.textContent()).includes('Alain Prost'), await erste.textContent())
+      pruefe('eigenes System 1988: Titelwechsel gemeldet', (await eigen.locator('.hinweis.akzent').textContent()).includes('Alain Prost'))
+      await eigen.getByLabel("Apply this season's dropped-scores rule").check()
+      await eigen.locator('.eigenes-ergebnis th', { hasText: 'Dropped' }).waitFor()
+      pruefe('eigenes System mit Streichung: Senna vorn', (await erste.textContent()).includes('Ayrton Senna'), await erste.textContent())
+
+      await p.goto(`${WURZEL}/seasons/2021/`, { waitUntil: 'networkidle' })
+      await eigen.scrollIntoViewIfNeeded()
+      await eigen.locator('.eigenes-ergebnis tbody tr').first().waitFor()
+      pruefe('eigenes System auf einer anderen Saison', (await eigen.getByRole('radio', { name: 'Sieg zählt doppelt' }).isChecked()))
+      p.once('dialog', (d) => d.accept())
+      await eigen.getByRole('button', { name: 'Delete' }).click()
+      await eigen.getByRole('button', { name: '+ New points system' }).waitFor()
+      pruefe('eigenes System gelöscht', (await eigen.locator('.chip').count()) === 0)
+      pruefe('eigenes System ohne Konsolenfehler', meldungen.length === 0, meldungen.slice(0, 2).join(' | '))
+    } catch (e) {
+      pruefe('Eigenes Punktesystem', false, e.message.split('\n')[0])
+    } finally {
+      await kontext.close()
+    }
+  }
+
+  /*
    * Info-Knöpfe: Das Skript findet die Beschriftungen im Glossar und setzt ein
    * „i“ daneben; ein Klick öffnet die Box mit der Erklärung, Escape schließt
    * sie. Auch im Vergleich, dessen Tabelle erst React zeichnet.
