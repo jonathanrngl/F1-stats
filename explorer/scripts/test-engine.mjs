@@ -383,6 +383,31 @@ pruefe(
   alleAusbauten.find((a) => a.bis - a.von !== a.schritte)?.kategorie?.id ?? '',
 )
 
+/* Das Fenster entscheidet, welche Läufe erscheinen, nicht wo sie beginnen:
+ * Ferraris Siegrekord der Teams wird nicht erst seit dem Fensterrand ausgebaut. */
+const imFenster = juengsteAenderungen(verlaeufe, { seit: `${standJetzt.jahr - 10}-01-01` }).ausbauten
+const schluessel = (a) => `${a.kategorie.id}/${a.halter.map((h) => h.id).join('+')}/${a.zuletzt.rennen}`
+const ohneFenster = new Map(
+  juengsteAenderungen(verlaeufe).ausbauten.map((a) => [schluessel(a), a]),
+)
+const verschoben = imFenster.filter((a) => ohneFenster.get(schluessel(a))?.seit.rennen !== a.seit.rennen)
+pruefe(
+  'das Fenster verschiebt keinen Laufbeginn',
+  imFenster.length > 0 && verschoben.length === 0,
+  verschoben.map((a) => `${a.kategorie.id}: ${a.seit.jahr}`).join(', '),
+)
+const teamSiegLauf = imFenster.find((a) => a.kategorie.id === 'teamSiege' && a.laeuftNoch)
+pruefe(
+  'ein laufender Ausbau der Team-Siege beginnt nicht am Fensterrand',
+  !teamSiegLauf || teamSiegLauf.seit.jahr < standJetzt.jahr - 10,
+  teamSiegLauf ? `${teamSiegLauf.halter[0].name} seit ${teamSiegLauf.seit.jahr}` : '',
+)
+const letztesJe = new Map(verlaeufe.map((v) => [v.kategorie.id, v.ereignisse.at(-1)]))
+pruefe(
+  'ein laufender Ausbau ist das letzte Ereignis seiner Bestmarke',
+  imFenster.filter((a) => a.laeuftNoch).every((a) => letztesJe.get(a.kategorie.id)?.rennen === a.zuletzt.rennen),
+)
+
 /* Ein Bruch trägt sein Gleichziehen bei sich, und dieses darf nicht zusätzlich
  * als eigener Eintrag auftauchen – sonst stünde dieselbe Geschichte zweimal. */
 const { einzeln: alleEinzeln } = juengsteAenderungen(verlaeufe, { seit: '2000-01-01' })

@@ -358,9 +358,16 @@ export function juengsteAenderungen(verlaeufe, { seit } = {}) {
      * Ausbauten desselben Halters am Stück zusammenfassen. Ein Wechsel des
      * Halters dazwischen trennt zwei Läufe – sonst verschmölzen zwei
      * verschiedene Geschichten zu einer falschen.
+     *
+     * Über die volle Geschichte (`alle`), nicht über `jung`: Ein Lauf, der
+     * schon vor dem Fenster `seit` lief – Ferrari baut „Most wins by a team"
+     * seit Jahrzehnten aus, nicht erst seit dem Fensterrand –, bekäme sonst
+     * dessen willkürlichen Rand als „Ausbau seit"-Datum. Erst nach dem
+     * Zusammenfassen wird gefiltert, welche Läufe fürs Fenster noch
+     * interessant sind.
      */
     let lauf = null
-    for (const e of jung) {
+    for (const e of alle) {
       const wer = e.halter.map((h) => h.id).join('+')
       if (e.art !== 'ausgebaut') {
         lauf = null
@@ -377,10 +384,12 @@ export function juengsteAenderungen(verlaeufe, { seit } = {}) {
           bis: e,
           schritte: 1,
           kategorie: v.kategorie,
-          rekordJetzt: v.rekord,
+          letztesEreignis: alle.at(-1),
         }
-        ausbauten.push(lauf)
       }
+      /* Nur Läufe aufnehmen, die bis ins Fenster reichen – ein Lauf, der
+       * längst vor `grenze` endete, gehört nicht unter „zuletzt". */
+      if (e.datum >= grenze && ausbauten.at(-1) !== lauf) ausbauten.push(lauf)
     }
   }
 
@@ -399,11 +408,13 @@ export function juengsteAenderungen(verlaeufe, { seit } = {}) {
         zuletzt: l.bis,
         datum: l.bis.datum,
         /*
-         * Steht die Marke noch dort, wo dieser Lauf sie hinterließ? Nur dann
-         * baut hier jemand *gerade* aus. Ein abgeschlossener Lauf ist
-         * Geschichte und gehört nicht unter eine Überschrift im Präsens.
+         * Ist seit dem letzten Schritt dieses Laufs nichts mehr geschehen? Nur
+         * dann baut hier jemand *gerade* aus. Der Wert allein reicht nicht:
+         * Hat seither jemand gleichgezogen, steht die Marke zwar noch, aber
+         * geteilt – der Lauf ist dann Geschichte und gehört nicht unter eine
+         * Überschrift im Präsens.
          */
-        laeuftNoch: l.bis.wert === l.rekordJetzt,
+        laeuftNoch: l.bis === l.letztesEreignis,
       }))
       .sort(neueste),
   }
