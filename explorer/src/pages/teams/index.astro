@@ -2,6 +2,7 @@
 import Seite from '../../layouts/Seite.astro'
 import Filter from '../../components/Filter.astro'
 import Sortierung from '../../components/Sortierung.astro'
+import { zahl } from '../../lib/format.js'
 import { teamListe, pfad } from '../../lib/db.js'
 
 const teams = teamListe().sort((a, b) => (b.siege ?? 0) - (a.siege ?? 0) || (b.starts ?? 0) - (a.starts ?? 0))
@@ -12,7 +13,7 @@ const neuestesJahr = Math.max(...teams.map((t) => t.bis ?? 0))
   <header class="seitenkopf">
     <div>
       <p class="oberzeile">Teams</p>
-      <h1>Every constructor since 1950</h1>
+      <h1>All constructors since 1950</h1>
       <p class="lead">
         {teams.length} constructors. Name changes and predecessor teams are set out on each
         team's own page.
@@ -45,12 +46,12 @@ const neuestesJahr = Math.max(...teams.map((t) => t.bis ?? 0))
       <tbody>
         {teams.map((t) => (
           <tr data-name={t.name}>
-            <td>
-              <span class="kuerzel" title={t.landName ?? ''}>{t.land ?? '—'}</span>
+            <th scope="row">
+              <span class="kuerzel" title={t.landName ?? ''}>{t.land ?? '–'}</span>
               <a class="zeile" href={pfad.team(t.id)}>{t.name}</a>
-            </td>
+            </th>
             <td class="leise">{t.von === t.bis ? t.von : `${t.von}–${t.bis}`}</td>
-            <td class="num">{t.starts ?? 0}</td>
+            <td class="num">{zahl(t.starts ?? 0)}</td>
             <td class="num">{t.siege || ''}</td>
             <td class="num">{t.doppelsiege || ''}</td>
             <td class="num meister">{t.titel || ''}</td>

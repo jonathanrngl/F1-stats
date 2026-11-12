@@ -9,8 +9,9 @@
 import Seite from '../../layouts/Seite.astro'
 import Karriere from '../../components/Karriere.astro'
 import Sprung from '../../components/Sprung.astro'
+import Epochenband from '../../components/Epochenband.astro'
 import { ein, prozent, raenge, zahl } from '../../lib/format.js'
-import { alle, db, pfad } from '../../lib/db.js'
+import { alle, db, eine, pfad } from '../../lib/db.js'
 import { land } from '../../lib/laender.js'
 import {
   motorProSaison, motorProfil, motorSieger, motorTeams, motorTitel, motorenListe,
@@ -75,6 +76,62 @@ const modelle = alle(
   id,
 )
 
+/*
+ * Das Epochenband: Saisons mit einem Start, Titeljahre aus der Liste der
+ * Fahrertitel weiter unten – ein Motor gewinnt keinen Titel, der Fahrer im
+ * Auto tut es (docs/DESIGN.md 8.3).
+ */
+const startJahre = saisons.filter((s) => s.starts > 0).map((s) => s.jahr)
+const titelJahre = titel.map((t) => t.jahr)
+
+/*
+ * Den Zeitraum zeigt das Epochenband. In Worten steht er nur, wenn das Band
+ * erstes oder letztes Jahr nicht beschriftet – es lässt eine Zahl weg, die
+ * näher als acht Saisons an einer anderen steht (Epochenband.astro).
+ */
+const achse = eine('SELECT MIN(year) AS von, MAX(year) AS bis FROM season')
+const marken = []
+for (const j of [achse.von, achse.bis, startJahre[0], startJahre.at(-1)]) {
+  if (j !== undefined && !marken.includes(j) && !marken.some((m) => Math.abs(m - j) < 8)) marken.push(j)
+}
+const bandNenntZeitraum = startJahre.length > 0 && marken.includes(startJahre[0]) && marken.includes(startJahre.at(-1))
+
+/*
+ * Der Kopfsatz: Herkunft und wie viele Teams den Motor fuhren, in einem Satz
+ * statt einer Zeile Eckdaten mit Trennlinien (docs/DESIGN.md 8.2).
+ */
+const herkunft = motor.land ? eine('SELECT demonym FROM country WHERE ioc = ?', motor.land)?.demonym : null
+const kopfsatz = [
+  `${herkunft ? `${herkunft} engine manufacturer` : 'Engine manufacturer'}, used by ${alleTeams.length === 1 ? 'one team' : `${alleTeams.length} teams`}.`,
+  !bandNenntZeitraum && (motor.von === motor.bis ? `Raced only in ${motor.von}.` : `First race in ${motor.von}, last in ${motor.bis}.`),
+]
+  .filter(Boolean)
+  .join(' ')
+
+/*
+ * Die Kennzahlen. Die tragende zuerst: Titel, wenn es welche gibt; sonst
+ * Siege; sonst Rennen (docs/DESIGN.md 8.6). Unter den Konstrukteurstiteln
+ * stehen die Fahrertitel – sie sind die Marken im Epochenband.
+ */
+const kennzahlListe = [
+  { art: 'rennen', label: 'Races', wert: zahl(motor.rennen) },
+  { art: 'siege', label: 'Wins', wert: zahl(motor.siege), dazu: motor.rennen > 0 ? `${prozent(motor.siege / motor.rennen)} of races` : null },
+  { label: 'Podiums', wert: zahl(motor.podien) },
+  { label: 'Pole positions', wert: zahl(motor.poles) },
+  { label: 'Fastest laps', wert: zahl(motor.schnellsteRunden) },
+  {
+    art: 'titel',
+    label: "Constructors' titles",
+    wert: zahl(motor.titel ?? 0),
+    dazu: titel.length > 0 ? `${titel.length} drivers' ${titel.length === 1 ? 'title' : 'titles'}` : null,
+  },
+]
+const traegt = (motor.titel ?? 0) > 0 ? 'titel' : motor.siege > 0 ? 'siege' : 'rennen'
+const kennzahlen = [
+  ...kennzahlListe.filter((k) => k.art === traegt),
+  ...kennzahlListe.filter((k) => k.art !== traegt),
+]
+
 const ziele = [
   bild.length > 1 && { id: 'verlauf', label: 'Season by season' },
   titel.length > 0 && { id: 'titel', label: 'Titles' },
@@ -93,23 +150,22 @@ const ziele = [
         <span class="trenner">/</span>
         <span class="still">{heimat.name}</span>
       </p>
-      <h1>{motor.name}</h1>
-      <ul class="eckdaten">
-        <li>Engine manufacturer</li>
-        <li>{zeitraum}</li>
-        <li>{alleTeams.length} {alleTeams.length === 1 ? 'team' : 'teams'}</li>
-      </ul>
+      <div class="titelblock">
+        <h1>{motor.name}</h1>
+        <p class="kopfsatz">{kopfsatz}</p>
+      </div>
+      <Epochenband jahre={startJahre} titel={titelJahre} wort="Seasons" />
     </div>
   </header>
 
   <ul class="kacheln">
-    <li><span>Races</span><b>{zahl(motor.rennen)}</b></li>
-    <li class={motor.siege > 0 ? 'stark' : undefined}><span>Wins</span><b>{motor.siege}</b>
-      {motor.rennen > 0 && <i>{prozent(motor.siege / motor.rennen)} of races</i>}</li>
-    <li><span>Podiums</span><b>{motor.podien}</b></li>
-    <li><span>Pole positions</span><b>{motor.poles}</b></li>
-    <li><span>Fastest laps</span><b>{motor.schnellsteRunden}</b></li>
-    <li><span>Constructors' titles</span><b>{motor.titel ?? 0}</b></li>
+    {kennzahlen.map((k) => (
+      <li class={k.art === traegt ? 'stark' : undefined}>
+        <span>{k.label}</span>
+        <b>{k.wert}</b>
+        {k.dazu && <i>{k.dazu}</i>}
+      </li>
+    ))}
   </ul>
 
   <p class="fussnote">
@@ -161,12 +217,12 @@ const ziele = [
     <div class="tabelle">
       <table>
         <thead>
-          <tr><th>Team</th><th>Period</th><th class="num">Races</th><th class="num">Wins</th></tr>
+          <tr><th scope="col">Team</th><th scope="col">Period</th><th class="num" scope="col">Races</th><th class="num" scope="col">Wins</th></tr>
         </thead>
         <tbody>
           {teams.map((t) => (
             <tr>
-              <td><a class="zeile" href={pfad.team(t.id)}>{t.name}</a></td>
+              <th scope="row"><a class="zeile" href={pfad.team(t.id)}>{t.name}</a></th>
               <td class="leise">{t.von === t.bis ? t.von : `${t.von}–${t.bis}`}</td>
               <td class="num">{t.rennen}</td>
               <td class="num">{t.siege || ''}</td>
@@ -179,7 +235,7 @@ const ziele = [
 
   {modelle.length > 0 && (
     <section class="abschnitt" id="modelle">
-      <div class="abschnitt-kopf"><div><h2>The engines</h2><p>Every specification that raced, with the teams that used it.</p></div></div>
+      <div class="abschnitt-kopf"><div><h2>The engines</h2><p>All specifications that raced, with the teams that used them.</p></div></div>
       <div class="tabelle">
         <table>
           <thead>
@@ -219,10 +275,14 @@ const ziele = [
 </Seite>
 
 <style>
+  /* Die Fußnote zur Kennzahlleiste: mit Abstand zur Sprungleiste darunter. */
+  .kacheln + .fussnote { margin: 0 0 var(--abstand-6); }
+
+  /* Die Titeljahre flach auf der Fläche: das Jahr groß und schmal, daneben Fahrer und Team. */
   .titelliste {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(min(16rem, 100%), 1fr));
-    gap: 0.6rem;
+    gap: var(--abstand-2);
     margin: 0;
     padding: 0;
     list-style: none;
@@ -232,18 +292,23 @@ const ziele = [
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
     align-items: baseline;
-    gap: 0 0.7rem;
-    padding: 0.7rem 0.95rem;
+    gap: 0 var(--abstand-3);
+    padding: var(--abstand-3) var(--abstand-4);
     background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-s);
-    box-shadow: var(--shadow-s);
   }
 
-  .titelliste b { grid-row: span 2; font-size: 1.15rem; font-weight: 800; color: var(--accent); font-variant-numeric: tabular-nums; }
-  .titelliste span { font-size: 0.8rem; color: var(--muted); }
+  .titelliste b {
+    grid-row: span 2;
+    font-size: var(--text-4);
+    font-stretch: var(--schmal);
+    font-weight: 800;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums lining-nums;
+  }
+
+  .titelliste span { font-size: var(--text-2); color: var(--muted); }
 
   /* Die Siegerliste kann lang sein: zweispaltig, damit sie nicht die halbe Seite füllt. */
-  .sieger .rangliste { columns: 2 16rem; column-gap: 2rem; }
+  .sieger .rangliste { columns: 2 16rem; column-gap: var(--abstand-6); }
   .sieger .rangliste li { break-inside: avoid; }
 </style>
