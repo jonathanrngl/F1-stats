@@ -10,9 +10,15 @@
  *
  * Die Farben sind die der Formel 1 selbst – rot weich, gelb mittel, weiß
  * hart, grün Intermediate, blau Regen –, weil jeder, der Rennen schaut, sie
- * so liest. Weiß bekommt einen Rand, sonst verschwände es auf hellem Grund.
- * Die Mischung steht zusätzlich als Buchstabe im Balken und in der Tabelle
- * darunter: Farbe allein trägt keine Information.
+ * so liest. Sie stehen als Rollen in theme.css (--reifen-*), ebenso die
+ * Schrift darauf. Weiß bekommt einen Rand, sonst verschwände es auf hellem
+ * Grund. Die Mischung steht zusätzlich als Buchstabe im Balken und in der
+ * Tabelle darunter: Farbe allein trägt keine Information.
+ *
+ * Die Namen links sind Verweise. Ein Bild (role="img") darf nichts enthalten,
+ * das den Fokus nimmt; das SVG ist deshalb eine benannte Gruppe. Achsen und
+ * Buchstaben sind für Vorleser ausgeblendet, jeder Stint nennt sich über
+ * seinen <title>.
  */
 interface Stint {
   von: number
@@ -78,12 +84,12 @@ const stintText = (s: Stint) =>
 const BASIS = import.meta.env.BASE_URL.replace(/\/$/, '')
 ---
 
-<figure class="strategie">
+<figure class="strategie bild">
   {FASSUNGEN.map((z) => (
-    <svg class={z.klasse} viewBox={`0 0 ${z.W} ${z.H}`} role="img"
-      aria-label={`Tyre stints of every driver over the ${anzahl} laps, in finishing order. The same information is in the table below.`}>
+    <svg class={z.klasse} viewBox={`0 0 ${z.W} ${z.H}`} role="group"
+      aria-label={`Tyre stints of all drivers over the ${anzahl} laps, in finishing order. The same information is in the table below.`}>
       {z.marken.map((r) => (
-        <g>
+        <g aria-hidden="true">
           <line class="gitter" x1={z.x(r + 1)} x2={z.x(r + 1)} y1={z.PAD.oben - 4} y2={z.H - z.PAD.unten} />
           <text class="achse" x={z.x(r + 1)} y={z.PAD.oben - 7} text-anchor="middle">{r}</text>
         </g>
@@ -103,8 +109,8 @@ const BASIS = import.meta.env.BASE_URL.replace(/\/$/, '')
               return (
                 <g class={`stint ${b.mischung.toLowerCase()}${b.alter ? ' gebraucht' : ''}`}>
                   <title>{`${f.name}: ${stintText(b)}`}</title>
-                  <rect x={bx + 0.5} y={y + 3} width={Math.max(bb - 1, 1)} height={z.zeile - 6} rx="2" />
-                  {bb > 16 && <text x={bx + bb / 2} y={y + z.zeile / 2} text-anchor="middle" dominant-baseline="central">{MISCHUNG[b.mischung]?.kurz}</text>}
+                  <rect x={bx + 0.5} y={y + 3} width={Math.max(bb - 1, 1)} height={z.zeile - 6} />
+                  {bb > 16 && <text x={bx + bb / 2} y={y + z.zeile / 2} text-anchor="middle" dominant-baseline="central" aria-hidden="true">{MISCHUNG[b.mischung]?.kurz}</text>}
                 </g>
               )
             })}
@@ -116,9 +122,9 @@ const BASIS = import.meta.env.BASE_URL.replace(/\/$/, '')
 
   <ul class="legende">
     {benutzt.map((m) => (
-      <li><svg class={`muster stint ${m.toLowerCase()}`} viewBox="0 0 22 14" aria-hidden="true"><rect x="0.5" y="0.5" width="21" height="13" rx="2" /></svg>{MISCHUNG[m].name}</li>
+      <li><svg class={`muster stint ${m.toLowerCase()}`} viewBox="0 0 22 14" aria-hidden="true"><rect x="0.5" y="0.5" width="21" height="13" /></svg>{MISCHUNG[m].name}</li>
     ))}
-    <li><svg class="muster stint medium gebraucht" viewBox="0 0 22 14" aria-hidden="true"><rect x="0.5" y="0.5" width="21" height="13" rx="2" /></svg>Pale: a set used before the race</li>
+    <li><svg class="muster stint medium gebraucht" viewBox="0 0 22 14" aria-hidden="true"><rect x="0.5" y="0.5" width="21" height="13" /></svg>Pale: a set used before the race</li>
   </ul>
 
   <figcaption>
@@ -135,7 +141,7 @@ const BASIS = import.meta.env.BASE_URL.replace(/\/$/, '')
             <tr>
               <th scope="row"><a class="zeile" href={`${BASIS}/drivers/${f.id}/`}>{f.name}</a></th>
               <td class="num">{f.stints.length - 1}</td>
-              <td class="leise">{f.stints.map(stintText).join(' · ')}</td>
+              <td class="leise">{f.stints.map(stintText).join(', ')}</td>
             </tr>
           ))}
         </tbody>
@@ -145,17 +151,7 @@ const BASIS = import.meta.env.BASE_URL.replace(/\/$/, '')
 </figure>
 
 <style>
-  .strategie {
-    --soft: #e8002d;
-    --medium: #ffd12e;
-    --hard: #f4f4f2;
-    --inter: #43b02a;
-    --wet: #0067ad;
-    margin: 0;
-    padding: 1rem 0 0.85rem;
-    border-bottom: 1px solid var(--border);
-  }
-
+  /* Das Diagramm steht auf der Fläche (.bild in theme.css), ohne eigene Linie darum. */
   svg { display: block; width: 100%; height: auto; }
   svg.schmal { display: none; }
 
@@ -165,38 +161,39 @@ const BASIS = import.meta.env.BASE_URL.replace(/\/$/, '')
   }
 
   .gitter { stroke: var(--grid); stroke-width: 1; shape-rendering: crispEdges; }
-  .achse { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
-  .name { fill: var(--ink-2); font-size: 12px; font-variant-numeric: tabular-nums; }
-  a:hover .name { fill: var(--link); text-decoration: underline; }
+  .achse { fill: var(--muted); font-size: var(--text-1); font-stretch: var(--schmal); font-variant-numeric: tabular-nums; }
+  .name { fill: var(--ink-2); font-size: var(--text-1); font-variant-numeric: tabular-nums; }
+  /* Die Namen sind Verweise wie die Namen einer Tabellenzeile: ohne Strich, der kommt mit dem Zeiger. */
+  svg a { text-decoration: none; }
+  a:is(:hover, :focus-visible) .name { fill: var(--ink); text-decoration: underline; }
 
-  .stint text { font-size: 10px; font-weight: 800; fill: #15181d; pointer-events: none; }
-  .soft rect { fill: var(--soft); }
-  .soft text { fill: #fff; }
-  .medium rect { fill: var(--medium); }
-  .hard rect { fill: var(--hard); stroke: var(--border); stroke-width: 1; }
-  .intermediate rect { fill: var(--inter); }
-  .intermediate text { fill: #fff; }
-  .wet rect { fill: var(--wet); }
-  .wet text { fill: #fff; }
+  /* Die Schrift auf dem Stint: hell auf Soft und Wet, dunkel auf den übrigen (theme.css, 4,5:1). */
+  .stint text { font-size: var(--text-1); font-stretch: var(--schmal); font-weight: 800; fill: var(--reifen-schrift-dunkel); pointer-events: none; }
+  .soft rect { fill: var(--reifen-soft); }
+  .soft text { fill: var(--reifen-schrift-hell); }
+  .medium rect { fill: var(--reifen-medium); }
+  .hard rect { fill: var(--reifen-hard); stroke: var(--border); stroke-width: 1; }
+  .intermediate rect { fill: var(--reifen-inter); }
+  .wet rect { fill: var(--reifen-wet); }
+  .wet text { fill: var(--reifen-schrift-hell); }
   /* Ein gebrauchter Satz: blasser, damit man frische und alte Sätze unterscheidet. */
   .gebraucht rect { opacity: 0.5; }
 
   .legende {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.4rem 1.1rem;
-    margin: 0.9rem 0 0;
-    padding: 0.85rem 0 0;
-    border-top: 1px solid var(--border);
+    gap: var(--abstand-2) var(--abstand-4);
+    margin: var(--abstand-4) 0 0;
+    padding: 0;
     list-style: none;
-    font-size: 0.84rem;
+    font-size: var(--text-2);
     color: var(--ink-2);
   }
-  .legende li { display: flex; align-items: center; gap: 0.45rem; }
+  .legende li { display: flex; align-items: center; gap: var(--abstand-2); }
   .legende .muster { width: 1.4rem; height: auto; flex: none; }
 
-  figcaption { margin-top: 0.85rem; font-size: 0.84rem; color: var(--muted); text-wrap: pretty; }
-  .als-tabelle { margin-top: 0.75rem; }
-  .als-tabelle summary { cursor: pointer; min-height: 2.25rem; font-size: 0.86rem; font-weight: 600; color: var(--ink); }
-  .als-tabelle .tabelle { margin-top: 0.5rem; box-shadow: none; }
+  figcaption { margin-top: var(--abstand-3); font-size: var(--text-2); color: var(--muted); text-wrap: pretty; }
+  .als-tabelle { margin-top: var(--abstand-3); }
+  .als-tabelle summary { cursor: pointer; min-height: 2.25rem; font-weight: 600; color: var(--ink); }
+  .als-tabelle .tabelle { margin-top: var(--abstand-2); }
 </style>
