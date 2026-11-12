@@ -3,45 +3,58 @@ import { datum, zahl } from '../lib/format.js'
 import Seite from '../layouts/Seite.astro'
 import Countdown from '../components/Countdown.astro'
 import Gefolgt from '../components/Gefolgt.astro'
-import { db, eine, saisonListe, pfad } from '../lib/db.js'
-import { naechstesRennen, standVorRennen } from '../engine/vorschau.js'
+import Meisterband from '../components/Meisterband.astro'
+import Turm from '../components/Turm.astro'
+import { alle, db, eine, saisonListe, pfad } from '../lib/db.js'
+import { naechstesRennen, standVorRennen, titelKannFallen } from '../engine/vorschau.js'
 import { datenstand, juengsteAenderungen, rekordVerlaeufe, zahlwort } from '../engine/aenderungen.js'
 
 /*
- * Gezählt wird, was eine eigene Seite hat. Die Tabellen führen mehr: 57
- * Fahrer, die gemeldet, aber nie in einer Ergebnisliste standen, einen
- * Konstrukteur ohne Rennen, und die noch ausstehenden Rennen der Saison.
- * „917 Drivers“ neben einer Liste mit 860 Einträgen war eine Zahl, die man
- * nicht nachzählen konnte.
- */
-const zahlen = eine(`
-  SELECT (SELECT COUNT(DISTINCT race_id) FROM race_result)        AS rennen,
-         (SELECT COUNT(DISTINCT driver_id) FROM race_result)      AS fahrer,
-         (SELECT COUNT(DISTINCT constructor_id) FROM race_result) AS teams,
-         (SELECT COUNT(DISTINCT circuit_id) FROM race)            AS strecken,
-         (SELECT COUNT(*) FROM race_result)                       AS ergebnisse,
-         (SELECT MIN(year) FROM season)                           AS von,
-         (SELECT MAX(year) FROM season)                           AS bis`)
-
-const saisons = saisonListe().slice(0, 6)
-
-/*
- * Die Startseite zeigte bisher nur Verweise auf Daten, keine Daten. Bei 2.384
- * Seiten und einem nächsten Rennen in der Datenbank war das verschenkt – die
- * drei Dinge unten sind genau die, wegen derer jemand eine Statistikseite
- * überhaupt aufruft, und alle drei werden auf Unterseiten ohnehin gerechnet.
+ * Die Startseite beantwortet drei Fragen, in dieser Reihenfolge und alle in den
+ * ersten 800 Pixeln: Wie steht es um die Geschichte (das Meisterband), wie
+ * steht die Weltmeisterschaft, wann ist das nächste Rennen. Dazu der jüngste
+ * Rekordwechsel, „On this day“ und, wer folgt, „Following“.
+ *
+ * Was vorher hier stand und gegangen ist: vier Zahlenkacheln (Races, Drivers,
+ * Teams, Circuits), „Right now“ in drei gleichen Spalten, ein Verzeichnis aller
+ * Bereiche – das leistet die Navigation – und die sechs jüngsten Saisons, die
+ * jetzt im Meisterband stehen. Siehe docs/DESIGN.md, Abbauliste.
  *
  * Jedes Stück steht für sich: Fehlt eines, fällt nur dieses weg. Am
- * Saisonende gibt es kein nächstes Rennen, und die Seite soll dann nicht
- * mit einer leeren Kachel dastehen.
- *
- * Nichts davon hängt am Tag des Bauens: Das nächste Rennen ist das erste
- * ohne Ergebnis, und die Tage bis dahin rechnet der Browser.
+ * Saisonende gibt es kein nächstes Rennen, und die Seite soll dann nicht mit
+ * einem leeren Block dastehen. Nichts hängt am Tag des Bauens: Das nächste
+ * Rennen ist das erste ohne Ergebnis, die Tage bis dahin rechnet der Browser.
  */
+const { von, bis } = eine('SELECT MIN(year) AS von, MAX(year) AS bis FROM season')
+
 const naechstes = naechstesRennen(db())
 const stand = naechstes ? standVorRennen(db(), naechstes) : null
-const fuehrend = stand && !stand.vorsaison ? (stand.fahrer?.[0] ?? null) : null
-const zweiter = stand && !stand.vorsaison ? (stand.fahrer?.[1] ?? null) : null
+const mitStand = stand && !stand.vorsaison
+const fuehrend = mitStand ? (stand.fahrer?.[0] ?? null) : null
+const kuerzel = new Map(alle('SELECT id, abbreviation AS k FROM driver').map((d) => [d.id, d.k]))
+
+/* Der Meister des laufenden Jahres, wenn der Titel schon vergeben ist, und wann es so weit war. */
+const saison = mitStand ? saisonListe().find((s) => s.jahr === stand.bezug.jahr) : null
+const entschieden = saison?.meister
+  ? eine(
+      `SELECT r.round AS runde, COALESCE(g.full_name, g.name || ' Grand Prix') AS gp FROM race r JOIN grand_prix g ON g.id = r.grand_prix_id
+        WHERE r.year = ? AND r.drivers_title_decider = 1`,
+      saison.jahr,
+    )
+  : null
+
+/*
+ * Der Satz zur Titelfrage am nächsten Rennen. Drei Lagen: Der Titel ist schon
+ * vergeben, er kann an diesem Wochenende fallen, oder er bleibt offen – dann
+ * steht da, wie viele Punkte noch zu holen sind.
+ */
+const titelSatz = !mitStand
+  ? null
+  : saison?.meister
+    ? `${saison.meister} won the title${entschieden ? ` in round ${entschieden.runde}, at the ${entschieden.gp}` : ''}.`
+    : titelKannFallen(stand)
+      ? `The title can be settled here: ${fuehrend.name} leads by ${zahl(fuehrend.punkte - stand.fahrer[1].punkte)} points.`
+      : `${zahl(stand.maxFuerEinenFahrer)} points are still to be won in ${stand.offen} ${stand.offen === 1 ? 'race' : 'races'}.`
 
 /*
  * Die jüngste Rekordbewegung. Der Verlauf über alle Bestmarken kostet beim
@@ -50,100 +63,80 @@ const zweiter = stand && !stand.vorsaison ? (stand.fahrer?.[1] ?? null) : null
  */
 const datenStand = datenstand(db())
 const letzteMarke = datenStand
-  ? (juengsteAenderungen(rekordVerlaeufe(db()), { seit: `${datenStand.jahr - 12}-01-01` })
-      .einzeln[0] ?? null)
+  ? (juengsteAenderungen(rekordVerlaeufe(db()), { seit: `${datenStand.jahr - 12}-01-01` }).einzeln[0] ?? null)
   : null
-
-/*
- * Die Einstiege, zweigeteilt wie die Navigation: erst die Dinge selbst, dann
- * die Werkzeuge. Wo es etwas zu zählen gibt, steht die Zahl daneben – sie
- * sagt mehr über die Seite dahinter als ein Symbol.
- */
-const DINGE = [
-  { weg: '/seasons/', titel: 'Seasons', zahl: zahlen.bis - zahlen.von + 1, text: 'Standings, calendar and points progression for every year' },
-  { weg: '/races/', titel: 'Races', zahl: zahlen.rennen, text: 'Every Grand Prix so far, result by result' },
-  { weg: '/drivers/', titel: 'Drivers', zahl: zahlen.fahrer, text: 'Profiles with career, streaks and team-mates' },
-  { weg: '/teams/', titel: 'Teams', zahl: zahlen.teams, text: 'Constructors and the names they raced under' },
-  { weg: '/circuits/', titel: 'Circuits', zahl: zahlen.strecken, text: 'On a map, season by season, and who went well where' },
-]
-const WERKZEUGE = [
-  { weg: '/records/', titel: 'Records', text: 'Every all-time mark, linked to the race behind it' },
-  { weg: '/comparison/', titel: 'Compare', text: 'Two careers side by side, over any period' },
-  { weg: '/explorer/', titel: 'Explorer', text: 'Your own queries over every result, with export' },
-  { weg: '/quiz/', titel: 'Quiz', text: 'Questions on every part of the sport, easy to expert' },
-]
 ---
 
 <Seite
-  titel="Formula 1 statistics – every season since 1950"
-  beschreibung={`Results, standings and analysis from ${zahl(zahlen.rennen)} races between ${zahlen.von} and ${zahlen.bis}.`}
+  titel="Formula 1 statistics since 1950"
+  beschreibung={`Results, standings and records for every Formula 1 season from ${von} to ${bis}.`}
+  lackierung={fuehrend?.teamId ?? null}
 >
   <header class="start">
-    <div>
-      <h1>Every World Championship race, {zahlen.von} to {zahlen.bis}</h1>
-      <p class="lead">
-        Results, standings and records for every race since {zahlen.von} – worked out from
-        {' '}{zahl(zahlen.ergebnisse)} result rows, not copied from a curated list.
-      </p>
-    </div>
-    <ul class="kacheln startzahlen">
-      <li><b>{zahl(zahlen.rennen)}</b><span>Races</span></li>
-      <li><b>{zahl(zahlen.fahrer)}</b><span>Drivers</span></li>
-      <li><b>{zahlen.teams}</b><span>Teams</span></li>
-      <li><b>{zahlen.strecken}</b><span>Circuits</span></li>
-    </ul>
+    <h1>Formula 1, {von} to {bis}</h1>
   </header>
 
-  {(naechstes || fuehrend || letzteMarke) && (
-    <section class="abschnitt">
-      <div class="abschnitt-kopf"><div><h2>Right now</h2></div></div>
-      <div class="jetzt">
-        {naechstes && (
-          <a class="jetzt-rennen" href={pfad.seite('/preview/')}>
-            <span class="etikett-klein">Next race, round {naechstes.runde}</span>
-            <b class="gross">{naechstes.grandPrixVoll ?? naechstes.grandPrix} {naechstes.jahr}</b>
-            <span class="dazu">{naechstes.strecke}, {datum(naechstes.datum)}</span>
-            <span class="countdown"><Countdown datum={naechstes.datum} zeit={naechstes.zeit} /></span>
-            <span class="weiter">Read the preview</span>
-          </a>
-        )}
-        {fuehrend && (
-          <a href={pfad.fahrer(fuehrend.id)}>
-            <span class="etikett-klein">Championship leader after round {stand.bezug.runde}</span>
-            <b class="gross">{fuehrend.name}</b>
-            <span class="dazu teampunkt" data-team={fuehrend.teamId}>{fuehrend.team}</span>
-            <span class="zahlreihe">
-              <span><b>{zahl(fuehrend.punkte)}</b> points</span>
-              {zweiter && <span><b>+{zahl(fuehrend.punkte - zweiter.punkte)}</b> on {zweiter.name}</span>}
-            </span>
-          </a>
-        )}
-        {letzteMarke && (
-          <a href={pfad.seite('/changes/')}>
-            <span class="etikett-klein">Latest record change</span>
-            <b class="gross">{letzteMarke.kategorie.titel}</b>
-            <span class="dazu">
-              {letzteMarke.halter.map((h) => h.name).join(' and ')}
-              {letzteMarke.art === 'eingestellt' ? ' equalled it' : ' took it'} on {datum(letzteMarke.datum)}
-            </span>
-            {/*
-              * Der Wert der Übernahme, nicht der heutige: Alonso übernahm den
-              * Startrekord 2022 mit 351 und baut ihn seither aus. „351 starts“
-              * allein las sich wie der Stand von heute.
-              */}
-            <span class="zahlreihe">
-              <span><b>{zahlwort(letzteMarke.wert, letzteMarke.kategorie)}</b> then</span>
-              {letzteMarke.rekordJetzt > letzteMarke.wert && (
-                <span><b>{zahl(letzteMarke.rekordJetzt)}</b> now</span>
-              )}
-            </span>
-          </a>
-        )}
-      </div>
-    </section>
-  )}
+  <Meisterband />
 
-  <Gefolgt />
+  <div class="start-raster">
+    {naechstes && (
+      <section class="abschnitt naechstes" aria-labelledby="naechstes-titel">
+        <h2 id="naechstes-titel">Next: {naechstes.grandPrixVoll ?? naechstes.grandPrix}</h2>
+        <p class="wann">
+          Round {naechstes.runde}, {datum(naechstes.datum)}.
+        </p>
+        <p class="countdown"><Countdown datum={naechstes.datum} zeit={naechstes.zeit} /></p>
+        {titelSatz && <p class="titelsatz">{titelSatz}</p>}
+        <p><a href={pfad.seite('/preview/')}>Read the preview</a></p>
+      </section>
+    )}
+
+    {mitStand && (
+      <section class="abschnitt wm" aria-labelledby="wm-titel">
+        <div class="abschnitt-kopf">
+          <div><h2 id="wm-titel">Championship after round {stand.bezug.runde}</h2></div>
+        </div>
+        {/*
+          * Der Turm: Position, Teamstreifen, Kürzel, Name, Punkte, Abstand zum
+          * Führenden. Am Telefon die ersten fünf, sonst zehn.
+          */}
+        <Turm
+          einheit="points"
+          zeilen={stand.fahrer.map((f, i) => ({
+            platz: f.position,
+            teamId: f.teamId,
+            code: kuerzel.get(f.id),
+            name: f.name,
+            href: pfad.fahrer(f.id),
+            team: f.team,
+            wert: zahl(f.punkte),
+            abstand: i > 0 ? `−${zahl(fuehrend.punkte - f.punkte)}` : null,
+            weitere: i >= 5,
+          }))}
+        />
+        <p class="weiter"><a href={`${pfad.saison(stand.bezug.jahr)}#wertung`}>Full standings</a></p>
+      </section>
+    )}
+
+    {letzteMarke && (
+      <section class="abschnitt marke" aria-labelledby="marke-titel">
+        <h2 id="marke-titel">Latest record change</h2>
+        {/*
+          * Der Wert der Übernahme und der von heute: Alonso übernahm den
+          * Startrekord 2022 mit 351 und baut ihn seither aus. „351 starts“
+          * allein las sich wie der Stand von heute.
+          */}
+        <p>
+          <b>{letzteMarke.kategorie.titel}:</b>{' '}
+          {letzteMarke.halter.map((h) => h.name).join(' and ')}
+          {letzteMarke.art === 'eingestellt' ? ' equalled it' : ' took it'} on {datum(letzteMarke.datum)}
+          {' '}with {zahlwort(letzteMarke.wert, letzteMarke.kategorie)}
+          {letzteMarke.rekordJetzt > letzteMarke.wert ? `, and has ${zahl(letzteMarke.rekordJetzt)} now` : ''}.
+        </p>
+        <p><a href={pfad.seite('/changes/')}>All record changes</a></p>
+      </section>
+    )}
+  </div>
 
   {/*
     * „On this day": welcher Tag heute ist, weiß nur der Browser. Ohne Skript
@@ -170,60 +163,7 @@ const WERKZEUGE = [
     </div>
   </section>
 
-  <section class="abschnitt">
-    <div class="abschnitt-kopf"><div><h2>Explore</h2></div></div>
-    <div class="einstiege">
-      <ul class="verzeichnis">
-        {DINGE.map((e) => (
-          <li>
-            <a href={pfad.seite(e.weg)}>
-              <b>{e.titel}</b>
-              <span class="text">{e.text}</span>
-              <span class="zahl anzeige">{zahl(e.zahl)}</span>
-            </a>
-          </li>
-        ))}
-      </ul>
-      <div class="werkzeugkasten">
-        <h3>Tools</h3>
-        <ul class="verzeichnis klein">
-          {WERKZEUGE.map((e) => (
-            <li>
-              <a href={pfad.seite(e.weg)}>
-                <b>{e.titel}</b>
-                <span class="text">{e.text}</span>
-              </a>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </div>
-  </section>
-
-  <section class="abschnitt">
-    <div class="abschnitt-kopf">
-      {/* Ohne diese Zeile las sich „2021 · Max Verstappen · Mercedes“ als sein Team. */}
-      <div><h2>Recent seasons</h2><p>Drivers' champion, then constructors' champion.</p></div>
-      <a class="mehr" href={pfad.seite('/seasons/')}>All seasons</a>
-    </div>
-    <ul class="saisons">
-      {saisons.map((s) => (
-        <li data-team={s.teamMeisterId ?? undefined}>
-          <a href={pfad.saison(s.jahr)}>
-            <b class="jahr anzeige">{s.jahr}</b>
-            {s.meister ? (
-              <>
-                <span class="wer">{s.meister}</span>
-                {s.teamMeister && <span class="team teampunkt">{s.teamMeister}</span>}
-              </>
-            ) : (
-              <span class="laeuft">Season in progress</span>
-            )}
-          </a>
-        </li>
-      ))}
-    </ul>
-  </section>
+  <Gefolgt />
 </Seite>
 
 <script>
@@ -354,146 +294,85 @@ const WERKZEUGE = [
       .catch(() => { abschnitt.hidden = true })
   }
 </script>
-
 <style>
   /*
-   * Der Kopf der Startseite: links die Aussage, rechts die vier Zahlen. Die
-   * Überschrift sagt, was hier steht – ohne Oberzeile darüber und ohne ein
-   * rot gefärbtes Wort darin.
+   * Der Titel der Startseite ist der größte der Seite, sonst nichts: keine
+   * Oberzeile, kein Lead, kein farbiges Wort. Was darunter folgt, ist Daten.
    */
-  .start {
-    display: grid;
-    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
-    align-items: end;
-    gap: 2rem 4rem;
-    margin-bottom: 3rem;
-    padding-block: 2.75rem 2.5rem;
-    /* Dieselbe getönte Fläche wie der Kopf jeder anderen Seite (theme.css, .seitenkopf). */
-    background: var(--band);
-    box-shadow: 0 0 0 100vmax var(--band);
-    clip-path: inset(0 -100vmax);
-  }
-
-  .start h1 { font-size: clamp(2.3rem, 5vw, 3.6rem); line-height: 1; letter-spacing: -0.035em; max-width: 14ch; }
-  .startzahlen { --kachel: var(--plane); grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0; }
-  .startzahlen b { font-size: 2.9rem; }
-
-  @media (max-width: 56rem) {
-    .start { grid-template-columns: minmax(0, 1fr); }
-    .startzahlen { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  }
-
-  @media (max-width: 34rem) {
-    .startzahlen { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .startzahlen b { font-size: 2.2rem; }
-  }
-
-  /*
-   * „Right now": drei Spalten, getrennt durch Haarlinien – keine Karten. Jede
-   * Spalte ist ein Verweis; was man anklicken kann, sagt die Unterstreichung
-   * der Zeile darunter, nicht ein Rahmen.
-   */
-  .jetzt {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(17rem, 100%), 1fr));
-    overflow: hidden;
-  }
-
-  .jetzt > a {
-    display: flex;
-    flex-direction: column;
-    gap: 0.3rem;
-    min-width: 0;
-    padding: 0.2rem 1.5rem 1.2rem;
-    color: inherit;
-    text-decoration: none;
-    box-shadow: -1px 0 0 var(--border);
-  }
-
-  .jetzt > a:first-child { padding-left: 0; }
-  .jetzt > a:hover .gross { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 0.15em; }
+  .start { margin-bottom: var(--abstand-5); }
+  .weiter { margin: var(--abstand-3) 0 0; }
 
   @media (max-width: 40rem) {
-    .jetzt > a { padding-inline: 0; box-shadow: 0 -1px 0 var(--border); padding-top: 1rem; }
+    .start { margin-bottom: var(--abstand-4); }
   }
+  .start h1 { font-size: clamp(var(--text-7), 1.4rem + 3.4vw, var(--text-9)); max-width: none; }
 
-  .etikett-klein {
-    font-size: 0.88rem;
-    font-weight: 500;
-    color: var(--muted);
-  }
-
-  .jetzt .gross {
-    font-size: 1.5rem;
-    font-weight: 800;
-    letter-spacing: -0.025em;
-    line-height: 1.15;
-    color: var(--ink);
-  }
-
-  .jetzt .dazu { font-size: 0.92rem; color: var(--ink-2); }
-
-  .zahlreihe {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.25rem 1.25rem;
-    margin-top: auto;
-    padding-top: 0.9rem;
-    font-size: 0.88rem;
-    color: var(--muted);
-  }
-
-  .zahlreihe b {
-    font-size: 1.5rem;
-    font-weight: 800;
-    letter-spacing: -0.03em;
-    color: var(--ink);
-    font-variant-numeric: tabular-nums;
+  /*
+   * Unter dem Band zwei Spalten: links der WM-Stand (7 von 12), rechts das
+   * nächste Rennen und der jüngste Rekordwechsel (5 von 12). Schmal untereinander,
+   * in derselben Reihenfolge – so liest die Tastatur, was das Auge liest.
+   */
+  .start-raster {
+    display: grid;
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+    grid-template-rows: auto 1fr;
+    gap: 0 var(--abstand-7);
+    align-items: start;
   }
 
   /*
-   * Das nächste Rennen trägt den Countdown – die eine Zahl auf der Seite, die
-   * sich bewegt, und der Grund, warum jemand während der Saison wiederkommt.
+   * Im Quelltext stehen das nächste Rennen, der Stand und der Rekordwechsel in
+   * dieser Reihenfolge: So liest es am Telefon und für Vorleser, und am Telefon
+   * stehen Band, nächstes Rennen und Stand so in den ersten 800 Pixeln. Breit
+   * stellt das Raster den Stand links neben die beiden anderen.
    */
-  /* :global – Zahl und Beschriftung schreibt Countdown.astro, teils erst im Browser. */
-  .countdown { margin-top: 0.7rem; font-size: 0.92rem; color: var(--muted); }
+  .start-raster > .wm { grid-column: 1; grid-row: 1 / span 2; }
+  .start-raster > .naechstes { grid-column: 2; grid-row: 1; }
+  .start-raster > .marke { grid-column: 2; grid-row: 2; }
+  .start-raster > :only-child { grid-column: 1 / -1; }
+  .start-raster > .naechstes { margin-top: var(--abstand-7); }
+
+  @media (max-width: 56rem) {
+    .start-raster { grid-template-columns: minmax(0, 1fr); }
+    .start-raster > * { grid-column: 1 !important; grid-row: auto !important; }
+    .start-raster > .naechstes { margin-top: 0; }
+  }
+
+
+  .naechstes .wann { margin: var(--abstand-2) 0 0; }
+  .naechstes p, .marke p { margin: var(--abstand-3) 0 0; max-width: var(--mass); }
+
+  /* Die Tage bis zum Rennen: die eine Zahl, die sich bewegt. Eng und groß. */
+  .countdown { color: var(--muted); }
   .countdown :global(b) {
-    font-size: 2.9rem;
-    font-weight: 800;
-    letter-spacing: -0.04em;
+    font-size: var(--text-7);
+    font-stretch: var(--eng);
+    font-weight: 700;
     line-height: 1;
     color: var(--ink);
     font-variant-numeric: tabular-nums;
   }
-  .weiter {
-    margin-top: auto;
-    padding-top: 0.75rem;
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--link);
-    text-decoration: underline;
-    text-decoration-color: var(--link-line);
-    text-underline-offset: 0.22em;
-  }
-  .jetzt-rennen:hover .weiter { text-decoration-color: currentColor; }
+
+  .titelsatz { color: var(--ink-2); }
+  .marke b { color: var(--ink); }
 
   /*
    * „On this day": links die Rennen des Tages, rechts die Geburtstage. Die
    * Einträge schreibt das Skript – daher :global, Astros Bereichsattribut
    * tragen nur die Elemente aus dem Gerüst.
    */
-  .blaettern { display: flex; flex: none; align-items: center; gap: 0.35rem; }
+  .blaettern { display: flex; flex: none; align-items: center; gap: var(--abstand-1); }
 
   .blaettern button {
     display: grid;
     place-items: center;
-    min-width: 2.4rem;
-    height: 2.4rem;
+    min-width: 2.5rem;
+    height: 2.5rem;
     padding: 0 0.6rem;
-    font-size: 0.88rem;
-    font-weight: 600;
+    font-size: var(--text-2);
+    font-weight: 650;
     color: var(--ink);
-    background: var(--plane);
+    background: var(--surface);
     border: 1px solid var(--border-input);
     border-radius: var(--radius);
     cursor: pointer;
@@ -507,7 +386,7 @@ const WERKZEUGE = [
     display: flex;
     flex-wrap: wrap;
     align-items: flex-start;
-    gap: 1rem 3rem;
+    gap: var(--abstand-4) var(--abstand-7);
     min-height: 8rem;
   }
 
@@ -515,170 +394,44 @@ const WERKZEUGE = [
   .heute-inhalt :global(.heute-spalte.geboren) { flex: 0 1 22rem; }
 
   .heute-inhalt :global(h3) {
-    margin: 0 0 0.3rem;
-    font-size: 0.88rem;
-    font-weight: 500;
+    margin: 0 0 var(--abstand-2);
+    font-size: var(--text-2);
+    font-weight: 600;
     color: var(--muted);
   }
 
-  .heute-inhalt :global(.heute-liste) { margin: 0; padding: 0; list-style: none; }
+  .heute-inhalt :global(.heute-liste) { margin: 0; padding: 0; list-style: none; background: var(--surface); }
 
   .heute-inhalt :global(.heute-liste li) {
     display: grid;
-    grid-template-columns: 3.6rem minmax(0, 1fr) auto;
+    grid-template-columns: 3.25rem minmax(0, 1fr) auto;
     align-items: baseline;
-    gap: 0.9rem;
-    padding: 0.6rem 0;
-    border-top: 1px solid var(--border);
+    gap: var(--abstand-3);
+    padding: var(--abstand-2) var(--abstand-3);
+    border-bottom: 1px solid var(--border);
   }
 
   .heute-inhalt :global(.heute-liste li b) {
-    font-size: 1.4rem;
-    font-weight: 800;
-    letter-spacing: -0.03em;
+    font-size: var(--text-5);
+    font-stretch: var(--eng);
+    font-weight: 700;
     line-height: 1;
-    color: var(--ink);
-  }
-
-  .heute-inhalt :global(.was) { display: grid; min-width: 0; }
-  .heute-inhalt :global(.was > a) { font-weight: 650; color: var(--ink); text-decoration: none; }
-  .heute-inhalt :global(.was > a:hover) { text-decoration: underline; }
-  .heute-inhalt :global(.wer) { font-size: 0.86rem; color: var(--muted); }
-  .heute-inhalt :global(.wer a) { color: var(--ink-2); text-decoration: none; }
-  .heute-inhalt :global(.wer a:hover) { color: var(--ink); text-decoration: underline; }
-  .heute-inhalt :global(.wann) { font-size: 0.82rem; color: var(--muted); white-space: nowrap; }
-
-  .heute-inhalt :global(.heute-leer p) { margin: 0 0 0.75rem; color: var(--ink-2); }
-  .heute-leer { color: var(--muted); }
-
-  @media (max-width: 34rem) {
-    .heute-inhalt :global(.heute-liste li) { grid-template-columns: 3rem minmax(0, 1fr); }
-    .heute-inhalt :global(.wann) { display: none; }
-  }
-
-  /*
-   * Die Einstiege als Verzeichnis: links die Dinge mit ihrer Zahl, rechts die
-   * Werkzeuge. Zeilen statt Kacheln – neun gleiche Kästchen mit Symbol lasen
-   * sich wie eine Vorlage, und die Zahl sagt mehr über die Seite dahinter.
-   */
-  .einstiege {
-    display: grid;
-    grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
-    gap: 1.5rem 4rem;
-    align-items: start;
-  }
-
-  .verzeichnis {
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-
-  .verzeichnis li + li { border-top: 1px solid var(--border); }
-
-  .verzeichnis a {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: baseline;
-    column-gap: 1.25rem;
-    padding: 0.8rem 0;
-    color: inherit;
-    text-decoration: none;
-  }
-
-  .verzeichnis b {
-    font-size: 1.3rem;
-    font-weight: 750;
-    letter-spacing: -0.02em;
-    line-height: 1.15;
-    color: var(--ink);
-  }
-
-  .verzeichnis .text {
-    grid-column: 1;
-    font-size: 0.9rem;
-    color: var(--muted);
-    text-wrap: pretty;
-  }
-
-  .verzeichnis .zahl {
-    grid-column: 2;
-    grid-row: 1 / span 2;
-    align-self: center;
-    font-size: 1.9rem;
-    font-weight: 800;
     color: var(--ink);
     font-variant-numeric: tabular-nums;
   }
 
-  .verzeichnis a:hover b { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 0.15em; }
+  .heute-inhalt :global(.was) { display: grid; min-width: 0; }
+  .heute-inhalt :global(.was > a) { font-weight: 650; text-decoration: none; }
+  .heute-inhalt :global(.was > a:hover) { text-decoration: underline 2px; text-decoration-color: var(--lackierung-linie); }
+  .heute-inhalt :global(.wer) { font-size: var(--text-2); color: var(--muted); }
+  .heute-inhalt :global(.wer a) { color: var(--ink-2); text-decoration-thickness: 1px; text-decoration-color: var(--border-input); }
+  .heute-inhalt :global(.wann) { font-size: var(--text-2); color: var(--muted); white-space: nowrap; }
 
-  .werkzeugkasten h3 {
-    margin: 0 0 0.2rem;
-    font-size: 0.88rem;
-    font-weight: 500;
-    color: var(--muted);
-  }
-
-  .verzeichnis.klein b { font-size: 1.05rem; font-weight: 700; }
-  .verzeichnis.klein a { padding-block: 0.6rem; }
-
-  @media (max-width: 56rem) {
-    .einstiege { grid-template-columns: minmax(0, 1fr); }
-  }
-
-  /*
-   * Saisons: eine Zeile wie die Kennzahlen, Jahr groß, darunter die beiden
-   * Meister. Feste Spaltenzahlen – sechs Saisons in sieben Spuren ließen
-   * rechts eine Lücke, und am Telefon stand jede Saison allein in ihrer Zeile.
-   * Die Linien zieht jedes Feld links und oben selbst, wie bei `.kacheln`.
-   */
-  .saisons {
-    display: grid;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-    margin: 0;
-    padding: 0;
-    list-style: none;
-    border-bottom: 1px solid var(--border);
-    overflow: hidden;
-  }
-
-  .saisons li { box-shadow: -1px 0 0 var(--border), 0 -1px 0 var(--border); }
-  /* Oben eine Kante in der Farbe des Konstrukteursmeisters (teams.css) – sechs Jahre, auf einen Blick, wer dominierte. */
-  .saisons li[data-team] a { box-shadow: inset 0 4px 0 var(--team, transparent); padding-top: calc(0.4rem + 4px); }
-
-  .saisons a {
-    display: grid;
-    align-content: start;
-    gap: 0.1rem;
-    height: 100%;
-    padding: 0.4rem 1rem 1rem;
-    color: inherit;
-    text-decoration: none;
-  }
-
-  .saisons li:first-child a { padding-left: 0; }
-  .saisons a:hover { background: var(--surface-2); }
-
-  .saisons .jahr {
-    font-size: 2rem;
-    line-height: 1;
-    margin-bottom: 0.4rem;
-    color: var(--ink);
-  }
-
-  .saisons .wer { font-size: 0.92rem; font-weight: 650; color: var(--ink); }
-  .saisons .team { font-size: 0.84rem; color: var(--muted); }
-  .saisons .laeuft { font-size: 0.88rem; font-weight: 500; color: var(--muted); }
-
-  @media (max-width: 56rem) {
-    .saisons { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-    .saisons li:nth-child(3n + 1) a { padding-left: 0; }
-  }
+  .heute-inhalt :global(.heute-leer p) { margin: 0 0 var(--abstand-3); color: var(--ink-2); }
+  .heute-leer { color: var(--muted); }
 
   @media (max-width: 34rem) {
-    .saisons { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .saisons li:nth-child(n) a { padding-left: 1rem; }
-    .saisons li:nth-child(odd) a { padding-left: 0; }
+    .heute-inhalt :global(.heute-liste li) { grid-template-columns: 2.75rem minmax(0, 1fr); }
+    .heute-inhalt :global(.wann) { display: none; }
   }
 </style>

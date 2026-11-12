@@ -11,37 +11,35 @@ import { herkunft, pfad } from '../../../lib/db.js'
 
 const { version } = herkunft()
 const ENDPUNKTE = [
-  { weg: '/api/v1/drivers.json', text: 'Every driver with at least one race: id, name, code, nationality, starts, wins, first and last season.' },
-  { weg: '/api/v1/drivers/lewis-hamilton.json', text: 'One driver: totals for every season (entries, starts, wins, podiums, poles, points, sprints, possible points, grid and finishing sums), titles, streaks and team-mate records.' },
-  { weg: '/api/v1/constructors.json', text: 'Every constructor with at least one race.' },
-  { weg: '/api/v1/constructors/ferrari.json', text: 'One constructor: races, wins, titles, every season, every driver and the lineage of its names.' },
-  { weg: '/api/v1/seasons.json', text: 'Every season with its number of races and both champions.' },
-  { weg: '/api/v1/seasons/1988.json', text: 'One season: both standings, calendar, the result of every driver in every race, entries with chassis, engine and tyres, and the points system.' },
-  { weg: '/api/v1/races.json', text: 'Every race since 1950, including those still to come.' },
-  { weg: '/api/v1/races/monaco-grand-prix-1988.json', text: 'One race: result, qualifying, starting grid, sprint, every pit stop, fastest laps, Driver of the Day and the standings afterwards.' },
-  { weg: '/api/v1/circuits.json', text: 'Every circuit with its coordinates and races.' },
-  { weg: '/api/v1/circuits/monaco.json', text: 'One circuit: layouts with their lap records, the most successful drivers and teams, every race.' },
-  { weg: '/api/v1/engines.json', text: 'Every engine manufacturer with races, wins, podiums and titles.' },
+  { weg: '/api/v1/drivers.json', text: 'All drivers with at least one race: id, name, code, nationality, starts, wins, first and last season.' },
+  { weg: '/api/v1/drivers/lewis-hamilton.json', text: 'One driver: totals for each season (entries, starts, wins, podiums, poles, points, sprints, possible points, grid and finishing sums), titles, streaks and team-mate records.' },
+  { weg: '/api/v1/constructors.json', text: 'All constructors with at least one race.' },
+  { weg: '/api/v1/constructors/ferrari.json', text: 'One constructor: races, wins, titles, all seasons, all drivers and the lineage of its names.' },
+  { weg: '/api/v1/seasons.json', text: 'All seasons with their number of races and both champions.' },
+  { weg: '/api/v1/seasons/1988.json', text: 'One season: both standings, calendar, the result of each driver in each race, entries with chassis, engine and tyres, and the points system.' },
+  { weg: '/api/v1/races.json', text: 'All races since 1950, including those still to come.' },
+  { weg: '/api/v1/races/monaco-grand-prix-1988.json', text: 'One race: result, qualifying, starting grid, sprint, all pit stops, fastest laps, Driver of the Day and the standings afterwards.' },
+  { weg: '/api/v1/circuits.json', text: 'All circuits with their coordinates and races.' },
+  { weg: '/api/v1/circuits/monaco.json', text: 'One circuit: layouts with their lap records, the most successful drivers and teams, all races.' },
+  { weg: '/api/v1/engines.json', text: 'All engine manufacturers with races, wins, podiums and titles.' },
   { weg: '/api/v1/records.json', text: 'The record lists: career totals, streaks, age records, winning margins, team records.' },
-  { weg: '/api/v1/coverage.json', text: 'From when each figure is recorded – so a zero can be told apart from a gap.' },
+  { weg: '/api/v1/coverage.json', text: 'From when each figure is recorded, so a zero can be told apart from a gap.' },
   { weg: '/data/version.json', text: 'Which F1DB release the data comes from, and the most recent race with a result.' },
   { weg: '/feed.xml', text: 'An Atom feed of new race results and record changes.' },
 ]
 ---
 
 <Seite
-  titel="JSON API – Formula 1 statistics as data"
-  beschreibung="Static JSON files with every driver's season-by-season record, built from F1DB with each release."
+  titel="JSON API: Formula 1 statistics as data"
+  beschreibung="Static JSON files with each driver's season-by-season record, built from F1DB with each release."
   brotkrumen={[]}
 >
   <header class="seitenkopf">
     <div>
-      <p class="oberzeile">Data</p>
       <h1>JSON API</h1>
       <p class="lead">
-        The numbers on this site are also available as static JSON files, rebuilt with every
-        F1DB release (currently {version}). No key, no rate limit – they are plain files.
-        Data licensed CC BY 4.0 by F1DB.
+        The numbers on this site as static JSON files, rebuilt with each F1DB release
+        (currently {version}). No key and no rate limit. Data licensed CC BY 4.0 by F1DB.
       </p>
     </div>
   </header>

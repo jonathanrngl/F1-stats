@@ -3,6 +3,8 @@ import { ein, km, plakette, prozent as proz, raenge, zahl, zeit } from '../../li
 import Seite from '../../layouts/Seite.astro'
 import Sprung from '../../components/Sprung.astro'
 import Lagekarte from '../../components/Lagekarte.astro'
+import Epochenband from '../../components/Epochenband.astro'
+import { zeitraumImBand } from '../../components/epochen.js'
 import { eine, streckenListe, pfad, db } from '../../lib/db.js'
 import { land } from '../../lib/laender.js'
 import {
@@ -32,9 +34,6 @@ const rekorde = new Map(circuitLapRecords(db(), id).map((r) => [r.layout, r]))
 const heutigesLayout = layouts.find((l) => l.aktuell === 1) ?? layouts.at(-1)
 const rekordHeute = heutigesLayout ? rekorde.get(heutigesLayout.id) : null
 
-const ART = { RACE: 'Permanent circuit', STREET: 'Street circuit', ROAD: 'Road course' }
-const RICHTUNG = { CLOCKWISE: 'Clockwise', ANTI_CLOCKWISE: 'Anti-clockwise' }
-
 const SEITE = 'https://jonathanrngl.github.io'
 const ort = {
   '@context': 'https://schema.org',
@@ -52,6 +51,41 @@ const hierListe = strecken.find((z) => z.id === id)
 
 const zeitraum = rennen.length ? `${rennen.at(-1).year}–${rennen[0].year}` : '–'
 
+/*
+ * Das Epochenband: die Jahre mit einem Rennen auf dieser Strecke, auch ein
+ * angesetztes der laufenden Saison (docs/DESIGN.md 8.3).
+ */
+const jahreHier = [...new Set(rennen.map((r) => r.year))].sort((a, b) => a - b)
+
+/*
+ * Den Zeitraum zeigt das Epochenband. In Worten steht er nur, wenn das Band
+ * erstes oder letztes Jahr nicht beschriftet – es lässt eine Zahl weg, die
+ * näher als acht Saisons an einer anderen steht (components/epochen.js).
+ */
+const bandNenntZeitraum = zeitraumImBand(jahreHier)
+
+/*
+ * Der Kopfsatz: was keine Zahl sagt, in ganzen Sätzen statt einer Zeile
+ * Eckdaten mit Trennlinien (docs/DESIGN.md 8.2). Art und Ort, Fahrtrichtung,
+ * Länge und Kurven, die Zahl der Layouts, frühere Namen.
+ */
+const ART_SATZ = { RACE: 'A permanent circuit', STREET: 'A street circuit', ROAD: 'A road course' }
+const RICHTUNG_SATZ = { CLOCKWISE: 'run clockwise', ANTI_CLOCKWISE: 'run anti-clockwise' }
+const ortText = [strecke.place_name, heimat.name].filter(Boolean).join(', ')
+const masse = [strecke.length_km > 0 && km(strecke.length_km), strecke.turns > 0 && `${strecke.turns} corners`].filter(Boolean).join(', ')
+const kopfsatz = [
+  ortText &&
+    `${ART_SATZ[strecke.type] ? `${ART_SATZ[strecke.type]} in` : 'In'} ${ortText}${RICHTUNG_SATZ[strecke.direction] ? `, ${RICHTUNG_SATZ[strecke.direction]}` : ''}.`,
+  !bandNenntZeitraum && jahreHier.length > 0 &&
+    (jahreHier.length === 1
+      ? `Raced only in ${jahreHier[0]}.`
+      : `First race in ${jahreHier[0]}, last in ${jahreHier.at(-1)}.`),
+  masse && (layouts.length > 1 ? `${masse} on the current layout, one of ${layouts.length}.` : `${masse}.`),
+  strecke.previous_names && `Also known as ${strecke.previous_names.split(/[;,]\s*/).join(', ')}.`,
+]
+  .filter(Boolean)
+  .join(' ')
+
 const ziele = [
   { id: 'bestenliste', label: 'Most successful' },
   spezialisten.length > 0 && { id: 'spezialisten', label: 'Specialists' },
@@ -61,41 +95,45 @@ const ziele = [
 ---
 
 <Seite
-  titel={`${strecke.name} – Formula 1 circuit statistics`}
+  titel={`${strecke.name}: Formula 1 circuit statistics`}
   beschreibung={`${rennen.length} Formula 1 races in ${strecke.place_name} (${zeitraum}): winners, pole-sitters, specialists, lap records and every result.`}
   strukturiert={[ort]}
   brotkrumen={[{ name: 'Circuits', pfad: '/circuits/' }]}
 >
+  {/*
+    * Der Kopf: Brotkrume, der Name, ein Satz mit dem, was keine Zahl sagt,
+    * das Epochenband mit den Jahren, in denen hier gefahren wurde. Rechts das
+    * Länderkürzel und darunter die Lage auf der Karte. Keine Lackierung – eine
+    * Strecke gehört keinem Team (docs/DESIGN.md, Prinzip 1).
+    */}
   <header class="seitenkopf">
     <span class="wappen" title={heimat.name}>{heimat.code}</span>
     <div>
       <p class="oberzeile">
         <a href={pfad.seite('/circuits/')}>Circuits</a>
-        <span class="trenner">/</span>
-        <span class="still">{heimat.name}</span>
       </p>
-      <h1>{strecke.name}</h1>
-      <ul class="eckdaten">
-        {strecke.place_name && strecke.place_name !== strecke.name && <li>{strecke.place_name}</li>}
-        <li>{zeitraum}</li>
-        {strecke.length_km > 0 && <li>{km(strecke.length_km)}</li>}
-        {strecke.turns > 0 && <li>{strecke.turns} corners</li>}
-        {ART[strecke.type] && <li>{ART[strecke.type]}</li>}
-        {RICHTUNG[strecke.direction] && <li>{RICHTUNG[strecke.direction]}</li>}
-      </ul>
-      {strecke.previous_names && <p class="frueher">Also known as: {strecke.previous_names.split(/[;,]\s*/).join(', ')}</p>}
+      <div class="titelblock">
+        <h1>{strecke.name}</h1>
+        {kopfsatz && <p class="kopfsatz">{kopfsatz}</p>}
+      </div>
+      <Epochenband jahre={jahreHier} wort="Races here" />
     </div>
     {hierListe && <Lagekarte strecke={hierListe} alle={strecken} aktuellAb={aktuellAb} />}
   </header>
 
+  {/*
+    * Die Rennen tragen die Seite und stehen zuerst. Der Rundenrekord ist die
+    * schnellste Rennrunde, die je auf diesem Layout gefahren wurde – die
+    * absolute Bestmarke der Strecke, darum in Lila.
+    */}
   <ul class="kacheln">
-    <li><span>Races</span><b>{rennen.length}</b></li>
+    <li class="stark"><span>Races</span><b>{rennen.length}</b></li>
     <li><span>Not classified</span><b>{proz(zahlen.ausfallquote)}</b><i>of all starts</i></li>
     <li><span>Pole to win</span><b>{proz(zahlen.poleZuSieg)}</b><i>pole-sitter won</i></li>
     <li><span>Winner's grid slot</span><b>{ein(zahlen.mittlererSiegerStart.value)}</b><i>on average</i></li>
     {rekordHeute && (
       <li>
-        <span>Lap record</span><b>{zeit(rekordHeute.zeit)}</b>
+        <span>Lap record</span><b class="rekord">{zeit(rekordHeute.zeit)}</b>
         <i><a href={pfad.fahrer(rekordHeute.fahrerId)}>{rekordHeute.fahrer}</a>, <a href={pfad.rennen(rekordHeute.raceId)}>{rekordHeute.jahr}</a>{layouts.length > 1 ? ', current layout' : ''}</i>
       </li>
     )}
@@ -103,11 +141,9 @@ const ziele = [
 
   {zahlen.groessteAufholjagd && (
     <p class="hinweis akzent">
-      <span>
-        Furthest charge to victory here:{' '}
-        <a href={pfad.fahrer(zahlen.groessteAufholjagd.id)}>{zahlen.groessteAufholjagd.name}</a>
-        {' '}won in {zahlen.groessteAufholjagd.year} from P{zahlen.groessteAufholjagd.start} on the grid.
-      </span>
+      <b>Furthest charge to victory here:</b>{' '}
+      <a href={pfad.fahrer(zahlen.groessteAufholjagd.id)}>{zahlen.groessteAufholjagd.name}</a>
+      {' '}won in {zahlen.groessteAufholjagd.year} from P{zahlen.groessteAufholjagd.start} on the grid.
     </p>
   )}
 
@@ -154,7 +190,7 @@ const ziele = [
           <h2>Circuit specialists</h2>
           <p>
             A driver's average finish here, set against the same driver's average everywhere
-            else – so a driver who wins everywhere is no specialist here. At least three starts
+            else, so a driver who wins everywhere is no specialist here. At least three starts
             here and three elsewhere.
           </p>
         </div>
@@ -190,7 +226,7 @@ const ziele = [
       <div class="abschnitt-kopf">
         <div>
           <h2>Layouts</h2>
-          <p>The circuit has been rebuilt. Comparing lap times across a change of layout is not valid – each layout has its own lap record.</p>
+          <p>The circuit has been rebuilt. Comparing lap times across a change of layout is not valid; each layout has its own lap record.</p>
         </div>
       </div>
       <div class="tabelle schmal">
@@ -206,9 +242,10 @@ const ziele = [
                 <td class="num">{l.laenge ? km(l.laenge) : '–'}</td>
                 <td class="num">{l.kurven ?? '–'}</td>
                 <td class="num">{l.rennen}</td>
-                <td class="leise">
+                {/* Die Zeit, darunter leise, wer sie wann fuhr – zwei Angaben, zwei Zeilen. */}
+                <td class="rekordzelle">
                   {rekorde.get(l.id)
-                    ? <>{zeit(rekorde.get(l.id).zeit)} · <a class="leise" href={pfad.fahrer(rekorde.get(l.id).fahrerId)}>{rekorde.get(l.id).fahrer}</a>, {rekorde.get(l.id).jahr}</>
+                    ? <>{zeit(rekorde.get(l.id).zeit)}<span class="neben"><a href={pfad.fahrer(rekorde.get(l.id).fahrerId)}>{rekorde.get(l.id).fahrer}</a>, {rekorde.get(l.id).jahr}</span></>
                     : '–'}
                 </td>
               </tr>
@@ -241,6 +278,19 @@ const ziele = [
 </Seite>
 
 <style>
+  /*
+   * Rechts im Kopf das Länderkürzel und darunter die Lage auf der Karte; der
+   * Titel mit Kopfsatz und Epochenband steht links über beide Zeilen. Am
+   * Telefon steht die Karte unter dem Kopf, über die volle Breite.
+   */
+  .seitenkopf > div { grid-row: 1 / span 2; }
+  .seitenkopf > .wappen { justify-self: end; }
+  .seitenkopf > :global(.lage) { grid-column: 2; grid-row: 2; width: 19rem; margin-top: var(--abstand-4); }
+
+  @media (max-width: 48rem) {
+    .seitenkopf > :global(.lage) { grid-column: 1 / -1; grid-row: 3; width: auto; margin-top: 0; }
+  }
+
   .schmal { max-width: 52rem; }
-  .frueher { margin: 0.5rem 0 0; font-size: 0.88rem; color: var(--muted); }
+  .rekordzelle { font-variant-numeric: tabular-nums lining-nums; }
 </style>

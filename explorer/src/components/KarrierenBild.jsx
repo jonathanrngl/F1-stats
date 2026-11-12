@@ -13,8 +13,8 @@ import { useEffect, useRef, useState } from 'react'
  * gerade – wie die Saison sich verteilte, steht nicht in diesen Daten. Die
  * Bildunterschrift sagt das.
  *
- * Farben wie in den Köpfen darüber: erster Fahrer rot, zweiter blau (das
- * geprüfte Paar der Seite). Namen stehen am Ende jeder Linie, die Farbe trägt
+ * Farben wie in den Köpfen darüber: erster Fahrer --s1, zweiter --s2 (das
+ * geprüfte erste Paar der Serienpalette, gesetzt an .vgl). Namen stehen am Ende jeder Linie, die Farbe trägt
  * nie allein. Keine style-Attribute: Die Inhaltsrichtlinie blockiert sie.
  */
 

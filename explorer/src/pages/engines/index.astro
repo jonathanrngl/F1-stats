@@ -23,7 +23,6 @@ const mitSieg = motoren.filter((m) => m.siege > 0).length
 >
   <header class="seitenkopf">
     <div>
-      <p class="oberzeile">Engines</p>
       <h1>Engine manufacturers</h1>
       <p class="lead">
         {motoren.length} manufacturers have entered a World Championship race since 1950;
@@ -56,10 +55,10 @@ const mitSieg = motoren.filter((m) => m.siege > 0).length
       <tbody>
         {motoren.map((m) => (
           <tr data-name={m.name}>
-            <td>
-              <span class="kuerzel" title={m.landName ?? ''}>{m.land ?? '—'}</span>
+            <th scope="row">
+              <span class="kuerzel" title={m.landName ?? ''}>{m.land ?? '–'}</span>
               <a class="zeile" href={pfad.seite(`/engines/${m.id}/`)}>{m.name}</a>
-            </td>
+            </th>
             <td class="leise">{m.von === m.bis ? m.von : `${m.von}–${m.bis}`}</td>
             <td class="num">{zahl(m.rennen)}</td>
             <td class="num">{m.siege || ''}</td>

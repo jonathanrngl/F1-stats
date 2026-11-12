@@ -15,17 +15,13 @@ const neuestesJahr = Math.max(...fahrer.map((f) => f.bis ?? 0))
 ---
 
 <Seite
-  titel="Every Formula 1 driver since 1950"
+  titel="All Formula 1 drivers since 1950"
   beschreibung={`${zahl(fahrer.length)} drivers with starts, wins, podiums and titles.`}
 >
   <header class="seitenkopf">
     <div>
-      <p class="oberzeile">Drivers</p>
-      <h1>Every driver since 1950</h1>
-      <p class="lead">
-        {zahl(fahrer.length)} drivers who were entered at least once. Type a name, or pick a
-        quick filter; click a column heading to sort.
-      </p>
+      <h1>All drivers since 1950</h1>
+      <p class="lead">{zahl(fahrer.length)} drivers who were entered at least once.</p>
     </div>
   </header>
 
@@ -60,9 +56,9 @@ const neuestesJahr = Math.max(...fahrer.map((f) => f.bis ?? 0))
         {nachSiegen.map((f) => (
           <tr data-name={f.nachname ?? f.name}>
             <td>
-              <span class="kuerzel" title={f.landName ?? ''}>{f.land ?? '—'}</span>
+              <span class="kuerzel" title={f.landName ?? ''}>{f.land ?? '–'}</span>
               <a class="zeile" href={pfad.fahrer(f.id)}>{f.name}</a>
-              {f.inFormel1 === 0 && <span class="etikett" title="Indianapolis 500 only – never drove a Formula 1 race">Indy</span>}
+              {f.inFormel1 === 0 && <span class="etikett" title="Indianapolis 500 only, never drove a Formula 1 race">Indy</span>}
             </td>
             <td class="leise">{f.von === f.bis ? f.von : `${f.von}–${f.bis}`}</td>
             <td class="num">{f.starts ?? 0}</td>
@@ -78,7 +74,7 @@ const neuestesJahr = Math.max(...fahrer.map((f) => f.bis ?? 0))
   <p class="fussnote">
     <b>Indy:</b> {nurIndy} of these drivers never drove a Formula 1 race. The Indianapolis 500
     counted towards the drivers' championship from 1950 to 1960 but was run to different
-    regulations with a different field – their points counted, so they belong in the
+    regulations with a different field. Their points counted, so they belong in the
     standings, and they are marked.
   </p>
 

@@ -28,14 +28,15 @@ const WEITER = [
 ---
 
 <Seite titel="Page not found" beschreibung="There is no page at this address." ohneIndex>
-  <header class="seitenkopf-schlicht">
-    <p class="oberzeile">Error 404</p>
-    <h1>Off the track</h1>
-    <p class="lead">
-      There is no page at <code data-pfad>this address</code>. It may have moved, or the link
-      has a typo in it.
-    </p>
-    <p class="lead" data-weiterleitung hidden>This address has moved – taking you to its new place …</p>
+  <header class="seitenkopf">
+    <div>
+      <h1>Off the track</h1>
+      <p class="lead">
+        There is no page at <code data-pfad>this address</code>. It may have moved, or the link
+        has a typo in it.
+      </p>
+      <p class="lead" data-weiterleitung hidden>This address has moved. Taking you to its new place …</p>
+    </div>
   </header>
 
   <section class="abschnitt" data-vorschlaege hidden>
@@ -43,11 +44,12 @@ const WEITER = [
     <ul class="vorschlaege" data-liste></ul>
   </section>
 
+  {/* Eine schlichte Liste von Verweisen – sechs gleiche Karten wiederholten nur die Navigation. */}
   <section class="abschnitt">
     <div class="abschnitt-kopf"><div><h2>Or start from here</h2></div></div>
     <ul class="weiter">
       {WEITER.map((w) => (
-        <li><a class="karte" href={pfad.seite(w.weg)}>{w.titel}</a></li>
+        <li><a href={pfad.seite(w.weg)}>{w.titel}</a></li>
       ))}
     </ul>
   </section>
@@ -86,17 +88,16 @@ const WEITER = [
         if (!gefunden.length) return
         liste.replaceChildren(
           ...gefunden.map((e) => {
+            /* Ein Verweis je Treffer, die Art leise dahinter: „Lewis Hamilton, Driver“. */
             const li = document.createElement('li')
             const a = Object.assign(document.createElement('a'), {
-              className: 'karte',
               href: `${BASIS}/${ARTEN[e.a as keyof typeof ARTEN].pfad}/${e.i}/`,
+              textContent: e.n,
             })
-            const name = Object.assign(document.createElement('b'), { textContent: e.n })
             const art = Object.assign(document.createElement('span'), {
-              textContent: ARTEN[e.a as keyof typeof ARTEN].label,
+              textContent: `, ${ARTEN[e.a as keyof typeof ARTEN].label}`,
             })
-            a.append(name, art)
-            li.append(a)
+            li.append(a, art)
             return li
           }),
         )
@@ -108,28 +109,28 @@ const WEITER = [
 </script>
 
 <style>
-  .seitenkopf-schlicht { margin-bottom: 2.5rem; }
   [data-vorschlaege][hidden] { display: none; }
-  .seitenkopf-schlicht code {
-    padding: 0.1em 0.35em;
-    font-size: 0.9em;
+  .seitenkopf code {
+    padding: 0 var(--abstand-1);
+    font-size: var(--text-3);
     word-break: break-all;
     background: var(--surface-2);
     border-radius: var(--radius-s);
   }
 
+  /* Zwei schlichte Listen von Verweisen, einer je Zeile. */
   .vorschlaege,
   .weiter {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(9.5rem, 100%), 1fr));
-    gap: 0.75rem;
+    gap: var(--abstand-2);
     margin: 0;
     padding: 0;
     list-style: none;
+    font-size: var(--text-4);
   }
 
+  .weiter a,
+  .vorschlaege :global(a) { font-weight: 600; }
   /* :global – die Vorschläge schreibt erst das Skript, ohne Astros Kennung für diese Seite. */
-  .vorschlaege :global(.karte),
-  .weiter .karte { display: grid; gap: 0.15rem; height: 100%; font-weight: 650; color: var(--ink); }
-  .vorschlaege :global(span) { font-size: 0.8rem; font-weight: 500; color: var(--muted); }
+  .vorschlaege :global(span) { color: var(--muted); }
 </style>

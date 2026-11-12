@@ -133,13 +133,13 @@
           a.tabIndex = -1
           const kuerzel = document.createElement('span')
           kuerzel.className = 'kuerzel'
-          kuerzel.textContent = e.l ?? '—'
+          kuerzel.textContent = e.l ?? '–'
           kuerzel.setAttribute('aria-hidden', 'true')
           const name = document.createElement('b')
           name.textContent = e.n
           const dazu = document.createElement('i')
           const zeit = e.v === e.b ? String(e.v) : `${e.v}–${e.b}`
-          dazu.textContent = e.a === 'r' || e.a === 'j' ? ARTEN[e.a].label : `${ARTEN[e.a].label} · ${zeit}`
+          dazu.textContent = e.a === 'r' || e.a === 'j' ? ARTEN[e.a].label : `${ARTEN[e.a].label}, ${zeit}`
           a.append(kuerzel, name, dazu)
           a.addEventListener('pointerenter', () => setzeAktiv(i))
           return a

@@ -1,102 +1,122 @@
 /*
- * Theme: eine Ergebnisliste. Weißes Papier, Tinte, Haarlinien – und Rot nur
- * dort, wo es etwas sagt: Sieg, Titel, Führung, Rekord. Vorher stand Rot an
- * jeder Überschrift, jeder Oberzeile, jeder Kartenkante, und weil es überall
- * war, sagte es nirgends etwas.
+ * Theme „Zeitnahme“ – beschrieben und begründet in docs/DESIGN.md.
  *
- * Nur Schwarz und Weiß war das andere Extrem: Man musste jede Zeile lesen.
- * Farbe steht deshalb dort, wo sie eine Bedeutung trägt, die man schon kennt –
- * die Teamfarben (teams.css), Gold, Silber und Bronze fürs Podium, Grün für
- * Punkte, Rot für Ausfälle, Lila für die schnellste Runde.
+ * Die Seite liest sich wie ein Zeitnahme-Monitor: Beton als Grund, weiße
+ * Flächen für die Daten, Tinte für Text und Zahlen. Farbe kommt aus den Daten
+ * selbst – die Lackierung des Teams, um das es auf einer Seite geht, Gold,
+ * Silber und Bronze fürs Podium, Lila für die absolute Bestmarke, Grün für
+ * „besser als der eigene Vergleichswert“, Flaggen für Hinweise.
  *
- * Alle Farben stehen als Token hier – die Seiten und die Graphen greifen nur
- * über die Rollen darauf zu. Jede Rolle ist einmal notiert, hell und dunkel in
- * einem `light-dark()`. Welcher der beiden Werte gilt, entscheidet
- * `color-scheme`: ohne Zutun das System, mit Wahl das `data-theme` am
- * Wurzelelement. Damit braucht der Umschalter keinen zweiten Satz Tokens, den
- * man beim Ändern vergessen könnte.
+ * Was vorher versucht wurde und nicht trug – und deshalb nicht zurückkommt:
  *
- * Darunter stehen die Bausteine, aus denen jede Seite besteht: Seitenkopf,
- * Kennzahlkacheln, Abschnitte, Tabellen, Ranglisten, Hinweise. Vorher hatte
- * jede Seite ihre eigene Kopie davon, mit leicht verschiedenen Abständen – so
- * sah keine Seite aus wie die andere, ohne dass es je entschieden worden war.
+ *   Rot an jeder Überschrift, Oberzeile und Kartenkante. Weil es überall
+ *   war, sagte es nirgends etwas.
+ *   Nur Schwarz und Weiß. Man musste jede Zeile lesen, um zu sehen, wer für
+ *   wen fuhr.
+ *   Links nur in Tinte mit einer blassen Unterstreichung. Nichts hob sich ab,
+ *   man musste suchen, was anklickbar ist. Darum ist die Unterstreichung jetzt
+ *   2 px kräftig, in der Lackierung der Seite oder in Tinte, und nie blass.
+ *   Drei schräge rote Striche vor dem Namen, wie im Logo der Formel 1. Eine
+ *   Seite, die nicht offiziell ist, soll nicht so aussehen.
+ *   Ein schwarzer Kopfbalken mit roter Kante. Er war das Lauteste auf jeder
+ *   Seite und sagte nur „Website“.
+ *   Blau für Verweise, Rot für Ergebnisse, getönte Leisten vor jedem
+ *   Abschnitt, Kacheln für jede Zahl. Das ergab eine Ergebnisliste, die zu
+ *   keinem Sport gehörte, und alles hatte dasselbe Gewicht.
+ *
+ * Alle Farben stehen als Rollen hier, jede einmal, hell und dunkel in einem
+ * `light-dark()`. Welcher Wert gilt, entscheidet `color-scheme`: ohne Zutun das
+ * System, mit Wahl das `data-theme` am Wurzelelement – und auf der
+ * Monitorfläche (`.monitor`) immer dunkel. Seiten und Komponenten greifen nur
+ * über die Rollen zu. Die Kontraste rechnet `npm run test:kontraste` aus
+ * genau dieser Datei.
  */
 :root {
   color-scheme: light dark;
 
-  /* Seite und Fläche sind hell dasselbe Weiß: Der Inhalt steht auf dem Papier,
-     nicht in Kästchen darauf. Dunkel ein kühles Asphaltgrau, kein Schwarz. */
-  --plane: light-dark(#ffffff, #15181d); /* Seitenhintergrund */
-  --surface: light-dark(#ffffff, #15181d); /* Tabelle, Diagrammfläche */
-  --surface-2: light-dark(#f3f4f6, #1c2027); /* Hover, Tabellenkopf, Kasten */
-  --surface-3: light-dark(#e8eaed, #262b33); /* Balkenrinne, Chips */
-  --ink: light-dark(#20242c, #eceef1); /* 15,4:1 auf Weiß */
-  --ink-2: light-dark(#3d434d, #c5cad2);
-  --muted: light-dark(#646b76, #959ca7); /* 5,3:1 auf Weiß, 5,9:1 auf #15181d */
-  --border: light-dark(#e3e5e8, #2a2f37);
-  --border-strong: light-dark(#c9cdd3, #3b414b);
-  /* Der Rand eines Bedienelements muss sich abheben, nicht nur andeuten:
-     mindestens 3:1 zur Fläche (WCAG 1.4.11). --border-strong erreicht 1,5:1
-     und bleibt für Trennlinien. */
-  --border-input: light-dark(#868d98, #6f7682);
-  --grid: light-dark(#eceef0, #232830); /* Gitternetz, haarfein */
-  --axis: light-dark(#c9cdd3, #3b414b);
+  /* ------------------------------------------------------- Grund und Fläche */
 
-  /* Signalrot: 5,9:1 auf Weiß, 6,2:1 auf #15181d. Nur für Daten, nie für Schmuck. */
-  --accent: light-dark(#c8102e, #ff6b6b);
-  --accent-strong: light-dark(#a00d25, #ff8e8e);
-  --accent-wash: light-dark(rgba(200, 16, 46, 0.06), rgba(255, 107, 107, 0.12));
-  --accent-ink: light-dark(#ffffff, #15181d);
+  /* Der Grund ist kühler Beton, dunkel Asphalt. Daten – Tabellen, Türme,
+     Hinweise – stehen auf einer eigenen Fläche, dem Startplatz. */
+  --plane: light-dark(#eef1f2, #1c2026);
+  --surface: light-dark(#ffffff, #232830);
+  --surface-2: light-dark(#e3e7ea, #2b313a); /* Hover auf dem Grund, gedrückt */
+  --surface-3: light-dark(#d7dce0, #323944); /* Rinnen in Balken */
+  --zebra: light-dark(#f5f7f8, #272c34);
+  --ink: light-dark(#16191e, #eceef0);
+  --ink-2: light-dark(#363c45, #c5cad1);
+  --muted: light-dark(#545b65, #9ba2ac);
+  --border: light-dark(#d3d9dd, #363c46);
+  --border-strong: light-dark(#b6bec4, #4a525d);
+  /* Der Rand eines Bedienelements hebt sich ab, nicht nur angedeutet: ≥ 3:1
+     auf Grund und Fläche (WCAG 1.4.11). */
+  --border-input: light-dark(#76808a, #7d8692);
+  --grid: light-dark(#e6eaed, #2e343d);
+  --axis: light-dark(#b6bec4, #4a525d);
 
   /*
-   * Zwei Farben mit je einer Aufgabe. Rot heißt „Ergebnis“: Sieg, Titel,
-   * Rekord. Blau heißt „anklickbar“: Verweise, Knöpfe, der gewählte Reiter.
-   * Ganz ohne Blau – nur Tinte und Unterstrich – sah die Seite ruhig aus,
-   * aber nichts hob sich ab, und man musste suchen, was man anklicken kann.
-   * 6,4:1 auf Weiß, 5,6:1 auf --band; dunkel 7,9:1.
+   * Die Lackierung der Seite. Ohne Gegenstand ist sie Tinte; eine Seite mit
+   * Fahrer, Team oder Saison setzt `data-lackierung` am <body>, und teams.css
+   * füllt beide Rollen – `--lackierung` für Streifen und Flächen,
+   * `--lackierung-linie` für Linien, die 3:1 brauchen.
    */
-  --link: light-dark(#1757b8, #7cb0ff);
-  --link-strong: light-dark(#0f4796, #a5c8ff);
-  --link-line: light-dark(rgba(23, 87, 184, 0.35), rgba(124, 176, 255, 0.4));
-  --link-wash: light-dark(#e8f0fb, #182638);
+  --lackierung: var(--ink);
+  --lackierung-linie: var(--ink);
 
-  /*
-   * Getönte Flächen gliedern die Seite: der Kopf jeder Seite mit seinen
-   * Kennzahlen, die Leiste über jedem Abschnitt, die Tabellenköpfe. So sieht
-   * man, wo ein Teil endet und der nächste beginnt, ohne Linien zu zählen.
-   */
-  --band: light-dark(#eef2f7, #1b2129);
-  --zebra: light-dark(#f7f9fb, #181c22);
+  /* ------------------------------------------------------------- Bedeutung */
 
-  /* Gegenrichtung zum Rot: Plätze gewonnen, Auto hielt durch, Titel noch drin. */
-  --good: light-dark(#0f7a52, #2fbf88);
-  /* Weder gut noch schlecht, aber bemerkenswert: eine Platzierung, die sich
-     unter einem anderen Punktesystem verschiebt. */
-  --warn: light-dark(#8f5400, #e0a54a); /* 5,6:1 auch auf --warn-wash; #a56100 hatte dort 4,4 */
+  /* Gegenrichtung zu Rot: besser als die eigene Bezugsgröße – Duell gewonnen,
+     Plätze gutgemacht, Karrierebestwert. Wie ein grüner Sektor. */
+  --good: light-dark(#0b7048, #3cc994);
   --good-wash: light-dark(rgba(15, 122, 82, 0.1), rgba(47, 191, 136, 0.16));
+  /* Bemerkenswert, aber weder gut noch schlecht: eine Platzierung, die sich
+     unter einem anderen Punktesystem verschiebt. */
+  --warn: light-dark(#8a5000, #e3a94f);
   --warn-wash: light-dark(rgba(165, 97, 0, 0.08), rgba(224, 165, 74, 0.12));
+  /* Ausfall, Fehler. Der Status, nicht das Ergebnis. */
+  --danger-fg: light-dark(#b00500, #ff8b83);
+  --danger-bg: light-dark(#fdf0ef, #301615);
+  --danger-border: light-dark(#f2c3c0, #6a2925);
 
-  --danger-fg: light-dark(#b80500, #ff8b83);
-  --danger-bg: light-dark(#fef2f2, #24100f);
-  --danger-border: light-dark(#f6c9c7, #5b2320);
-
-  /* Podestplätze. Dunkle Schrift auf allen dreien, in beiden Modi – die Töne
-     sind hell genug, dass sie auf dunklem Grund nicht umgedreht werden müssen. */
+  /* Podestplätze. Dunkle Schrift auf allen dreien, in beiden Modi. */
   --gold: #e5b83a;
   --silber: #c6c9ce;
   --bronze: #d49563;
   --podest-ink: #1a1a1a;
   /* Die Zeile eines Meisters: golden unterlegt, deckend – die Namensspalte
      klebt beim Scrollen und braucht einen Grund, der nichts durchscheinen lässt. */
-  --gold-wash: light-dark(#fdf5dc, #2b2513);
+  --gold-wash: light-dark(#fbf3d9, #322b17);
 
   /* Lila heißt in der Formel 1 „schnellste Zeit“ – so steht es auf jedem
-     Zeitenmonitor, und so steht es hier an der schnellsten Runde. */
+     Zeitenmonitor. Hier: die absolute Bestmarke, Rekord und schnellste Runde. */
   --lila: light-dark(#7b2fbe, #c49bff);
 
-  /* Die Kopfleiste gehört zum Papier: gleicher Grund, eine Linie darunter.
-     Ein schwarzer Balken mit roter Kante war das Lauteste auf jeder Seite,
-     und er sagte nur „Website“. */
+  /* Reifenmischungen, wie die Hersteller sie färben – in beiden Modi gleich,
+     wie Gold. Die Schrift darauf ist je Mischung die, die 4,5:1 erreicht:
+     weiß auf Soft und Wet, dunkel auf Medium, Hard und Intermediate (weiß
+     hatte dort 2,7:1). */
+  --reifen-soft: #e8002d;
+  --reifen-medium: #ffd12e;
+  --reifen-hard: #f4f4f2;
+  --reifen-inter: #43b02a;
+  --reifen-wet: #0067ad;
+  --reifen-schrift-hell: #ffffff;
+  --reifen-schrift-dunkel: #15181d;
+
+  /* Flaggen. Ein Hinweis beginnt immer mit einem Wort, das seine Art sagt;
+     der Streifen ist Zugabe, nicht Träger (DESIGN.md 8.8). */
+  --flagge-gelb: light-dark(#f2c200, #ffd84d);
+  --flagge-blau: light-dark(#1f6fe5, #5b9bff);
+
+  /*
+   * Es gibt keine Rolle für Verweise (vorher Blau, --link) und keine für
+   * Ergebnisse (vorher Rot, --accent), auch keine getönte Leiste (--band).
+   * Verweise sind Tinte mit Unterstreichung in der Lackierung, die tragende
+   * Zahl steht auf der Lackierung, ein Rekord in Lila. Wer eine dieser Rollen
+   * zurückholt, baut den alten Fehler wieder ein.
+   */
+
+  /* Die Kopfleiste gehört zum Grund: gleicher Ton, eine Linie darunter. */
   --kopf-bg: var(--plane);
   --kopf-ink: var(--ink);
   --kopf-muted: var(--muted);
@@ -104,24 +124,27 @@
   --kopf-linie: var(--border);
   --kopf-h: 3.5rem;
 
-  /* Kategoriale Serienfarben der Graphen, rot-geführt.
-     Reihenfolge gegen die CVD-Gates geprüft (schlechtestes Nachbarpaar
-     ΔE 9,2 farbfehlsichtig / 19,6 normalsichtig). Nie zyklisch weiterdrehen –
-     ab Platz 9 laufen die Fahrer als graue Sammelgruppe. */
+  /* Kategoriale Serienfarben der Graphen, rot-geführt, in fester Reihenfolge.
+     Geprüft mit dem Dataviz-Validator (DESIGN.md 5.6): hell auf #fff
+     schlechtestes Nachbarpaar ΔE 9,2 farbfehlsichtig / 19,6 normalsichtig,
+     dunkel auf #232830 ΔE 9,4 / 19,3. --s6 dunkel war #008300 und fiel auf der
+     helleren Asphaltfläche auf 2,996:1 – jetzt #0a8c0a. Nie zyklisch
+     weiterdrehen; ab Platz 9 laufen die Fahrer als graue Sammelgruppe. */
   --s1: light-dark(#e34948, #e66767);
   --s2: light-dark(#2a78d6, #3987e5);
   --s3: light-dark(#eb6834, #d95926);
   --s4: light-dark(#1baf7a, #199e70);
   --s5: light-dark(#4a3aa7, #9085e9);
-  --s6: light-dark(#008300, #008300);
+  --s6: light-dark(#008300, #0a8c0a);
   --s7: light-dark(#e87ba4, #d55181);
   --s8: light-dark(#eda100, #c98500);
-  /* Die Sammelgruppe: zurückhaltend, aber mit 3,5:1 noch als Form zu sehen –
-     #b9b8b3 hatte 2:1, und die „übrigen Starts“ im Karrierebild verschwanden. */
-  --s-rest: light-dark(#8a8984, #6b6a66);
+  /* Die Sammelgruppe: zurückhaltend, aber mit ≥ 3:1 noch als Form zu sehen. */
+  --s-rest: light-dark(#8a8984, #74736f);
+  /* Hell liegen Grün, Pink und Gelb unter 3:1 – deshalb hat jedes Diagramm
+     eine Tabellenansicht und Namen an den Linien, und die Farbe trägt nie allein. */
+
   /* Die Karten der Strecken (Weltkarte.astro, Lagekarte.astro). Rot und Blau
-     sind als Paar geprüft (dataviz validate_palette.js, alle Paare), hell und
-     dunkel auf --karte-land. */
+     sind als Paar geprüft, hell und dunkel auf --karte-land. */
   --karte-meer: light-dark(#dde7ef, #0d1822);
   --karte-netz: light-dark(#cbd9e4, #16283a);
   --karte-land: light-dark(#fbfaf6, #232d37);
@@ -130,20 +153,48 @@
   --punkt-frueher: light-dark(#2a78d6, #4a93ea);
   --punkt-ring: light-dark(#ffffff, #0d1822);
 
-  /* Die Palette oben ist geprüft (dataviz validate_palette.js): in beiden
-     Modi farbfehlsichtig unterscheidbar, dunkel auch ≥ 3:1. Hell liegen Grün,
-     Pink und Gelb darunter – deshalb hat jedes Diagramm eine Tabellenansicht
-     und Namen an den Linien, und die Farbe trägt nie allein. */
+  /* ---------------------------------------------------------------- Schrift */
 
-  /* Knappe Ecken: Die Seite ist eine Tafel mit Zahlen, keine Sammlung von Kärtchen. */
-  --radius: 4px;
-  --radius-s: 3px;
-  --sans: 'Libre Franklin Variable', 'Franklin Gothic Book', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  /* Dieselbe Familie für Überschriften und große Zahlen – nur schwerer. Der
-     Name bleibt, damit Seiten, die ihn nutzen, nichts ändern müssen. */
+  /*
+   * Eine Familie mit Breitenachse (Archivo, 62–125 %). Die Breite trägt
+   * Bedeutung: breit für Namen und Titel wie die Schrift auf einer Lackierung,
+   * normal für Text, schmal für Zahlenkolonnen, eng für die großen Zahlen.
+   */
+  --sans: 'Archivo Variable', 'Archivo', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --display: var(--sans);
+  --breit: 125%;
+  --schmal: 75%;
+  --eng: 62.5%;
 
-  font: 16px/1.55 var(--sans);
+  /* Die Skala nach Bringhurst: 12 · 14 · 16 · 18 · 21 · 24 · 36 · 48 · 60. */
+  --text-1: 0.75rem;
+  --text-2: 0.875rem;
+  --text-3: 1rem;
+  --text-4: 1.125rem;
+  --text-5: 1.3125rem;
+  --text-6: 1.5rem;
+  --text-7: 2.25rem;
+  --text-8: 3rem;
+  --text-9: 3.75rem;
+  /* Höchstens rund 75 Zeichen je Zeile Fließtext. */
+  --mass: 38rem;
+
+  /* ---------------------------------------------------------------- Abstand */
+
+  --abstand-1: 0.25rem;
+  --abstand-2: 0.5rem;
+  --abstand-3: 0.75rem;
+  --abstand-4: 1rem;
+  --abstand-5: 1.5rem;
+  --abstand-6: 2rem;
+  --abstand-7: 3rem;
+  --abstand-8: 4rem;
+
+  /* Datenflächen sind eckig; nur Bedienelemente haben eine knappe Rundung. */
+  --radius: 3px;
+  --radius-s: 2px;
+
+  font: 400 var(--text-3) / 1.5 var(--sans);
   color: var(--ink-2);
   background: var(--plane);
   font-synthesis: none;
@@ -152,7 +203,7 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Die Wahl im Kopf der Seite. `color-scheme` allein genügt: alle Tokens oben
+/* Die Wahl im Kopf der Seite. `color-scheme` allein genügt: alle Rollen
    hängen daran, und Formularelemente ziehen gleich mit. */
 :root[data-theme='light'] {
   color-scheme: light;
@@ -163,15 +214,23 @@
 }
 
 /*
- * Schatten nur für das, was über der Seite liegt: Trefferliste, Menü. Was auf
- * der Seite steht, liegt flach – `--shadow-s` bleibt als Name, ist aber leer.
- *
- * Der Schatten ist die eine Ausnahme bei den Tokens: light-dark() nimmt kein
- * Wertepaar, das selbst Kommas enthält, und eine Schattenliste besteht aus
- * genau solchen.
+ * Die Monitorfläche: immer dunkel, in beiden Modi der Seite. Darauf steht das
+ * Meisterband – die Teamfarben erreichen dort alle mindestens 3:1, auf dem
+ * hellen Beton elf von ihnen nicht (DESIGN.md 5.5). Eine je Seite.
+ */
+.monitor {
+  color-scheme: dark;
+  color: var(--ink-2);
+  background: var(--surface);
+}
+
+/*
+ * Schatten nur für das, was über der Seite liegt: Trefferliste, Menü, Infobox.
+ * Was auf der Seite steht, liegt flach. light-dark() nimmt kein Wertepaar mit
+ * Kommas darin, deshalb steht der Schatten zweimal.
  */
 :root {
-  --shadow: 0 12px 32px -8px rgba(32, 36, 44, 0.22), 0 0 0 1px rgba(32, 36, 44, 0.04);
+  --shadow: 0 12px 32px -8px rgba(22, 25, 30, 0.24), 0 0 0 1px rgba(22, 25, 30, 0.05);
   --shadow-s: none;
 }
 
@@ -200,43 +259,71 @@ body {
   flex-direction: column;
   color: var(--ink-2);
   background: var(--plane);
-  font: 16px/1.55 var(--sans);
+  font: 400 var(--text-3) / 1.5 var(--sans);
   font-variant-numeric: lining-nums;
 }
 
-h1,
-h2,
-h3 {
-  color: var(--ink);
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  margin: 0;
-  text-wrap: balance;
-}
+/* --------------------------------------------------------- Überschriften */
 
 /*
- * Die Schrift der Tafel: Überschriften und die Zahlen, die man von weitem
- * lesen soll – dieselbe Franklin, nur schwer und eng gesetzt. Eine Klasse
- * dazu, damit Seiten sie für eigene Zahlen nehmen können.
+ * Titel und Abschnitte breit und schwer, wie die Schrift auf einer
+ * Lackierung. Breite, nicht Farbe, macht sie zur Überschrift.
  */
 h1,
 h2,
-.anzeige {
-  font-family: var(--display);
+h3 {
+  margin: 0;
+  color: var(--ink);
+  text-wrap: balance;
+}
+
+h1 {
+  font-size: clamp(var(--text-7), 1.6rem + 2.2vw, var(--text-8));
+  font-stretch: var(--breit);
   font-weight: 800;
-  letter-spacing: -0.025em;
+  line-height: 1.02;
+  letter-spacing: -0.012em;
 }
 
-.anzeige { font-variant-numeric: tabular-nums lining-nums; }
+h2 {
+  font-size: clamp(var(--text-5), 1.1rem + 0.8vw, var(--text-6));
+  font-stretch: var(--breit);
+  font-weight: 750;
+  line-height: 1.15;
+  letter-spacing: -0.008em;
+}
 
+h3 {
+  margin: 0 0 var(--abstand-3);
+  font-size: var(--text-4);
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+/* Eine Zahl, die man von weitem lesen soll: eng und schwer, mit Tabellenziffern. */
+.anzeige {
+  font-stretch: var(--eng);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums lining-nums;
+  letter-spacing: 0;
+}
+
+/* --------------------------------------------------------------- Verweise */
+
+/*
+ * Ein Verweis im Text ist Tinte mit einer kräftigen Unterstreichung – in der
+ * Lackierung der Seite, wo sie 3:1 erreicht, sonst in Tinte. Beim Überfahren
+ * wird sie dicker. So sieht man, was anklickbar ist, ohne Linkblau.
+ */
 a {
-  color: var(--link);
-  text-decoration-color: var(--link-line);
-  text-decoration-thickness: 1px;
-  text-underline-offset: 0.22em;
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--lackierung-linie);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.2em;
 }
 
-a:hover { text-decoration-color: currentColor; }
+a:hover { text-decoration-thickness: 3px; }
 
 button,
 select,
@@ -244,9 +331,9 @@ input {
   font: inherit;
 }
 
-/* Der Fokus in Tinte: Er zeigt, wo man ist, und soll nicht wie ein Rekord aussehen. */
+/* Der Fokus in Tinte, auf jedem Grund sichtbar – auf dem Monitor in dessen Tinte. */
 :where(button, select, a, input, summary, [tabindex]):focus-visible {
-  outline: 2px solid var(--link);
+  outline: 2px solid var(--ink);
   outline-offset: 2px;
   border-radius: var(--radius-s);
 }
@@ -259,26 +346,26 @@ html:not(.js) .nur-mit-js { display: none !important; }
 html.js .nur-ohne-js { display: none !important; }
 /* Zeilen hinter „Show more“ (MehrZeigen.astro): ohne Skript sichtbar, mit ihm auf Wunsch. */
 html.js section:not(.alle-gezeigt) [data-weitere] { display: none; }
-.mehr-zeigen { margin-top: 0.6rem; }
+.mehr-zeigen { margin-top: var(--abstand-3); }
 
-/* Ein Verweis, der wie ein Knopf aussieht: „Compare with another driver“. Tinte, nicht Rot. */
+/* Knöpfe: gefüllt Tinte für die Hauptaktion, leise mit Rand für den Rest. */
 .knopf {
   display: inline-flex;
   align-items: center;
   min-height: 2.5rem;
   padding: 0.45rem 0.95rem;
-  font-size: 0.9rem;
-  font-weight: 600;
+  font-size: var(--text-2);
+  font-weight: 650;
   color: var(--plane);
-  background: var(--link);
-  border: 1px solid var(--link);
+  background: var(--ink);
+  border: 1px solid var(--ink);
   border-radius: var(--radius);
   text-decoration: none;
 }
 
-.knopf:hover { background: var(--link-strong); border-color: var(--link-strong); }
-.knopf.leise { color: var(--link); background: var(--plane); border-color: var(--border-input); }
-.knopf.leise:hover { border-color: var(--link); }
+.knopf:hover { background: var(--ink-2); border-color: var(--ink-2); }
+.knopf.leise { color: var(--ink); background: transparent; border-color: var(--border-input); }
+.knopf.leise:hover { background: var(--surface-2); border-color: var(--ink); }
 
 /* Nur für Hilfsmittel: erklärt, was ein Platzhalter gerade tut. */
 .sr-only {
@@ -291,6 +378,7 @@ html.js section:not(.alle-gezeigt) [data-weitere] { display: none; }
   white-space: nowrap;
 }
 
+/* Eine Animation gibt es auf der ganzen Seite (Meisterband); auch sie entfällt hier. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -306,7 +394,7 @@ html.js section:not(.alle-gezeigt) [data-weitere] { display: none; }
 .wrap {
   max-width: 76rem;
   margin: 0 auto;
-  padding-inline: 1.5rem;
+  padding-inline: var(--abstand-5);
 }
 
 /* ---------------------------------------------------------- Kopfleiste */
@@ -318,45 +406,40 @@ html.js section:not(.alle-gezeigt) [data-weitere] { display: none; }
   color: var(--kopf-ink);
   background: color-mix(in srgb, var(--kopf-bg) 94%, transparent);
   backdrop-filter: blur(10px);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--kopf-linie);
 }
 
 .kopf .wrap {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: var(--abstand-3);
   min-height: var(--kopf-h);
 }
 
 /*
- * Der Schriftzug: nur der Name, schwer gesetzt. Die drei schrägen roten
- * Striche davor erinnerten an das Logo der Formel 1 selbst – eine Seite, die
- * nicht offiziell ist, soll auch nicht so aussehen.
+ * Die Wortmarke: „Formula 1“ breit und schwer, „Statistics“ normal. Ohne
+ * Zeichen davor – die schrägen Striche erinnerten an das Logo des Sports.
  */
 .logo {
   display: flex;
   align-items: baseline;
-  gap: 0.4rem;
-  margin-right: 0.75rem;
+  gap: 0.35rem;
+  margin-right: var(--abstand-3);
   color: var(--kopf-ink);
   text-decoration: none;
   white-space: nowrap;
   flex: none;
-  font-size: 1.05rem;
-  font-weight: 800;
-  letter-spacing: -0.02em;
+  font-size: var(--text-3);
 }
 
-.logo b { font-weight: 800; }
-.logo span { font-weight: 400; color: var(--muted); letter-spacing: -0.01em; }
+.logo b { font-stretch: var(--breit); font-weight: 800; letter-spacing: -0.01em; }
+.logo span { font-weight: 450; color: var(--muted); }
 
 /*
  * Drei Breiten, drei Formen der Kopfleiste:
  *
- *   ab 76rem     alles in einer Zeile, das Suchfeld offen (72rem, bis „Tyres“
- *                dazukam – dann wurde bei 1153 px „Analysis“ abgeschnitten)
- *   64–76rem     die Suche als Knopf, der ihr Feld aufklappt – dort lief die
- *                Leiste vorher über, und „Circuits“ fiel heraus
+ *   ab 76rem     alles in einer Zeile, das Suchfeld offen
+ *   64–76rem     die Suche als Knopf, der ihr Feld aufklappt
  *   unter 64rem  ein Menü mit allen Zielen; die Leiste selbst verschwindet
  *
  * Vorher scrollte die Leiste am Telefon waagerecht, mit verborgenem Balken.
@@ -377,9 +460,9 @@ html.js section:not(.alle-gezeigt) [data-weitere] { display: none; }
 .klappe > summary {
   position: relative;
   display: block;
-  padding: 0.5rem 0.65rem;
-  font-size: 0.9rem;
-  font-weight: 500;
+  padding: 0.5rem 0.55rem;
+  font-size: var(--text-2);
+  font-weight: 550;
   color: var(--kopf-muted);
   text-decoration: none;
   border-radius: var(--radius);
@@ -392,20 +475,20 @@ html.js section:not(.alle-gezeigt) [data-weitere] { display: none; }
   background: var(--kopf-hover);
 }
 
-/* Der aktive Punkt: in Tinte, und unterstrichen auf der Linie, auf der die Leiste steht. */
+/* Der aktive Punkt: Tinte, und unterstrichen auf der Linie, auf der die Leiste steht. */
 .hauptnav a[aria-current='page'] {
   color: var(--kopf-ink);
-  font-weight: 650;
+  font-weight: 700;
 }
 
 .hauptnav > ul > li > a[aria-current='page']::after {
   content: '';
   position: absolute;
-  left: 0.65rem;
-  right: 0.65rem;
-  bottom: calc((var(--kopf-h) - 2.4rem) / -2 - 1px);
+  left: 0.55rem;
+  right: 0.55rem;
+  bottom: calc((var(--kopf-h) - 2.3rem) / -2 - 1px);
   height: 2px;
-  background: var(--link);
+  background: var(--ink);
 }
 
 /* Hell / dunkel / System. Ein Knopf, der reihum schaltet. */
@@ -420,7 +503,7 @@ html.js section:not(.alle-gezeigt) [data-weitere] { display: none; }
   padding: 0;
   color: var(--kopf-muted);
   background: none;
-  border: 1px solid var(--kopf-linie);
+  border: 1px solid var(--border-input);
   border-radius: var(--radius);
   cursor: pointer;
 }
@@ -448,16 +531,16 @@ html.js section:not(.alle-gezeigt) [data-weitere] { display: none; }
 }
 
 .suche-knopf { display: none; }
-.suche-feld { position: relative; width: 14rem; }
+.suche-feld { position: relative; width: 13rem; }
 
 .suche input {
   width: 100%;
   min-height: 2.5rem;
   padding: 0.45rem 2rem 0.45rem 2.1rem;
-  font-size: 0.88rem;
+  font-size: var(--text-2);
   color: var(--kopf-ink);
-  background: var(--surface-2)
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%23868d98' stroke-width='2' stroke-linecap='round' viewBox='0 0 24 24'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E")
+  background: var(--surface)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%2376808a' stroke-width='2' stroke-linecap='round' viewBox='0 0 24 24'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E")
     no-repeat 0.65rem 50%;
   border: 1px solid var(--border-input);
   border-radius: var(--radius);
@@ -465,12 +548,10 @@ html.js section:not(.alle-gezeigt) [data-weitere] { display: none; }
 }
 
 .suche input::placeholder { color: var(--kopf-muted); }
-/* Fokus sichtbar wie überall: der Rahmen in Tinte, nicht nur ein Farbwechsel des Randes. */
 .suche input:focus-visible {
-  border-color: var(--link);
-  outline: 2px solid var(--link);
+  border-color: var(--ink);
+  outline: 2px solid var(--ink);
   outline-offset: 1px;
-  background-color: var(--plane);
 }
 .suche input::-webkit-search-cancel-button { display: none; }
 
@@ -481,10 +562,10 @@ html.js section:not(.alle-gezeigt) [data-weitere] { display: none; }
   top: 50%;
   translate: 0 -50%;
   padding: 0.05rem 0.35rem;
-  font: 600 0.75rem/1.4 var(--sans);
+  font: 600 var(--text-1) / 1.4 var(--sans);
   color: var(--kopf-muted);
-  border: 1px solid var(--kopf-linie);
-  border-radius: 0.25rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-s);
   pointer-events: none;
 }
 
@@ -523,22 +604,22 @@ html.js section:not(.alle-gezeigt) [data-weitere] { display: none; }
 }
 
 .suche .ergebnisse a[aria-selected='true'] { background: var(--surface-2); outline: 1px solid var(--border-input); }
-.suche .ergebnisse b { color: var(--ink); font-weight: 600; font-size: 0.92rem; }
+.suche .ergebnisse b { color: var(--ink); font-weight: 650; font-size: var(--text-3); }
 .suche .ergebnisse i {
   grid-column: 2;
   font-style: normal;
-  font-size: 0.8rem;
+  font-size: var(--text-2);
   color: var(--muted);
 }
 .suche .ergebnisse .kuerzel { grid-row: span 2; margin: 0; align-self: center; }
-.suche .leer { margin: 0; padding: 0.6rem 0.65rem; font-size: 0.88rem; color: var(--muted); }
+.suche .leer { margin: 0; padding: 0.6rem 0.65rem; font-size: var(--text-2); color: var(--muted); }
 
 /* ------------------------------------------------------- Werkzeug-Ausklapp */
 
 /*
  * Das Ausklappmenü der Analysewerkzeuge, und am Telefon das ganze Menü: beide
- * ein <details>. Es braucht kein JavaScript, und es öffnet und schließt sich
- * auch dann, wenn nichts geladen hat.
+ * ein <details>. Es braucht kein JavaScript. Darin nur die Namen – eine Zeile
+ * Beschreibung je Punkt wiederholte, was der Name schon sagte.
  */
 .klappe { position: relative; }
 
@@ -548,18 +629,18 @@ html.js section:not(.alle-gezeigt) [data-weitere] { display: none; }
 }
 
 .klappe > summary::-webkit-details-marker { display: none; }
-.werkzeuge > summary::after { content: ' ▾' / ''; font-size: 0.75em; opacity: 0.7; }
+.werkzeuge > summary::after { content: ' ▾' / ''; font-size: 0.75em; }
 .klappe[open] > summary { color: var(--kopf-ink); background: var(--kopf-hover); }
-.werkzeuge.aktiv > summary { color: var(--kopf-ink); }
+.werkzeuge.aktiv > summary { color: var(--kopf-ink); font-weight: 700; }
 
 .werkzeuge ul {
   position: absolute;
   top: calc(100% + 0.55rem);
   right: 0;
   z-index: 50;
-  width: 19rem;
+  width: 12rem;
   margin: 0;
-  padding: 0.35rem;
+  padding: 0.3rem;
   list-style: none;
   color-scheme: light dark;
   background: var(--surface);
@@ -572,17 +653,16 @@ html.js section:not(.alle-gezeigt) [data-weitere] { display: none; }
 :root[data-theme='dark'] .werkzeuge ul { color-scheme: dark; }
 
 .werkzeuge a {
-  display: grid;
-  gap: 0.05rem;
-  padding: 0.5rem 0.65rem;
-  white-space: normal;
+  display: block;
+  padding: 0.55rem 0.7rem;
+  font-size: var(--text-3);
+  font-weight: 600;
+  color: var(--ink);
   border-radius: var(--radius-s);
 }
 
 .werkzeuge a:hover { background: var(--surface-2); }
-.werkzeuge b { color: var(--ink); font-size: 0.92rem; font-weight: 650; }
-.werkzeuge span { color: var(--muted); font-size: 0.8rem; }
-.werkzeuge a[aria-current='page'] { background: var(--surface-2); box-shadow: inset 2px 0 0 var(--link); }
+.werkzeuge a[aria-current='page'] { box-shadow: inset 3px 0 0 var(--ink); }
 
 /* Das Menü am schmalen Schirm: verborgen, bis es gebraucht wird. */
 .menue { display: none; }
@@ -591,7 +671,7 @@ html.js section:not(.alle-gezeigt) [data-weitere] { display: none; }
   display: flex;
   gap: 0.4rem;
   padding: 0 0.75rem;
-  font-size: 0.9rem;
+  font-size: var(--text-2);
   font-weight: 650;
   color: var(--kopf-ink);
 }
@@ -604,18 +684,19 @@ html.js section:not(.alle-gezeigt) [data-weitere] { display: none; }
   z-index: 45;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(14rem, 100%), 1fr));
-  gap: 1rem 1.5rem;
+  gap: var(--abstand-4) var(--abstand-5);
   max-height: calc(100svh - var(--kopf-h) - 1px);
   overflow-y: auto;
-  padding: 1rem 1.5rem 1.5rem;
+  padding: var(--abstand-4) var(--abstand-5) var(--abstand-5);
   background: var(--plane);
   border-bottom: 1px solid var(--border-strong);
   box-shadow: var(--shadow);
 }
 
 .menue-feld h2 {
-  margin: 0 0 0.35rem;
-  font-size: 0.85rem;
+  margin: 0 0 var(--abstand-2);
+  font-size: var(--text-2);
+  font-stretch: 100%;
   font-weight: 600;
   letter-spacing: 0;
   color: var(--kopf-muted);
@@ -624,7 +705,7 @@ html.js section:not(.alle-gezeigt) [data-weitere] { display: none; }
 .menue-feld ul {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.25rem;
+  gap: var(--abstand-1);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -635,16 +716,16 @@ html.js section:not(.alle-gezeigt) [data-weitere] { display: none; }
   align-items: center;
   min-height: 2.75rem;
   padding: 0.45rem 0.7rem;
-  font-size: 1rem;
-  font-weight: 600;
+  font-size: var(--text-3);
+  font-weight: 650;
   color: var(--kopf-ink);
   text-decoration: none;
-  border: 1px solid var(--border);
+  background: var(--surface);
   border-radius: var(--radius);
 }
 
 .menue-feld a:hover { background: var(--kopf-hover); }
-.menue-feld a[aria-current='page'] { border-color: var(--link); box-shadow: inset 0 0 0 1px var(--link); }
+.menue-feld a[aria-current='page'] { box-shadow: inset 3px 0 0 var(--ink); }
 
 /* Mittlere Breite: die Suche als Knopf, ihr Feld klappt darunter auf. */
 @media (max-width: 76rem) {
@@ -660,12 +741,11 @@ html.js section:not(.alle-gezeigt) [data-weitere] { display: none; }
   .suche.offen .suche-feld { display: block; }
   .suche.offen .suche-knopf { color: var(--kopf-ink); background: var(--kopf-hover); }
   .suche .ergebnisse { width: 100%; }
-  .suche input { background-color: var(--plane); }
 }
 
 /* Schmal: Menü statt Leiste, die Suche über die volle Breite. */
 @media (max-width: 64rem) {
-  .kopf .wrap { gap: 0.5rem; }
+  .kopf .wrap { gap: var(--abstand-2); }
   .logo { margin-right: auto; }
   .hauptnav { display: none; }
   .menue { display: block; }
@@ -717,113 +797,107 @@ main:focus { outline: none; }
 
 main {
   flex: 1;
-  padding-block: 2.25rem 4.5rem;
+  padding-block: var(--abstand-6) var(--abstand-8);
 }
-
-/* Beginnt die Seite mit ihrem Kopf, schließt dessen Fläche direkt an die Kopfleiste an. */
-main:has(> .wrap > :is(.seitenkopf, .start):first-child) { padding-top: 0; }
 
 /* --------------------------------------------------------- Seitenkopf */
 
 /*
- * Jede Seite beginnt gleich: eine Oberzeile (wo bin ich), die Überschrift,
- * eine Zeile mit Eckdaten. Was darunter an Erklärung steht, ist kürzer als
- * vorher – die ausführliche Fassung steht unten auf der Seite, zusammengeklappt.
+ * Der Kopf einer Seite steht auf dem Grund, nicht auf einer getönten Fläche:
+ * Er gehört zur Seite. Oben die Brotkrume, dann der Titel – auf einem Streifen
+ * in der Lackierung, wenn die Seite einen Gegenstand hat –, darunter ein Satz
+ * und die Kennzahlleiste. Das Länderkürzel steht rechts neben dem Titel, wie
+ * auf dem Monitor neben dem Namen.
  */
 .seitenkopf {
-  display: flex;
-  align-items: flex-start;
-  gap: 1.1rem;
-  margin-bottom: 2.25rem;
-  padding-block: 2rem 1.9rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  column-gap: var(--abstand-4);
+  margin-bottom: var(--abstand-6);
 }
 
-.seitenkopf > div { min-width: 0; flex: 1; }
+.seitenkopf > div { grid-column: 1; grid-row: 1; min-width: 0; }
+.seitenkopf > .wappen { grid-column: 2; grid-row: 1; }
+
+/* Der Streifen in der Lackierung – nur, wenn die Seite einen Gegenstand hat. */
+body[data-lackierung] .seitenkopf h1,
+body[data-lackierung] .titelblock {
+  padding-left: var(--abstand-4);
+  border-left: 6px solid var(--lackierung);
+}
+
+body[data-lackierung] .titelblock h1 { padding-left: 0; border-left: 0; }
 
 /*
- * Der Kopf liegt auf einer getönten Fläche über die volle Breite, und die
- * Kennzahlen direkt darunter mit ihm: Oben steht die Zusammenfassung, darunter
- * auf Weiß die Einzelheiten. Vorher stand beides auf demselben Weiß, und man
- * sah nicht, wo die Übersicht aufhört.
- *
- * Die Fläche reicht über den Satzspiegel hinaus, ohne dass das Markup einen
- * eigenen Rahmen braucht: Ein Schatten ohne Unschärfe färbt den Rand nach
- * beiden Seiten, `clip-path` schneidet ihn oben und unten ab.
- */
-.seitenkopf,
-.seitenkopf + .kacheln,
-.seitenkopf + .kacheln + .kacheln {
-  background: var(--band);
-  box-shadow: 0 0 0 100vmax var(--band);
-  clip-path: inset(0 -100vmax);
-}
-
-.seitenkopf:has(+ .kacheln) { margin-bottom: 0; padding-bottom: 1.5rem; }
-
-.seitenkopf + .kacheln,
-.seitenkopf + .kacheln + .kacheln {
-  --kachel: var(--plane);
-  margin-bottom: 2.25rem;
-  padding-bottom: 2rem;
-}
-
-.seitenkopf + .kacheln:has(+ .kacheln) { margin-bottom: 0; padding-bottom: 0.5rem; }
-
-/*
- * Die Oberzeile ist eine Brotkrume: wo die Seite liegt, in normaler
- * Schreibung und leise. Als rote Versalzeile mit Logostrichen rief sie über
- * jeder Überschrift, und auf Übersichten wiederholte sie nur den Menüpunkt.
+ * Die Brotkrume: wo die Seite liegt, in normaler Schreibung und leise. Als rote
+ * Versalzeile mit Logostrichen rief sie über jeder Überschrift.
  */
 .oberzeile {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.4rem;
-  margin: 0 0 0.6rem;
-  font-size: 0.88rem;
+  margin: 0 0 var(--abstand-3);
+  font-size: var(--text-2);
   font-weight: 450;
   color: var(--muted);
 }
 
-.oberzeile a { color: var(--ink-2); text-decoration: underline; text-decoration-color: var(--link-line); }
-.oberzeile a:hover { color: var(--link); text-decoration-color: currentColor; }
+.oberzeile a { color: var(--ink-2); text-decoration-thickness: 1px; text-decoration-color: var(--border-input); }
+.oberzeile a:hover { color: var(--ink); text-decoration-thickness: 2px; text-decoration-color: currentColor; }
 .oberzeile .trenner { color: var(--border-input); }
 .oberzeile .still { color: var(--muted); }
 
-h1 {
-  font-size: clamp(2rem, 4.4vw, 2.9rem);
-  line-height: 1.05;
-  font-weight: 800;
-  letter-spacing: -0.03em;
-}
-
 .lead {
-  max-width: 42rem;
-  margin: 0.75rem 0 0;
-  font-size: 1.05rem;
-  line-height: 1.6;
+  max-width: var(--mass);
+  margin: var(--abstand-3) 0 0;
+  font-size: var(--text-4);
+  line-height: 1.5;
   color: var(--ink-2);
   text-wrap: pretty;
 }
 
+/* Der Satz unter dem Titel: was keine Zahl sagt, in ganzen Sätzen. */
+.kopfsatz {
+  max-width: var(--mass);
+  margin: var(--abstand-3) 0 0;
+  font-size: var(--text-4);
+  line-height: 1.5;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+
+@media (max-width: 40rem) {
+  .kopfsatz { font-size: var(--text-3); }
+}
+
+/* Die Nachbarn einer Seite – vorige und nächste Saison –, oben rechts, wo sonst das Länderkürzel steht. */
+.nachbarn {
+  grid-column: 2;
+  grid-row: 1;
+  display: flex;
+  gap: var(--abstand-4);
+  margin-top: 0.2rem;
+  font-size: var(--text-2);
+  font-weight: 650;
+  white-space: nowrap;
+}
+
 /*
- * Eckdaten als Zeile, getrennt durch Haarlinien: Geburtstag, Zeitraum, Kürzel
- * sind Angaben, keine Knöpfe. Als Pillen gezeichnet sahen sie aus, als könne
- * man sie anklicken. Die eine Angabe, die die Seite trägt – der Titel –, steht
- * vorn und in Rot: Sie ist ein Ergebnis, kein Schmuck.
+ * Eckdaten als Zeile, getrennt durch Haarlinien. Sie weichen Seite für Seite
+ * dem Kopfsatz (DESIGN.md 8.2); bis dahin stehen sie ruhig da.
  *
- * Bricht die Zeile um, darf die nächste nicht mit einer Linie beginnen. Jede
- * Linie sitzt deshalb links an ihrem Eintrag, einen Pixel nach links
- * verschoben, und die Liste ragt um den Innenabstand nach links hinaus und
- * schneidet ab: Was am Anfang einer Zeile steht, liegt genau außerhalb.
- * Der Rand oben und unten lässt dem Fokusrahmen der Verweise Platz.
+ * Bricht die Zeile um, darf die nächste nicht mit einer Linie beginnen: Jede
+ * Linie sitzt links an ihrem Eintrag, einen Pixel nach links verschoben, und
+ * die Liste ragt um den Innenabstand nach links hinaus und schneidet ab.
  */
 .eckdaten {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   row-gap: 0.4rem;
-  margin: calc(0.9rem - 4px) 0 -4px -0.75rem;
+  margin: calc(var(--abstand-3) - 4px) 0 -4px -0.75rem;
   padding: 4px 0;
   list-style: none;
   overflow: hidden;
@@ -832,24 +906,19 @@ h1 {
 .eckdaten li {
   margin-left: -1px;
   padding: 0 0.75rem;
-  font-size: 0.9rem;
+  font-size: var(--text-3);
   line-height: 1.35;
   color: var(--ink-2);
   border-left: 1px solid var(--border-strong);
   white-space: nowrap;
 }
 
-.eckdaten li.stark {
-  font-weight: 700;
-  color: var(--accent);
-}
-
-.eckdaten a { color: inherit; text-decoration: underline; text-decoration-color: var(--link-line); }
-.eckdaten a:hover { text-decoration-color: currentColor; }
+.eckdaten li.stark { font-weight: 700; color: var(--ink); }
+.eckdaten a { color: inherit; }
 
 /*
- * Das Länderkürzel neben der Überschrift, wie es in einer Ergebnisliste neben
- * dem Namen steht: drei Buchstaben in einem Rahmen, nicht mehr.
+ * Das Länderkürzel, wie es in der Zeitnahme neben dem Namen steht: drei
+ * Buchstaben in einem Rahmen aus Tinte, nicht mehr.
  */
 .wappen {
   display: grid;
@@ -859,34 +928,33 @@ h1 {
   height: 2.2rem;
   margin-top: 0.55rem;
   padding: 0 0.5rem;
-  font-size: 0.95rem;
+  font-size: var(--text-3);
   font-weight: 700;
   letter-spacing: 0.04em;
   color: var(--ink);
-  background: var(--plane);
+  background: var(--surface);
   border: 1.5px solid var(--ink);
   border-radius: var(--radius-s);
-  font-variant-numeric: tabular-nums;
 }
 
 @media (max-width: 34rem) {
-  .wappen { min-width: 2.9rem; height: 1.9rem; margin-top: 0.3rem; font-size: 0.82rem; }
+  .wappen { min-width: 2.9rem; height: 1.9rem; margin-top: 0.3rem; font-size: var(--text-2); }
 }
 
 /* ------------------------------------------------------ Sprungleiste */
 
 /*
- * Lange Seiten – ein Fahrerprofil hat sechs Abschnitte, eine Saison sieben –
- * bekommen eine Leiste mit Sprungmarken. Sie klebt unter der Kopfleiste, so
- * dass man beim Lesen jederzeit weiß, welche Abschnitte es gibt.
+ * Lange Seiten bekommen eine Leiste mit Sprungmarken. Sie klebt unter der
+ * Kopfleiste, so dass man beim Lesen jederzeit weiß, welche Abschnitte es gibt.
+ * Der gelesene Abschnitt ist unterstrichen, in der Lackierung der Seite.
  */
 .sprung {
   position: sticky;
   top: calc(var(--kopf-h) + 1px);
   z-index: 30;
   display: flex;
-  gap: 1.25rem;
-  margin: 0 0 2.25rem;
+  gap: var(--abstand-5);
+  margin: 0 0 var(--abstand-6);
   padding: 0;
   overflow-x: auto;
   scrollbar-width: none;
@@ -897,22 +965,21 @@ h1 {
 
 .sprung::-webkit-scrollbar { display: none; }
 
-/* Reiter, keine Pillen: Der gelesene Abschnitt ist unterstrichen, wie der Menüpunkt oben. */
 .sprung a {
   flex: none;
-  padding: 0.65rem 0 calc(0.65rem - 2px);
-  font-size: 0.88rem;
-  font-weight: 500;
+  padding: 0.65rem 0 calc(0.65rem - 3px);
+  font-size: var(--text-2);
+  font-weight: 550;
   color: var(--muted);
   text-decoration: none;
-  border-bottom: 2px solid transparent;
+  border-bottom: 3px solid transparent;
 }
 
-.sprung a:hover { color: var(--link); }
-.sprung a.an { color: var(--link); font-weight: 650; border-bottom-color: var(--link); }
+.sprung a:hover { color: var(--ink); }
+.sprung a.an { color: var(--ink); font-weight: 700; border-bottom-color: var(--lackierung-linie); }
 
-/* Unter 52rem bricht die Kopfleiste um und ist höher; dort klebt die
-   Sprungleiste nicht, sonst deckten beide zusammen ein Drittel der Seite ab. */
+/* Unter 52rem klebt die Sprungleiste nicht; sonst deckten beide Leisten
+   zusammen ein Drittel der Seite ab. */
 @media (max-width: 52rem) {
   .sprung { position: static; background: none; backdrop-filter: none; }
   html { scroll-padding-top: 7.5rem; }
@@ -920,64 +987,49 @@ h1 {
 
 /* --------------------------------------------------------- Abschnitte */
 
+/*
+ * Abschnitte trennt Abstand und eine breite Überschrift. Die getönte Leiste
+ * vor jedem Abschnitt gab jedem dasselbe Gewicht; jetzt führt die Breite der
+ * Schrift den Blick.
+ */
 .abschnitt {
-  margin-top: 3rem;
+  margin-top: var(--abstand-7);
   min-width: 0;
 }
 
 .abschnitt:first-child,
 .sprung + .abschnitt { margin-top: 0; }
 
-/*
- * Jeder Abschnitt beginnt mit einer getönten Leiste, darin Überschrift und
- * Satz dazu. Beim Scrollen findet der Blick den nächsten Abschnitt an der
- * Fläche, nicht erst an einer Linie – auf einer langen Seite mit sieben
- * Abschnitten war das der Unterschied zwischen Lesen und Suchen.
- */
 .abschnitt-kopf {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
-  gap: 0.35rem 1rem;
-  margin-bottom: 1.25rem;
-  padding: 0.75rem 1rem 0.8rem;
-  background: var(--band);
-  border-radius: var(--radius);
+  gap: var(--abstand-2) var(--abstand-4);
+  margin-bottom: var(--abstand-4);
 }
 
 .abschnitt-kopf > div { min-width: 0; flex: 1 1 24rem; }
 
-h2 {
-  font-size: 1.4rem;
-  line-height: 1.15;
-  font-weight: 800;
-}
-
 .abschnitt-kopf p {
-  max-width: 46rem;
-  margin: 0.35rem 0 0;
-  font-size: 0.9rem;
+  max-width: var(--mass);
+  margin: var(--abstand-2) 0 0;
+  font-size: var(--text-3);
   color: var(--muted);
   text-wrap: pretty;
 }
 
 .abschnitt-kopf .mehr {
-  font-size: 0.88rem;
-  font-weight: 600;
+  font-size: var(--text-2);
+  font-weight: 650;
   white-space: nowrap;
-}
-
-h3 {
-  font-size: 1rem;
-  margin: 0 0 0.6rem;
 }
 
 /* Mehrere gleichrangige Blöcke nebeneinander, am Telefon untereinander. */
 .spalten {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(17rem, 100%), 1fr));
-  gap: 2rem 2.5rem;
+  gap: var(--abstand-6) var(--abstand-7);
 }
 
 .spalten.zwei {
@@ -988,109 +1040,123 @@ h3 {
 
 /* ---------------------------------------------------------------- Karten */
 
+/* Ein Verweis mit etwas mehr Inhalt: flach auf der Fläche, ohne Rahmen und Schatten. */
 .karte {
   display: block;
-  padding: 1.1rem 1.2rem;
+  padding: var(--abstand-4) var(--abstand-4);
   color: inherit;
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
 }
 
-a.karte {
-  text-decoration: none;
-}
+a.karte { text-decoration: none; }
+a.karte:hover { box-shadow: inset 0 -3px 0 var(--ink); }
 
-/* Beim Überfahren wird der Rahmen zur Tinte – die Karte springt nicht und färbt sich nicht. */
-a.karte:hover {
-  border-color: var(--link);
-}
-
-.karte > h3:first-child { margin-bottom: 0.75rem; }
+.karte > h3:first-child { margin-bottom: var(--abstand-3); }
 
 .karten {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(15rem, 100%), 1fr));
-  gap: 0.85rem;
+  gap: var(--abstand-2);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .karten .karte { height: 100%; }
-.karten .karte b { display: block; color: var(--ink); font-weight: 700; font-size: 1.02rem; }
-.karten .karte span { display: block; margin-top: 0.2rem; font-size: 0.85rem; color: var(--muted); text-wrap: pretty; }
+.karten .karte b { display: block; color: var(--ink); font-weight: 700; font-size: var(--text-3); }
+.karten .karte span { display: block; margin-top: 0.2rem; font-size: var(--text-2); color: var(--muted); text-wrap: pretty; }
 
-/* ------------------------------------------------------- Kennzahlkacheln */
+/* ------------------------------------------------------- Kennzahlleiste */
 
 /*
- * Die Kennzahlen als Kacheln: jede Zahl auf ihrer eigenen Fläche, damit das
- * Auge sie einzeln greift. Auf der getönten Fläche des Seitenkopfs sind die
- * Kacheln weiß, auf weißem Grund getönt – `--kachel` entscheidet.
+ * Die Zählungen einer Seite in einer Zeile, wie die Zeitnahme sie zeigt: der
+ * Wert groß und eng, die Beschriftung darunter. Keine Kästen – vorher stand
+ * jede Zahl auf ihrer eigenen Kachel, und neun gleiche Kacheln hatten dasselbe
+ * Gewicht. `.kacheln` ist der alte Name derselben Leiste.
+ *
+ * Die eine Zahl, die die Seite trägt, steht auf einem Streifen in der
+ * Lackierung (`.traegt`, früher `.stark`).
  */
+.leiste,
 .kacheln {
-  --kachel: var(--band);
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(7.25rem, 100%), 1fr));
-  gap: 0.5rem;
-  margin: 0 0 2.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(7rem, 1fr));
+  align-items: start;
+  gap: var(--abstand-5) var(--abstand-4);
+  margin: 0 0 var(--abstand-6);
   padding: 0;
   list-style: none;
 }
 
+.leiste li,
 .kacheln li {
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
-  padding: 0.85rem 1rem 1rem;
-  background: var(--kachel);
-  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
-  border-radius: var(--radius);
+  gap: var(--abstand-1);
+  min-width: 0;
 }
 
-/* Die große Zahl ist das eine laute Element der Seite: schwer, eng, mit Tabellenziffern. */
+.leiste b,
 .kacheln b {
-  order: 2;
-  font-family: var(--display);
-  font-size: 2.5rem;
-  font-weight: 800;
+  order: 1;
+  align-self: flex-start;
+  font-size: var(--text-7);
+  font-stretch: var(--eng);
+  font-weight: 700;
   line-height: 1;
   color: var(--ink);
   font-variant-numeric: tabular-nums lining-nums;
-  letter-spacing: -0.04em;
 }
 
-/* Die Beschriftung steht über der Zahl: Man liest erst, was gezählt wird. */
+.leiste span,
 .kacheln span {
-  order: 1;
-  font-size: 0.85rem;
-  font-weight: 500;
+  order: 2;
+  font-size: var(--text-2);
+  font-weight: 550;
   color: var(--muted);
 }
 
+.leiste i,
 .kacheln i {
   order: 3;
-  margin-top: 0.2rem;
   font-style: normal;
-  font-size: 0.78rem;
+  font-size: var(--text-2);
   color: var(--muted);
   text-wrap: pretty;
 }
 
-/* Eine Kachel, die die Aussage der Seite trägt – der Titel, der Sieg: die Zahl in Rot, oben eine goldene Kante. */
-.kacheln li.stark { box-shadow: inset 0 3px 0 var(--gold); }
-.kacheln li.stark b { color: var(--accent); }
+.leiste li.traegt b,
+.kacheln li.stark b {
+  padding-bottom: var(--abstand-1);
+  border-bottom: 6px solid var(--lackierung);
+}
 
-/* Kacheln mit einem Namen statt einer Zahl: Sieger, Pole, schnellste Runde. */
-.kacheln.namen b { font-size: 1.3rem; line-height: 1.2; letter-spacing: -0.02em; }
-.kacheln.namen b a { color: var(--ink); text-decoration: none; }
-.kacheln.namen b a:hover { color: var(--link); text-decoration: underline; }
+/* Ein Allzeitrekord: Lila, die Farbe der absoluten Bestmarke. Die Unterzeile sagt es auch in Worten.
+   Ein verlinkter Name darin (schnellste Runde eines Rennens) behält die Farbe. */
+.kacheln b.rekord,
+.kacheln li b.rekord a { color: var(--lila); }
 
-/* Zahlen und Zeilen neben einer Beschriftung, zweispaltig, direkt auf dem Papier. */
+/* Eine Leiste mit Namen statt Zahlen: Meister, Pole, schnellste Runde. */
+.kacheln.namen b {
+  font-size: var(--text-5);
+  font-stretch: 100%;
+  line-height: 1.2;
+}
+
+.kacheln.namen { grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr)); }
+.kacheln.namen b a { color: var(--ink); }
+
+@media (max-width: 40rem) {
+  .leiste,
+  .kacheln { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--abstand-4); }
+  .kacheln.namen { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Zahlen und Zeilen neben einer Beschriftung, zweispaltig, direkt auf dem Grund. */
 .daten {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(18rem, 100%), 1fr));
-  gap: 0 2.5rem;
+  gap: 0 var(--abstand-7);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -1101,42 +1167,68 @@ a.karte:hover {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 1rem;
+  gap: var(--abstand-4);
   padding: 0.6rem 0;
   border-bottom: 1px solid var(--border);
-  font-size: 0.9rem;
+  font-size: var(--text-3);
 }
 
 .daten span { color: var(--muted); }
-.daten b { color: var(--ink); font-weight: 650; text-align: right; font-variant-numeric: tabular-nums; }
+.daten b {
+  color: var(--ink);
+  font-weight: 700;
+  font-stretch: var(--schmal);
+  text-align: right;
+  font-variant-numeric: tabular-nums lining-nums;
+}
 .daten li.breit { grid-column: 1 / -1; flex-direction: column; gap: 0.25rem; }
-.daten li.breit b { text-align: left; font-weight: 500; color: var(--ink-2); line-height: 1.6; }
+.daten li.breit b { text-align: left; font-weight: 400; font-stretch: 100%; color: var(--ink-2); line-height: 1.6; }
 
 /* -------------------------------------------------------------- Hinweise */
 
-/* Ein Hinweis ist ein grau unterlegter Absatz mit einer Linie davor – die Farbe der Linie sagt die Art. */
+/*
+ * Ein Hinweis ist eine Flagge: ein Absatz auf der Fläche mit einem Streifen
+ * links. Blau sagt „Hinweis“, Gelb „Datenlücke oder Sonderfall“, das Karo nur
+ * „Saison abgeschlossen“. Der Absatz beginnt mit einem fetten Wort, das die Art
+ * nennt – die Farbe trägt nie allein.
+ */
 .hinweis {
+  position: relative;
   max-width: 50rem;
-  margin: 0 0 1.5rem;
-  padding: 0.8rem 1rem;
-  font-size: 0.92rem;
+  margin: 0 0 var(--abstand-5);
+  padding: var(--abstand-3) var(--abstand-4);
+  font-size: var(--text-3);
   color: var(--ink-2);
-  background: var(--band);
-  border-left: 3px solid var(--border-input);
-  border-radius: 0 var(--radius-s) var(--radius-s) 0;
+  background: var(--surface);
+  border-left: 4px solid var(--flagge-blau);
   text-wrap: pretty;
 }
 
 .hinweis > b:first-child { color: var(--ink); }
-.hinweis.akzent { border-left-color: var(--accent); }
-.hinweis.warn { border-left-color: var(--warn); background: var(--warn-wash); }
-.hinweis.gut { border-left-color: var(--good); background: var(--good-wash); }
 .hinweis p { margin: 0; }
+.hinweis.gelb,
+.hinweis.warn { border-left-color: var(--flagge-gelb); }
+/* Ein Ergebnis – Titel entschieden, Titel wechselt im What-if: Tinte, keine Flagge. */
+.hinweis.akzent { border-left-color: var(--ink); }
+
+/* Die Zielflagge: ein Muster, das eine Flagge zeigt – kein Verlauf als Schmuck. */
+.hinweis.karo {
+  border-left: 0;
+  padding-left: calc(var(--abstand-4) + 8px);
+}
+
+.hinweis.karo::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 8px;
+  background: repeating-conic-gradient(var(--ink) 0 25%, var(--surface) 0 50%) 0 0 / 8px 8px;
+}
 
 .fussnote {
   max-width: 50rem;
-  margin: 0.85rem 0 0;
-  font-size: 0.8rem;
+  margin: var(--abstand-3) 0 0;
+  font-size: var(--text-2);
   color: var(--muted);
   text-wrap: pretty;
 }
@@ -1144,25 +1236,25 @@ a.karte:hover {
 /*
  * Die ausführliche Erklärung, wie eine Zahl zustande kommt. Sie bleibt auf
  * der Seite, aber zugeklappt: Wer die Zahl liest, soll nicht erst an drei
- * Absätzen Methodik vorbei müssen. Wer wissen will, warum sie so ist, findet
- * sie mit einem Klick.
+ * Absätzen Methodik vorbei müssen.
  */
 .erklaerung {
   max-width: 52rem;
-  margin: 1rem 0 0;
+  margin: var(--abstand-4) 0 0;
   border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
 }
 
-.erklaerung.abschnitt { margin-top: 3rem; }
+.erklaerung.abschnitt { margin-top: var(--abstand-7); }
 
 .erklaerung > summary {
   display: flex;
   align-items: center;
   gap: 0.55rem;
-  padding: 0.75rem 0.1rem;
-  font-size: 0.92rem;
-  font-weight: 600;
+  min-height: 2.75rem;
+  padding: 0.6rem 0.1rem;
+  font-size: var(--text-3);
+  font-weight: 650;
   color: var(--ink);
   cursor: pointer;
   list-style: none;
@@ -1179,56 +1271,58 @@ a.karte:hover {
   border-bottom: 2px solid var(--muted);
   rotate: 45deg;
   translate: 0 -0.12rem;
-  transition: rotate 0.15s ease;
 }
 
 .erklaerung[open] > summary::after { rotate: 225deg; translate: 0 0.12rem; }
-.erklaerung > summary:hover { text-decoration: underline; text-underline-offset: 0.22em; }
+.erklaerung > summary:hover { text-decoration: underline 2px; text-underline-offset: 0.2em; }
 
-.erklaerung > div {
-  padding: 0 0.1rem 1rem;
-}
+.erklaerung > div { padding: 0 0.1rem var(--abstand-4); }
 
 .erklaerung p,
 .erklaerung li {
-  font-size: 0.88rem;
+  font-size: var(--text-3);
   color: var(--ink-2);
   text-wrap: pretty;
 }
 
-.erklaerung p { margin: 0.8rem 0 0; }
-.erklaerung ol, .erklaerung ul { margin: 0.6rem 0 0; padding-left: 1.2rem; display: grid; gap: 0.4rem; }
+.erklaerung p { margin: var(--abstand-3) 0 0; }
+.erklaerung ol, .erklaerung ul { margin: var(--abstand-3) 0 0; padding-left: 1.2rem; display: grid; gap: var(--abstand-2); }
 .erklaerung b { color: var(--ink); }
 
 /* ============================================================== Tabellen */
 
+/*
+ * Eine Tabelle steht auf der Fläche. Der Kopf beschriftet leise, darunter eine
+ * Linie in Tinte wie auf dem Monitor; Namen in voller Breite, Zahlen schmal
+ * und rechtsbündig auf einer Kante.
+ */
 table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.9rem;
+  font-size: var(--text-3);
+  line-height: 1.35;
 }
 
-/* Der Spaltenkopf in normaler Schreibung: Er beschriftet, er ruft nicht. */
 th {
-  padding: 0.65rem 0.8rem 0.55rem;
+  padding: 0.6rem 0.75rem 0.5rem;
   text-align: left;
   white-space: nowrap;
-  font-size: 0.82rem;
+  font-size: var(--text-2);
   font-weight: 600;
-  color: var(--ink-2);
-  background: var(--band);
-  border-bottom: 1px solid var(--border-strong);
+  color: var(--muted);
+  background: var(--surface);
+  border-bottom: 1px solid var(--ink);
 }
 
 td {
-  padding: 0.6rem 0.8rem;
+  padding: 0.55rem 0.75rem;
   border-bottom: 1px solid var(--border);
   vertical-align: middle;
 }
 
 /* Zeilenköpfe im Rumpf sehen aus wie Zellen – für Vorleser sind sie der Name der Zeile. */
 tbody th {
-  padding: 0.6rem 0.8rem;
+  padding: 0.55rem 0.75rem;
   font-size: inherit;
   font-weight: inherit;
   letter-spacing: normal;
@@ -1243,25 +1337,27 @@ tbody th {
 th.num,
 td.num {
   text-align: right;
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: tabular-nums lining-nums;
 }
+
+/* Zahlen schmal: Sie sparen Platz und bleiben groß – Namen bleiben breit. */
+td.num { font-stretch: var(--schmal); }
 
 /*
  * Jede zweite Zeile leicht getönt: In einer Tabelle mit acht Spalten verliert
  * das Auge sonst auf dem Weg vom Namen zu den Punkten die Zeile.
  */
 tbody tr:nth-child(even) { background: var(--zebra); }
-tbody tr:hover { background: var(--link-wash); }
+tbody tr:hover { background: var(--surface-2); }
 
 /*
- * Am Telefon ist fast jede Tabelle breiter als der Schirm, und rechts brach
- * sie einfach ab – nichts sagte, dass dort noch „Points“ stand. Ein Schatten
- * an der Kante sagt es jetzt, ohne Skript: Die beiden Deckflächen („local“)
- * wandern mit dem Inhalt und verdecken den Schatten („scroll“), sobald man am
- * Rand angekommen ist. Passt die Tabelle, liegen sie immer darüber.
+ * Am Telefon ist fast jede Tabelle breiter als der Schirm. Ein Schatten an der
+ * Kante sagt, dass dort noch etwas steht, ohne Skript: Die beiden Deckflächen
+ * („local“) wandern mit dem Inhalt und verdecken den Schatten („scroll“),
+ * sobald man am Rand angekommen ist. Ein Verlauf, der etwas sagt.
  */
 .tabelle {
-  --kante: color-mix(in srgb, var(--ink) 16%, transparent);
+  --kante: color-mix(in srgb, var(--ink) 18%, transparent);
   overflow-x: auto;
   background:
     linear-gradient(to right, var(--surface) 40%, transparent) left / 2.5rem 100% no-repeat local,
@@ -1271,9 +1367,7 @@ tbody tr:hover { background: var(--link-wash); }
     var(--surface);
 }
 
-/* Eine lange Tabelle bekommt eine feste Höhe und einen klebenden Kopf –
-   bei 860 Zeilen weiß man sonst nach dem dritten Bildschirm nicht mehr,
-   welche Spalte was war. Die Linie unten sagt, wo der Bereich endet. */
+/* Eine lange Tabelle bekommt eine feste Höhe und einen klebenden Kopf. */
 .tabelle.lang {
   max-height: min(75vh, 48rem);
   overflow: auto;
@@ -1287,9 +1381,8 @@ tbody tr:hover { background: var(--link-wash); }
 }
 
 /*
- * Die Namensspalte klebt links, wenn die Tabelle waagerecht scrollt: Am
- * Telefon passt ein Ergebnis mit acht Spalten nicht in die Breite, und ohne
- * den Namen weiß man nach dem Wischen nicht mehr, wessen Zeile man liest.
+ * Die Namensspalte klebt links, wenn die Tabelle waagerecht scrollt: Ohne den
+ * Namen weiß man nach dem Wischen nicht mehr, wessen Zeile man liest.
  */
 .tabelle tbody th[scope='row'] {
   position: sticky;
@@ -1299,21 +1392,18 @@ tbody tr:hover { background: var(--link-wash); }
 }
 
 tbody tr:nth-child(even) th[scope='row'] { background: var(--zebra); }
-tbody tr:hover th[scope='row'] { background: var(--link-wash); }
-
+tbody tr:hover th[scope='row'] { background: var(--surface-2); }
 
 /*
  * Am Telefon keine Tabelle mit eigener Höhe. Ein Scrollbereich in der
- * scrollenden Seite ist dort eine Falle: Wer in der Fahrerliste wischt, bleibt
- * darin hängen und kommt weder zum Ende der Seite noch zurück. Der Kopf klebt
- * stattdessen unter der Kopfleiste.
+ * scrollenden Seite ist dort eine Falle.
  */
 @media (max-width: 40rem) {
   .tabelle.lang { max-height: none; overflow-x: auto; overflow-y: visible; }
   th, td { padding-inline: 0.55rem; }
 }
 
-.tabelle + .fussnote { margin-top: 0.75rem; }
+.tabelle + .fussnote { margin-top: var(--abstand-3); }
 
 td.leise,
 span.leise {
@@ -1322,17 +1412,18 @@ span.leise {
 
 td.fett { font-weight: 700; color: var(--ink); }
 
+/* Ein Name in einer Tabelle oder einem Turm: immer ein Verweis, ohne Strich – der Strich kommt mit dem Zeiger. */
 a.zeile {
   color: var(--ink);
   font-weight: 600;
   text-decoration: none;
 }
 
-/* In einer Tabelle wäre jede Zeile unterstrichen; der Strich kommt erst unter dem Zeiger. */
-a.zeile:hover {
-  color: var(--link);
+a.zeile:hover,
+a.zeile:focus-visible {
   text-decoration: underline;
-  text-decoration-color: currentColor;
+  text-decoration-thickness: 2px;
+  text-decoration-color: var(--lackierung-linie);
 }
 
 /* Ein Verweis in einer Nebenspalte: da, aber leise. */
@@ -1341,47 +1432,39 @@ a.leise {
   text-decoration: none;
 }
 
-a.leise:hover { color: var(--link); text-decoration: underline; }
+a.leise:hover { color: var(--ink); text-decoration: underline 2px; }
 
 td .neben {
   display: block;
-  font-size: 0.76rem;
+  font-size: var(--text-2);
   color: var(--muted);
   text-wrap: pretty;
 }
 
 td .neben a { color: var(--muted); text-decoration: none; }
-td .neben a:hover { color: var(--link); text-decoration: underline; }
+td .neben a:hover { color: var(--ink); text-decoration: underline; }
 
-/*
- * Eine Zelle mit zweiter Zeile ist ein kleiner Absatz, keine Zahl. Am Telefon
- * drückte der Browser sie auf Wortbreite zusammen – „440 · Fernando Alonso –
- * still racing …“ stand auf acht Zeilen, und die Tabelle scrollte trotzdem.
- * Mit einer Mindestbreite scrollt sie, statt zu quetschen.
- */
+/* Eine Zelle mit zweiter Zeile ist ein kleiner Absatz: Sie scrollt, statt zu quetschen. */
 td:has(> .neben) { min-width: 9.5rem; }
 
-/*
- * Zeile des Meisters: golden unterlegt. Der Rand links gehört jetzt der
- * Teamfarbe (unten, „Teamfarben“) – ein roter Strich dort hätte mit Ferrari
- * verwechselt werden können.
- */
+/* Zeile des Meisters: golden unterlegt. Der Rand links gehört der Teamfarbe. */
 tbody tr.meister,
 tbody tr.meister th[scope='row'] { background: var(--gold-wash); }
 tbody tr.meister:hover,
-tbody tr.meister:hover th[scope='row'] { background: var(--link-wash); }
-tr.meister a.zeile { font-weight: 700; }
+tbody tr.meister:hover th[scope='row'] { background: var(--surface-2); }
+tr.meister a.zeile { font-weight: 750; }
 tr.raus td { color: var(--muted); }
 tr.raus a.zeile { color: var(--muted); font-weight: 500; }
 
-td.meister { color: var(--accent); font-weight: 750; }
-td.gut { color: var(--good); font-weight: 650; }
-td.schlecht { color: var(--danger-fg); font-weight: 650; }
-td.verschoben { color: var(--warn); font-weight: 650; }
+td.meister { color: var(--ink); font-weight: 750; }
+td.gut { color: var(--good); font-weight: 700; }
+td.schlecht { color: var(--danger-fg); font-weight: 700; }
+td.verschoben { color: var(--warn); font-weight: 700; }
 
 /*
- * Die Platzziffer als Plakette. Die ersten drei in Gold, Silber und Bronze –
- * das ist die eine Farbkonvention, die in diesem Sport jeder sofort liest.
+ * Die Platzziffer. Die ersten drei in Gold, Silber und Bronze – die eine
+ * Farbkonvention, die in diesem Sport jeder sofort liest. Die übrigen nur als
+ * Ziffer: Grün für „in den Punkten“ wiederholte die Punktespalte.
  */
 .pos {
   display: inline-grid;
@@ -1389,32 +1472,32 @@ td.verschoben { color: var(--warn); font-weight: 650; }
   min-width: 1.9rem;
   height: 1.6rem;
   padding: 0 0.3rem;
-  font-size: 0.8rem;
+  font-size: var(--text-3);
+  font-stretch: var(--schmal);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  color: var(--ink-2);
-  background: var(--surface-3);
+  color: var(--ink);
   border-radius: var(--radius-s);
 }
 
 .pos.p1 { color: var(--podest-ink); background: var(--gold); }
 .pos.p2 { color: var(--podest-ink); background: var(--silber); }
 .pos.p3 { color: var(--podest-ink); background: var(--bronze); }
-/* In den Punkten, aber nicht auf dem Podium: grün. Die Seite setzt `punkte` an die Zeile. */
-tr.punkte .pos:not(.p1, .p2, .p3, .aus) { color: var(--good); background: var(--good-wash); }
-/* Ausgefallen, nicht qualifiziert, nicht gestartet: rot gerahmt, damit man die Ausfälle zählt, ohne zu lesen. */
-.pos.aus { font-size: 0.75rem; letter-spacing: 0.02em; color: var(--danger-fg); background: var(--danger-bg); border: 1px solid var(--danger-border); }
+/* Ausgefallen, nicht qualifiziert, nicht gestartet: rot gerahmt, mit dem Grund als Text. */
+.pos.aus { font-size: var(--text-2); letter-spacing: 0.02em; color: var(--danger-fg); background: var(--danger-bg); border: 1px solid var(--danger-border); }
 
+/* Das Fahrerkürzel, wie im Turm: schmal, schwer, in einem Rahmen. */
 .kuerzel {
   display: inline-block;
   min-width: 2.6rem;
   margin-right: 0.55rem;
   padding: 0.12rem 0.3rem;
-  font-size: 0.75rem;
-  font-weight: 700;
+  font-size: var(--text-2);
+  font-stretch: var(--schmal);
+  font-weight: 800;
   letter-spacing: 0.03em;
   text-align: center;
-  color: var(--ink-2);
+  color: var(--ink);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-s);
   vertical-align: 0.08em;
@@ -1429,8 +1512,8 @@ tr.punkte .pos:not(.p1, .p2, .p3, .aus) { color: var(--good); background: var(--
   display: inline-block;
   margin-left: 0.45rem;
   padding: 0 0.35rem;
-  font-size: 0.75rem;
-  font-weight: 600;
+  font-size: var(--text-1);
+  font-weight: 650;
   line-height: 1.5;
   color: var(--muted);
   border: 1px solid var(--border-strong);
@@ -1439,27 +1522,24 @@ tr.punkte .pos:not(.p1, .p2, .p3, .aus) { color: var(--good); background: var(--
   white-space: nowrap;
 }
 
-.etikett.akzent { color: var(--accent); border-color: currentColor; }
+.etikett.akzent { color: var(--ink); border-color: currentColor; }
 .etikett.gut { color: var(--good); border-color: currentColor; }
 .etikett.warn { color: var(--warn); border-color: currentColor; }
-.etikett.lila { color: #fff; background: var(--lila); border-color: var(--lila); }
-:root[data-theme='dark'] .etikett.lila { color: #15181d; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) .etikett.lila { color: #15181d; } }
+/* Lila ist die absolute Bestmarke: schnellste Runde. Gefüllt, weil sie selten ist. */
+.etikett.lila { color: var(--plane); background: var(--lila); border-color: var(--lila); }
 
 /* ------------------------------------------------------------ Teamfarben */
 
 /*
  * Die Farben selbst stehen in teams.css. Hier steht, wie sie erscheinen: als
  * Streifen am linken Rand jeder Zeile, die ein Team nennt, und als Punkt vor
- * dem Teamnamen. Beides liest man beim Überfliegen, ohne den Namen zu lesen –
- * zwei McLaren vorn, ein Ferrari dazwischen.
+ * dem Teamnamen. Beides liest man beim Überfliegen, ohne den Namen zu lesen.
  */
 tbody tr:has(a[href*='/teams/']) > :first-child {
   box-shadow: inset 4px 0 0 var(--team, transparent);
 }
 
 :is(td, th) a[href*='/teams/']::before,
-.podium .team::before,
 .teampunkt::before {
   content: '';
   display: inline-block;
@@ -1468,43 +1548,17 @@ tbody tr:has(a[href*='/teams/']) > :first-child {
   margin-right: 0.4em;
   vertical-align: 0.04em;
   background: var(--team, var(--s-rest));
-  border-radius: 2px;
-}
-
-/*
- * Der Kopf einer Team- oder Fahrerseite nimmt die Farbe des Teams an: Die
- * getönte Fläche wird zu einem Hauch der Lackierung, unter dem Namen steht ein
- * Balken in voller Farbe. Ein Fahrer trägt die Farbe seines letzten Teams.
- */
-.seitenkopf[data-team],
-.seitenkopf[data-team] + .kacheln,
-.seitenkopf[data-team] + .kacheln + .kacheln {
-  /* Ein Team ohne eigene Farbe in teams.css behält die gewohnte, blaugraue Tönung. */
-  --band: color-mix(in srgb, var(--team, #8b9bb0) 9%, var(--plane));
-}
-
-.seitenkopf[data-team] h1::after {
-  content: '';
-  display: block;
-  width: 3.5rem;
-  height: 5px;
-  margin-top: 0.7rem;
-  background: var(--team, var(--border-strong));
-  border-radius: 3px;
+  border-radius: 1px;
 }
 
 /* --------------------------------------------------- sortierbare Tabellen */
 
 /*
  * Ein Spaltenkopf zum Anklicken. Der Knopf sieht aus wie der Text daneben,
- * bis der Zeiger ihn trifft – ein Kopf soll ein Kopf bleiben.
- *
- * Die Regel steht global und nicht auf der Seite: Ein <style>-Block hängt in
- * Astro jedem Element der Seite ein Bereichsattribut an, und bei 860 Zeilen
- * mal sieben Elementen waren das 170 KB für sechs Zeilen CSS.
+ * bis der Zeiger ihn trifft. Die Regel steht global: Ein <style>-Block hängt
+ * in Astro jedem Element der Seite ein Bereichsattribut an.
  */
 thead button:not(.info) {
-  /* Groß genug für einen Finger, ohne dass der Kopf höher aussieht. */
   min-height: 2.25rem;
   margin-block: -0.5rem;
   padding: 0;
@@ -1518,11 +1572,9 @@ thead button:not(.info) {
   cursor: pointer;
 }
 
-thead button:not(.info):hover { color: var(--link); }
-/* Die Pfeile mit leerem Alternativtext: Sie zeigen die Richtung, sind aber nicht
-   Teil des Knopfnamens – die sagt aria-sort am Spaltenkopf. */
-thead button:not(.info)::after { content: ' ↕' / ''; opacity: 0.35; }
-thead button:not(.info)[data-aktiv='1'] { color: var(--link); font-weight: 700; }
+thead button:not(.info):hover { color: var(--ink); }
+thead button:not(.info)::after { content: ' ↕' / ''; opacity: 0.45; }
+thead button:not(.info)[data-aktiv='1'] { color: var(--ink); font-weight: 750; }
 thead button:not(.info)[data-aktiv='1']::after { content: ' ▾' / ''; opacity: 1; font-size: 0.8em; }
 thead button:not(.info)[data-aktiv='1'][data-richtung='auf']::after { content: ' ▴' / ''; }
 
@@ -1530,56 +1582,58 @@ thead button:not(.info)[data-aktiv='1'][data-richtung='auf']::after { content: '
 
 /*
  * Über jeder langen Liste: ein Feld, das die Zeilen im Browser filtert, und
- * daneben, wie viele übrig sind. Das ist die Frage, mit der man eine Liste von
- * 860 Fahrern aufschlägt – „wo ist er?" –, und die Browsersuche beantwortet
- * sie nur Treffer für Treffer.
+ * daneben, wie viele übrig sind.
  */
 .filterleiste {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.6rem 0.9rem;
-  margin: 0 0 1rem;
+  gap: var(--abstand-2) var(--abstand-4);
+  margin: 0 0 var(--abstand-4);
 }
 
 .filterleiste input[type='search'] {
   flex: 1 1 18rem;
   max-width: 30rem;
   min-width: 0;
-  padding: 0.6rem 0.8rem 0.6rem 2.3rem;
-  font-size: 0.92rem;
+  min-height: 2.5rem;
+  padding: 0.55rem 0.8rem 0.55rem 2.3rem;
+  font-size: var(--text-3);
   color: var(--ink);
-  background: var(--plane)
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%23868d98' stroke-width='2' stroke-linecap='round' viewBox='0 0 24 24'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E")
+  background: var(--surface)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%2376808a' stroke-width='2' stroke-linecap='round' viewBox='0 0 24 24'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E")
     no-repeat 0.75rem 50%;
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--border-input);
   border-radius: var(--radius);
   appearance: none;
 }
 
-.filterleiste input[type='search']:focus { border-color: var(--link); outline: none; }
-.filterleiste output { font-size: 0.85rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.filterleiste input[type='search']:focus-visible { border-color: var(--ink); outline: 2px solid var(--ink); outline-offset: 1px; }
+.filterleiste output { font-size: var(--text-2); color: var(--muted); font-variant-numeric: tabular-nums; }
 
-/* Umschalter: „nur Weltmeister", „nur aktive". Der Name „Pillen“ ist geblieben, die Form nicht. */
-.pillen { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+/*
+ * Umschalter: „nur Weltmeister“, „nur aktive“. Gewählt heißt gefüllt in Tinte.
+ * Blau gefüllt stand vorher eine Wand aus Knöpfen da, wenn viel gewählt war.
+ */
+.pillen { display: flex; flex-wrap: wrap; gap: var(--abstand-1); }
 
 .pillen button {
+  min-height: 2.25rem;
   padding: 0.35rem 0.8rem;
-  font-size: 0.85rem;
-  font-weight: 500;
-  color: var(--ink-2);
-  background: var(--plane);
+  font-size: var(--text-2);
+  font-weight: 550;
+  color: var(--ink);
+  background: var(--surface);
   border: 1px solid var(--border-input);
   border-radius: var(--radius);
   cursor: pointer;
 }
 
-.pillen button:hover { border-color: var(--link); color: var(--link); }
-/* Gewählt heißt Tinte, nicht rot: Bei acht gewählten Spalten war die Leiste sonst eine rote Fläche. */
-.pillen button[aria-pressed='true'] { color: var(--plane); background: var(--link); border-color: var(--link); }
+.pillen button:hover { border-color: var(--ink); }
+.pillen button[aria-pressed='true'] { color: var(--plane); background: var(--ink); border-color: var(--ink); }
 
 .leer-meldung {
-  padding: 2rem 1rem;
+  padding: var(--abstand-6) var(--abstand-4);
   text-align: center;
   color: var(--muted);
 }
@@ -1589,29 +1643,25 @@ thead button:not(.info)[data-aktiv='1'][data-richtung='auf']::after { content: '
   min-height: 2.25rem;
   padding: 0.3rem 0.75rem;
   font: inherit;
-  font-size: 0.86rem;
-  font-weight: 600;
-  color: var(--link);
+  font-size: var(--text-2);
+  font-weight: 650;
+  color: var(--ink);
   background: none;
   border: 1px dashed var(--border-input);
   border-radius: var(--radius);
   cursor: pointer;
 }
 
-.leise-knopf:hover { border-style: solid; border-color: var(--link); }
-
-.pillen button { min-height: 2.25rem; }
-.filterleiste input[type='search'] { border-color: var(--border-input); }
-.filterleiste input[type='search']:focus-visible { outline: 2px solid var(--link); outline-offset: 1px; }
+.leise-knopf:hover { border-style: solid; border-color: var(--ink); }
 
 /*
  * Auswahl zwischen vorgerechneten Ansichten (Wahl.astro, What-if): echte
  * Optionsfelder, unsichtbar über der Pille – Tastatur, Pfeiltasten und
  * Vorleser bekommen sie so ohne eigenes Zutun.
  */
-.wahl { display: grid; gap: 0.6rem; margin: 0 0 1rem; padding: 0; border: none; min-width: 0; }
+.wahl { display: grid; gap: var(--abstand-2); margin: 0 0 var(--abstand-4); padding: 0; border: none; min-width: 0; }
 .wahl[hidden] { display: none; }
-.wahl-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.wahl-chips { display: flex; flex-wrap: wrap; gap: var(--abstand-1); }
 .wahl-chip { position: relative; }
 .wahl-chip input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; margin: 0; cursor: pointer; }
 
@@ -1620,44 +1670,147 @@ thead button:not(.info)[data-aktiv='1'][data-richtung='auf']::after { content: '
   align-items: center;
   min-height: 2.25rem;
   padding: 0.35rem 0.85rem;
-  font-size: 0.86rem;
-  font-weight: 500;
-  color: var(--ink-2);
-  background: var(--plane);
+  font-size: var(--text-2);
+  font-weight: 550;
+  color: var(--ink);
+  background: var(--surface);
   border: 1px solid var(--border-input);
   border-radius: var(--radius);
 }
 
-.wahl-chip:hover span { border-color: var(--link); color: var(--link); }
-.wahl-chip input:checked + span { color: var(--plane); background: var(--link); border-color: var(--link); font-weight: 600; }
-.wahl-chip input:focus-visible + span { outline: 2px solid var(--link); outline-offset: 2px; }
+.wahl-chip:hover span { border-color: var(--ink); }
+.wahl-chip input:checked + span { color: var(--plane); background: var(--ink); border-color: var(--ink); font-weight: 650; }
+.wahl-chip input:focus-visible + span { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+/* ======================================================= Zeitnahme-Turm */
+
+/*
+ * Eine Rangliste, wie sie der Timing-Tower zeigt: Position, Teamstreifen,
+ * Kürzel, Name, Wert, Abstand. Eine Form für WM-Stand, Rekorde, Team-mates –
+ * wer eine kennt, liest alle (DESIGN.md 8.5).
+ *
+ *   <ol class="turm">
+ *     <li data-team="mercedes">
+ *       <span class="platz p1">1</span> <span class="code">ANT</span>
+ *       <a class="zeile wer" href="…">Kimi Antonelli</a>
+ *       <b class="wert">390</b> <span class="abstand">−111</span>
+ *     </li>
+ *
+ * Der Rang steht im Feld, nicht in einem Zähler: Ein Zähler kennt keinen
+ * Gleichstand („=5“). Ohne Kürzel (Teams) entfällt die Spalte von selbst.
+ */
+.turm {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  background: var(--surface);
+}
+
+.turm li {
+  display: grid;
+  grid-template-columns: 2rem 4px 2.75rem minmax(0, 1fr) auto minmax(3.25rem, auto);
+  align-items: center;
+  column-gap: var(--abstand-3);
+  min-height: 2.75rem;
+  padding: var(--abstand-1) var(--abstand-3) var(--abstand-1) var(--abstand-1);
+  border-bottom: 1px solid var(--border);
+}
+
+.turm li:not(:has(.code)) { grid-template-columns: 2rem 4px minmax(0, 1fr) auto minmax(3.25rem, auto); }
+.turm li:last-child { border-bottom: 0; }
+
+/* Der Teamstreifen. Der Name des Teams steht daneben oder eine Zeile weiter – die Farbe ist Zugabe. */
+.turm li::before {
+  content: '';
+  grid-column: 2;
+  grid-row: 1;
+  align-self: stretch;
+  background: var(--team, var(--s-rest));
+}
+
+.turm .platz {
+  grid-column: 1;
+  grid-row: 1;
+  display: grid;
+  place-items: center;
+  height: 1.85rem;
+  font-size: var(--text-3);
+  font-stretch: var(--schmal);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  background: var(--zebra);
+}
+
+.turm .platz.p1 { color: var(--podest-ink); background: var(--gold); }
+.turm .platz.p2 { color: var(--podest-ink); background: var(--silber); }
+.turm .platz.p3 { color: var(--podest-ink); background: var(--bronze); }
+
+.turm .code {
+  font-stretch: var(--schmal);
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  color: var(--ink);
+}
+
+.turm .wer {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.turm .wer i {
+  font-style: normal;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+/* Ein Name ohne eigene Seite: Tinte, aber nicht fett – fett heißt hier „Link“. */
+.turm span.zeile { color: var(--ink); }
+
+/* Am Telefon steht das Team in einer zweiten Zeile, statt den Namen abzuschneiden. */
+@media (max-width: 40rem) {
+  .turm .wer i { display: block; font-size: var(--text-2); line-height: 1.3; overflow: hidden; text-overflow: ellipsis; }
+  /* Zeilen, die nur breit gezeigt werden: Auf der Startseite rückte sonst das nächste Rennen aus den ersten 800 Pixeln. */
+  .turm .weitere { display: none; }
+}
+
+.turm .wert,
+.turm .abstand {
+  text-align: right;
+  font-stretch: var(--schmal);
+  font-variant-numeric: tabular-nums lining-nums;
+  white-space: nowrap;
+}
+
+.turm .wert { font-weight: 700; color: var(--ink); }
+.turm .abstand { color: var(--muted); }
 
 /* ============================================================ Ranglisten */
 
 /*
- * Eine kurze Bestenliste. Der erste Eintrag ist der Rekord und steht groß
- * oben; die übrigen folgen als Liste. So liest man beim Überfliegen der
- * Rekordseite erst die Halter und erst dann die Verfolger. Ohne Kasten: Die
- * Linie oben trennt eine Liste von der nächsten.
+ * Eine kurze Bestenliste, im Stil des Turms. Der erste Eintrag ist der Rekord:
+ * der Wert in Lila, der Farbe der absoluten Bestmarke.
  */
 .rangkarte {
   display: flex;
   flex-direction: column;
-  padding: 0.75rem 0 0.3rem;
+  padding: var(--abstand-3) 0 0;
   border-top: 1px solid var(--ink);
   min-width: 0;
 }
 
 .rangkarte > h3 {
-  margin: 0 0 0.2rem;
-  font-size: 0.95rem;
-  font-weight: 650;
+  margin: 0 0 var(--abstand-1);
+  font-size: var(--text-3);
+  font-weight: 700;
   color: var(--ink);
 }
 
 .rangkarte > .unter {
-  margin: 0 0 0.35rem;
-  font-size: 0.78rem;
+  margin: 0 0 var(--abstand-2);
+  font-size: var(--text-2);
   color: var(--muted);
   text-wrap: pretty;
 }
@@ -1667,15 +1820,17 @@ thead button:not(.info)[data-aktiv='1'][data-richtung='auf']::after { content: '
   padding: 0;
   list-style: none;
   counter-reset: rang;
+  background: var(--surface);
 }
 
 .rangliste li {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  padding: 0.42rem 0;
+  gap: var(--abstand-3);
+  min-height: 2.5rem;
+  padding: var(--abstand-1) var(--abstand-3) var(--abstand-1) var(--abstand-1);
   border-bottom: 1px solid var(--border);
-  font-size: 0.9rem;
+  font-size: var(--text-3);
   min-width: 0;
 }
 
@@ -1684,17 +1839,21 @@ thead button:not(.info)[data-aktiv='1'][data-richtung='auf']::after { content: '
 
 /*
  * Der Rang steht im Attribut, gerechnet von `raenge()` in format.js – ein
- * Zähler kennt keinen Gleichstand. Der Zähler bleibt als Rückfall für Listen
- * ohne Attribut.
+ * Zähler kennt keinen Gleichstand. Der Zähler bleibt als Rückfall.
  */
 .rangliste li::before {
   counter-increment: rang;
   content: counter(rang);
+  display: grid;
+  place-items: center;
   flex: none;
-  min-width: 1.7rem;
-  font-size: 0.78rem;
-  font-weight: 650;
-  color: var(--muted);
+  min-width: 2rem;
+  height: 1.85rem;
+  font-size: var(--text-3);
+  font-stretch: var(--schmal);
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--zebra);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1714,11 +1873,11 @@ thead button:not(.info)[data-aktiv='1'][data-richtung='auf']::after { content: '
 }
 
 .rangliste > li > a { flex: 1; }
-.rangliste a:hover { color: var(--link); text-decoration: underline; }
+.rangliste a:hover { text-decoration: underline 2px; text-decoration-color: var(--lackierung-linie); }
 
 .rangliste i {
   font-style: normal;
-  font-size: 0.76rem;
+  font-size: var(--text-2);
   color: var(--muted);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1726,49 +1885,257 @@ thead button:not(.info)[data-aktiv='1'][data-richtung='auf']::after { content: '
 }
 
 .rangliste i a { color: var(--muted); font-weight: 400; }
-.rangliste i a:hover { color: var(--link); text-decoration: underline; }
 
 .rangliste b {
   flex: none;
   color: var(--ink);
   font-weight: 700;
+  font-stretch: var(--schmal);
   font-variant-numeric: tabular-nums;
 }
 
-/* Rang eins: der Halter – bei Gleichstand alle. Größer, mit Plakette statt Ziffer. */
-.rangkarte .rangliste li.vorn {
-  padding: 0.55rem 0 0.7rem;
-}
+/*
+ * Rang eins: der Halter – bei Gleichstand alle. Gold im Feld, der Wert groß in
+ * Tinte. Nicht Lila: Auf der Rekordseite ist jede erste Zeile ein Rekord, und
+ * Lila an allen zwölf wäre, was vorher Rot war – überall, also nichtssagend.
+ */
+.rangkarte .rangliste li.vorn { min-height: 3.25rem; }
+.rangkarte .rangliste li.vorn::before { color: var(--podest-ink); background: var(--gold); }
+.rangkarte .rangliste li.vorn a { font-size: var(--text-4); font-weight: 700; }
 
-.rangkarte .rangliste li.vorn::before {
-  display: grid;
-  place-items: center;
-  min-width: 1.75rem;
-  height: 1.75rem;
-  color: var(--podest-ink);
-  background: var(--gold);
-  border-radius: var(--radius-s);
-}
-
-.rangkarte .rangliste li.vorn a { font-size: 1.02rem; font-weight: 700; }
-
-/* Die Rekordzahl in Rot: Sie ist der Rekord. */
 .rangkarte .rangliste li.vorn b {
-  font-family: var(--display);
-  font-size: 1.75rem;
-  font-weight: 800;
-  letter-spacing: -0.03em;
+  font-size: var(--text-6);
+  font-stretch: var(--eng);
+  font-weight: 750;
   line-height: 1;
-  color: var(--accent);
+  color: var(--ink);
 }
+
+/* ============================================================ Epochenband */
+
+/*
+ * Wo der Gegenstand einer Seite auf der Zeitachse steht: ein Feld je Saison
+ * von 1950 bis heute, gefahrene hoch, übrige flach (Epochenband.astro). Die
+ * Spalten zählt das Raster selbst – keine Prozentposition, also kein
+ * style-Attribut.
+ */
+.epochen {
+  max-width: 40rem;
+  margin: var(--abstand-5) 0 calc(var(--abstand-5) + 1rem);
+}
+
+.epochen ol {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  align-items: end;
+  column-gap: 1px;
+  height: 0.875rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.epochen li {
+  position: relative;
+  height: 2px;
+  background: var(--border-strong);
+}
+
+/* Titeljahre ragen über die übrigen hinaus: Die Form trägt den Titel, nicht nur das Gold,
+   das auf hellem Beton kaum 2:1 erreicht. */
+.epochen li.an { height: 64%; background: var(--lackierung-linie); }
+.epochen li.titel { height: 100%; background: var(--ink); box-shadow: inset 0 3px 0 var(--gold); }
+
+/* Die Jahreszahl hängt unter ihrem Feld; die letzte endet an der rechten Kante. */
+.epochen li > span {
+  position: absolute;
+  top: calc(100% + 0.3rem);
+  left: 0;
+  font-size: var(--text-1);
+  font-stretch: var(--schmal);
+  font-weight: 550;
+  line-height: 1;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Jede Zahl steht auf derselben Linie, gleich wie hoch ihr Feld ist. */
+.epochen li > span { top: auto; bottom: calc(-0.3rem - 1em); }
+.epochen li.ende > span { left: auto; right: 0; }
+
+/* ============================================================ Meisterband */
+
+/*
+ * Jede Saison ein Balken in der Farbe des Teams ihres Fahrermeisters, so hoch
+ * wie dessen Anteil an den möglichen Punkten (Meisterband.astro, DESIGN.md
+ * 8.4). Groß steht es auf dem Monitor.
+ *
+ * Jedes `li` ist ein kleines Raster mit zwei Zeilen: oben der Balken, unten,
+ * wo ein Jahrzehnt beginnt, die Jahreszahl. So steht jede Zahl unter ihrem
+ * Balken, ohne Prozentposition und ohne positioniertes Element – die Zahl ragt
+ * aus ihrer 3 px breiten Spalte einfach hinaus.
+ */
+.meisterband {
+  --balken-h: 6rem;
+  position: relative;
+  margin: 0 0 var(--abstand-5);
+  /* Rechts Platz für die Beschriftung des Maßstabs, außerhalb der Balken. */
+  padding: var(--abstand-4) calc(var(--abstand-4) + 1.5rem) var(--abstand-3) var(--abstand-4);
+}
+
+.meisterband .legende {
+  max-width: 46rem;
+  margin: 0;
+  font-size: var(--text-2);
+  color: var(--muted);
+  text-wrap: pretty;
+}
+
+/* Der Text des gewählten Balkens: eine eigene Zeile, die nichts verdeckt. */
+.meisterband .zeile {
+  min-height: 1.5em;
+  margin: var(--abstand-2) 0 var(--abstand-3);
+  font-size: var(--text-3);
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+html:not(.js) .meisterband .legende { margin-bottom: var(--abstand-3); }
+
+.meisterband .balken {
+  position: relative;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  column-gap: 1px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Eine Spalte so breit wie das `li`: Sonst machte die Jahreszahl die Spalte und damit den Balken breiter. */
+.meisterband li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: var(--balken-h) 1.1rem;
+  min-width: 0;
+}
+
+.meisterband li > a,
+.meisterband li > svg {
+  grid-row: 1;
+  display: block;
+  height: 100%;
+  min-width: 0;
+  text-decoration: none;
+  border-radius: 0;
+}
+
+.meisterband svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Nur die vollen Balken – der schraffierte trägt sein Muster im fill-Attribut. */
+.meisterband rect.voll,
+.meisterband .schraffur { fill: var(--team, var(--s-rest)); }
+.meisterband a:is(:hover, :focus-visible, .gewaehlt) :is(rect.voll, .schraffur) { fill: var(--ink); }
+.meisterband a:focus-visible { outline-offset: 1px; }
+
+/* Die Achse: Tinte unter den Balken, dazu die Hälfte der möglichen Punkte gestrichelt. */
+.meisterband .balken::before,
+.meisterband .balken::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+}
+
+.meisterband .balken::before { top: calc(var(--balken-h) / 2); border-top: 1px dashed var(--border-strong); }
+.meisterband .balken::after { top: var(--balken-h); border-top: 1px solid var(--ink); }
+
+.meisterband .flaeche { position: relative; }
+
+.meisterband .massstab {
+  position: absolute;
+  top: calc(var(--balken-h) / 2 - 0.45rem);
+  left: calc(100% + 0.3rem);
+  line-height: 1;
+  font-size: var(--text-1);
+  font-stretch: var(--schmal);
+  color: var(--muted);
+}
+
+.meisterband .marke {
+  grid-row: 2;
+  justify-self: start;
+  align-self: end;
+  font-size: var(--text-1);
+  font-stretch: var(--schmal);
+  font-weight: 550;
+  line-height: 1;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.meisterband li.ende .marke { justify-self: end; }
+
+/*
+ * Die einzige Animation der Seite: Das Band wischt beim Laden einmal von 1950
+ * bis heute auf. Ein Wischen über die ganze Reihe statt Balken für Balken –
+ * eine Verzögerung je Balken bräuchte ein style-Attribut, und das verbietet die
+ * Inhaltsrichtlinie. Ohne Füllmodus: Nach 800 ms ist kein clip-path mehr
+ * gesetzt, der Fokusrahmen und die Jahreszahlen bleiben ganz.
+ */
+@keyframes aufbau {
+  from { clip-path: inset(0 100% 0 0); }
+  to { clip-path: inset(0 0 0 0); }
+}
+
+.meisterband.monitor .balken { animation: aufbau 0.8s cubic-bezier(0.2, 0.7, 0.3, 1); }
+
+@media (prefers-reduced-motion: reduce) {
+  .meisterband .balken { animation: none !important; }
+}
+
+@media (max-width: 40rem) {
+  .meisterband { --balken-h: 4rem; padding: var(--abstand-3) calc(var(--abstand-3) + 1.4rem) var(--abstand-2) var(--abstand-3); }
+  .meisterband .legende { font-size: var(--text-2); }
+  /* Am Telefon erscheint die Zeile erst, wenn ein Balken angetippt ist – sonst schöbe sie den Stand aus dem ersten Bildschirm. */
+  .meisterband .zeile { font-size: var(--text-2); min-height: 0; margin-block: 0 var(--abstand-2); }
+  .meisterband .zeile:not(.an) { display: none; }
+  .meisterband .legende { margin-bottom: var(--abstand-3); }
+}
+
+/*
+ * Klein, auf der Saisonseite: hell, ohne Links, nicht auf dem Monitor – es ist
+ * Zusammenhang, nicht der laute Moment. Die Saison der Seite steht voll da,
+ * mit einer Marke in Tinte darüber, die übrigen zurückgenommen.
+ */
+.meisterband.klein {
+  --balken-h: 2.5rem;
+  max-width: 40rem;
+  margin: var(--abstand-5) 0 var(--abstand-4);
+  padding: 0;
+}
+
+.meisterband.klein .balken::before { display: none; }
+.meisterband.klein li:not(.hier) :is(rect.voll, .schraffur) { opacity: 0.4; }
+.meisterband.klein li.hier > svg { box-shadow: 0 -4px 0 var(--ink); }
 
 /* ============================================================ Diagramme */
 
-/* Ein Diagramm steht auf dem Papier, gerahmt von einer Linie oben und unten. */
+/* Ein Diagramm steht auf der Fläche. */
 .bild {
   margin: 0;
-  padding: 1rem 0 0.85rem;
-  border-bottom: 1px solid var(--border);
+  padding: var(--abstand-4) var(--abstand-4) var(--abstand-3);
+  background: var(--surface);
 }
 
 /* ========================================================== Info-Knöpfe */
@@ -1792,7 +2159,7 @@ thead button:not(.info)[data-aktiv='1'][data-richtung='auf']::after { content: '
   background: none;
   border: none;
   cursor: pointer;
-  font: 700 0.68rem/1 var(--sans);
+  font: 700 0.6875rem/1 var(--sans);
 }
 
 .info::before {
@@ -1808,14 +2175,14 @@ thead button:not(.info)[data-aktiv='1'][data-richtung='auf']::after { content: '
 }
 
 .info:hover,
-.info[aria-expanded='true'] { color: var(--link); }
+.info[aria-expanded='true'] { color: var(--ink); }
 .info:focus-visible { outline-offset: 0; border-radius: 50%; }
 
 .info-halt { white-space: nowrap; }
 
-/* Im Spaltenkopf und in einer Kachel ist die Schrift kleiner – der Kreis bleibt gleich groß. */
 th .info,
-.kacheln span .info { font-size: 0.68rem; }
+.kacheln span .info,
+.leiste span .info { font-size: 0.6875rem; }
 
 /* Die Box: ein Zettel neben dem Knopf. Ohne Skript zum Anlegen erscheint sie in der Mitte. */
 .info-box {
@@ -1825,15 +2192,15 @@ th .info,
   margin: 0;
   padding: 0.85rem 2.4rem 0.9rem 1rem;
   color: var(--ink-2);
-  background: var(--plane);
+  background: var(--surface);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  font-size: 0.9rem;
+  font-size: var(--text-3);
   line-height: 1.5;
 }
 
-.info-box b { display: block; margin-bottom: 0.25rem; color: var(--ink); font-size: 0.95rem; }
+.info-box b { display: block; margin-bottom: 0.25rem; color: var(--ink); font-size: var(--text-3); }
 .info-box p { margin: 0; text-wrap: pretty; }
 
 .info-zu {
@@ -1857,45 +2224,57 @@ th .info,
 
 /* ============================================================= Fußzeile */
 
+/*
+ * Der Fuß steht auf dem Grund, oben eine Linie in Tinte. Hier – und nur hier –
+ * steht, woher die Zahlen kommen. Jeder Verweis ist unterstrichen: Vorher waren
+ * es nur Farbunterschiede zum Umtext, 1,85:1, und das reichte nicht.
+ */
 footer {
-  padding-block: 2.5rem 3rem;
-  font-size: 0.86rem;
+  padding-block: var(--abstand-7) var(--abstand-7);
+  font-size: var(--text-2);
   color: var(--muted);
-  background: var(--surface-2);
-  border-top: 1px solid var(--border);
+  background: var(--plane);
+  border-top: 1px solid var(--ink);
 }
 
-footer a { color: var(--ink-2); text-decoration: none; }
-footer a:hover { color: var(--link); text-decoration: underline; }
+footer a {
+  color: var(--ink-2);
+  text-decoration-thickness: 1px;
+  text-decoration-color: var(--border-input);
+}
+
+footer a:hover { color: var(--ink); text-decoration-thickness: 2px; text-decoration-color: currentColor; }
 
 .fuss-raster {
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) repeat(auto-fit, minmax(9rem, 1fr));
-  gap: 1.75rem 2rem;
+  gap: var(--abstand-6) var(--abstand-6);
 }
 
 .fuss-raster h2 {
-  margin: 0 0 0.6rem;
-  font-size: 0.95rem;
+  margin: 0 0 var(--abstand-2);
+  font-size: var(--text-3);
+  font-stretch: 100%;
   font-weight: 700;
+  letter-spacing: 0;
   color: var(--kopf-ink);
 }
 
-.fuss-raster ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 0.35rem; }
-.fuss-raster p { margin: 0.6rem 0 0; max-width: 28rem; text-wrap: pretty; }
-.fuss-raster .logo { margin: 0; }
+.fuss-raster ul { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--abstand-2); }
+.fuss-raster p { margin: var(--abstand-3) 0 0; max-width: 28rem; text-wrap: pretty; font-size: var(--text-3); color: var(--ink-2); }
+.fuss-raster .logo { margin: 0; text-decoration: none; }
 
 .fuss-klein {
-  margin-top: 2rem;
-  padding-top: 1.25rem;
+  margin-top: var(--abstand-6);
+  padding-top: var(--abstand-4);
   border-top: 1px solid var(--kopf-linie);
-  font-size: 0.78rem;
+  max-width: 60rem;
 }
 
 @media (max-width: 40rem) {
-  .wrap { padding-inline: 1rem; }
-  main { padding-block: 1.5rem 3.5rem; }
+  .wrap { padding-inline: var(--abstand-4); }
+  main { padding-block: var(--abstand-5) var(--abstand-7); }
   .fuss-raster { grid-template-columns: 1fr 1fr; }
   .fuss-raster > :first-child { grid-column: 1 / -1; }
-  td, th { padding-inline: 0.6rem; }
+  td, th { padding-inline: 0.55rem; }
 }

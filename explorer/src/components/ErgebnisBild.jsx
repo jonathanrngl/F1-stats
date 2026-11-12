@@ -67,7 +67,7 @@ export default function ErgebnisBild({ reihen, kennzahl, label, zeitlich, zeige,
     <figure className="ergebnisbild" ref={ref}>
       <figcaption>
         <b>{titel}</b>
-        {zeitlich && <span aria-live="polite">{ziel ? anzeige : `Highest – ${anzeige}`}</span>}
+        {zeitlich && <span aria-live="polite">{ziel ? anzeige : `Highest: ${anzeige}`}</span>}
       </figcaption>
       {breite > 0 && (zeitlich
         ? <Saeulen liste={liste} kennzahl={kennzahl} breite={breite} min={min} spanne={spanne} ziel={ziel} setZiel={setZiel} zeige={zeige} label={label} />
@@ -85,8 +85,13 @@ function Balken({ liste, kennzahl, breite, min, spanne, ziel, setZiel, zeige, ba
   const x = (v) => x0 + ((v - min) / spanne) * flaeche
   const hoehe = liste.length * ZEILE + 4
 
+  /*
+   * Eine Gruppe, kein Bild: Die Namen sind Verweise, und ein Element mit
+   * role="img" darf nichts Fokussierbares enthalten (axe: nested-interactive).
+   * Vorleser lesen so Name und Wert je Zeile, die Verweise bleiben erreichbar.
+   */
   return (
-    <svg width={breite} height={hoehe} viewBox={`0 0 ${breite} ${hoehe}`} role="img"
+    <svg width={breite} height={hoehe} viewBox={`0 0 ${breite} ${hoehe}`} role="group"
       aria-label={`${label}, bar chart of the top ${liste.length}. The values are in the table below.`}>
       {min < 0 && <line className="null" x1={x(0)} x2={x(0)} y1={0} y2={hoehe} />}
       {liste.map((r, i) => {

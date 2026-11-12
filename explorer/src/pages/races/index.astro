@@ -35,11 +35,10 @@ for (const j of jahre) {
 >
   <header class="seitenkopf">
     <div>
-      <p class="oberzeile">Races</p>
-      <h1>Every race since 1950</h1>
+      <h1>All races since 1950</h1>
       <p class="lead">
-        {zahl(rennen.length)} World Championship rounds, arranged by season. Filter for a race,
-        a circuit or a winner – try “Monaco” or “Senna”.
+        {zahl(rennen.length)} World Championship rounds, by season. Filter for a race, a circuit
+        or a winner, for example “Monaco” or “Senna”.
       </p>
     </div>
   </header>
@@ -102,21 +101,19 @@ for (const j of jahre) {
   * eindeutig genug, um niemandem in die Quere zu kommen.
   */}
 <style is:global>
+  /* Die Jahre auf der Fläche, flach: ohne Rahmen, Rundung und Schatten. */
   .jahre {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(min(14rem, 100%), 1fr));
-    gap: 0.6rem 1.5rem;
-    margin: 0 0 2.5rem;
-    padding: 1rem 1.2rem;
+    gap: var(--abstand-2) var(--abstand-5);
+    margin: 0 0 var(--abstand-7);
+    padding: var(--abstand-4);
     background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow-s);
   }
 
-  .jahre div { display: flex; align-items: baseline; gap: 0.6rem; }
-  .jahre b { flex: none; width: 3rem; font-size: 0.8rem; font-weight: 750; color: var(--ink); font-variant-numeric: tabular-nums; }
-  .jahre span { display: flex; flex-wrap: wrap; gap: 0.15rem; }
+  .jahre div { display: flex; align-items: baseline; gap: var(--abstand-2); }
+  .jahre b { flex: none; width: 3rem; font-size: var(--text-2); font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .jahre span { display: flex; flex-wrap: wrap; gap: var(--abstand-1); }
 
   /* Vier Ziffern, nicht zwei: „05“ ist nicht von „50“ zu unterscheiden. Und groß genug für einen Finger. */
   .jahre a {
@@ -124,18 +121,18 @@ for (const j of jahre) {
     align-items: center;
     min-height: 1.75rem;
     min-width: 2.75rem;
-    padding: 0.1rem 0.35rem;
-    font-size: 0.8rem;
+    padding: 0 var(--abstand-1);
+    font-size: var(--text-2);
     color: var(--muted);
     text-decoration: none;
-    border-radius: 0.25rem;
+    border-radius: var(--radius);
     font-variant-numeric: tabular-nums;
   }
 
   .jahre a:hover { color: var(--ink); background: var(--surface-2); }
 
   .abschnitt h2 a { color: var(--ink); text-decoration: none; }
-  .abschnitt h2 a:hover { color: var(--link); }
+  .abschnitt h2 a:hover { text-decoration: underline; text-decoration-thickness: 3px; text-decoration-color: var(--lackierung-linie); }
 
   /*
    * Das Jahr steht über jeder Tabelle, im Datum wäre es das zweite Mal. Ohne

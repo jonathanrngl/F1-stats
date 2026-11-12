@@ -9,8 +9,9 @@
  * Die Balkenhöhe ist die Zahl der Starts, nicht die der Siege. Das ist die
  * Entscheidung, an der alles hängt: Über Siege gezeichnet wären 800 der 860
  * Fahrer ein leeres Bild. Über Starts hat jeder eine Gestalt, und der Erfolg
- * sitzt als Färbung darin – Siege unten in der Akzentfarbe, weitere Podien
- * darüber blasser, der Rest als helle Fläche mit Kontur.
+ * sitzt als Färbung darin – Siege unten in der Lackierung der Seite (auf
+ * Motor- und Reifenseiten Tinte), weitere Podien darüber blasser, der Rest als
+ * helle Fläche mit Kontur.
  *
  * Gezeichnet beim Bauen, in zwei Breiten wie der Punkteverlauf (Verlauf.astro):
  * eine feste Breite von 900 ergab am Telefon Jahreszahlen von drei Pixeln.
@@ -121,7 +122,8 @@ const FASSUNGEN = [
     <span class="schluessel"><i class="siege"></i>Wins</span>
     <span class="schluessel"><i class="podien"></i>Other podiums</span>
     <span class="schluessel"><i class="rest"></i>Other starts</span>
-    <span class="schluessel"><i class="titel"></i>Title</span>
+    {/* Nur, wo eine Titelmarke steht: Motor- und Reifenseiten zeichnen keine. */}
+    {saisons.some((s) => s.meister) && <span class="schluessel"><i class="titel"></i>Title</span>}
     <span class="notiz">Bar height is the number of starts in that season.</span>
   </figcaption>
 
@@ -154,7 +156,7 @@ const FASSUNGEN = [
 <style>
   .karriere {
     margin: 0;
-    padding: 1rem 0 0.85rem;
+    padding: var(--abstand-4) 0 var(--abstand-3);
     border-bottom: 1px solid var(--border);
   }
 
@@ -166,54 +168,62 @@ const FASSUNGEN = [
     svg.schmal { display: block; }
   }
 
+  /* Die Achse in Tinte, wie auf dem Monitor (docs/DESIGN.md 7). */
   .gitter { stroke: var(--grid); stroke-width: 1; shape-rendering: crispEdges; }
-  .achslinie { stroke: var(--axis); stroke-width: 1; shape-rendering: crispEdges; }
-  .achse { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+  .achslinie { stroke: var(--ink); stroke-width: 1; shape-rendering: crispEdges; }
+  .achse {
+    fill: var(--muted);
+    font-size: var(--text-1);
+    font-stretch: var(--schmal);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+  }
 
   /*
    * Drei Stufen einer Farbe statt drei Farben: Die Reihenfolge Sieg – Podium –
    * Rest ist eine Rangfolge, und eine Rangfolge zeichnet man mit Helligkeit,
-   * nicht mit verschiedenen Farbtönen.
+   * nicht mit verschiedenen Farbtönen. Die Farbe ist die Linienfarbe der
+   * Lackierung: Sie hält 3:1 auf der Fläche, sonst ist sie Tinte (DESIGN.md 5.4).
    *
-   * Der Rest ist nur noch eine helle Fläche mit Kontur in --s-rest. Volldeckend
+   * Der Rest ist nur eine helle Fläche mit Kontur in --s-rest. Volldeckend
    * grau war er der größte Block im Bild und drückte die Siege weg, um die es
-   * geht; mit halber Deckkraft (1,4:1) verschwand dagegen die Form. Die Kontur
-   * hält die 3:1, die Fläche tritt zurück.
+   * geht. Die Kontur hält die 3:1, die Fläche tritt zurück.
    *
    * Zwischen den Stufen eine Fuge in der Farbe der Fläche, damit sie sich auch
-   * ohne Farbunterschied trennen.
+   * ohne Farbunterschied trennen. Die Titelmarke ist ein Punkt in Tinte – die
+   * Form unterscheidet sie von den Balken, nicht die Farbe.
    */
-  rect { vector-effect: non-scaling-stroke; transition: opacity 0.12s ease; }
-  rect.siege { fill: var(--accent); stroke: var(--surface); stroke-width: 1.5; }
-  rect.podien { fill: color-mix(in srgb, var(--accent) 45%, var(--surface)); stroke: var(--surface); stroke-width: 1.5; }
-  rect.rest { fill: color-mix(in srgb, var(--s-rest) 16%, var(--surface)); stroke: var(--s-rest); stroke-width: 1; }
-  circle.titel { fill: var(--accent); stroke: var(--surface); stroke-width: 1.5; }
+  rect { vector-effect: non-scaling-stroke; }
+  rect.siege { fill: var(--lackierung-linie); stroke: var(--surface); stroke-width: 1.5; }
+  rect.podien { fill: color-mix(in srgb, var(--lackierung-linie) 45%, var(--surface)); stroke: var(--surface); stroke-width: 1.5; }
+  rect.rest { fill: var(--surface-3); stroke: var(--s-rest); stroke-width: 1; }
+  circle.titel { fill: var(--ink); stroke: var(--surface); stroke-width: 1.5; }
 
-  /* Die Saison unter dem Zeiger bleibt, die übrigen treten zurück. */
+  /* Die Saison unter dem Zeiger bleibt, die übrigen treten zurück – sofort, ohne Übergang. */
   svg:has(g:hover) g:not(:hover) rect { opacity: 0.45; }
 
   figcaption {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.3rem 1rem;
-    margin-top: 0.7rem;
-    padding-top: 0.7rem;
+    gap: var(--abstand-1) var(--abstand-4);
+    margin-top: var(--abstand-3);
+    padding-top: var(--abstand-3);
     border-top: 1px solid var(--border);
-    font-size: 0.8rem;
+    font-size: var(--text-2);
     color: var(--muted);
   }
 
-  .schluessel { display: flex; align-items: center; gap: 0.35rem; }
-  .schluessel i { width: 0.75rem; height: 0.75rem; border-radius: 0.15rem; flex: none; }
-  .schluessel i.siege { background: var(--accent); }
-  .schluessel i.podien { background: color-mix(in srgb, var(--accent) 45%, var(--surface)); }
-  .schluessel i.rest { background: color-mix(in srgb, var(--s-rest) 16%, var(--surface)); border: 1px solid var(--s-rest); }
-  .schluessel i.titel { background: var(--accent); border-radius: 50%; width: 0.55rem; height: 0.55rem; }
+  .schluessel { display: flex; align-items: center; gap: var(--abstand-2); }
+  .schluessel i { width: 0.75rem; height: 0.75rem; flex: none; }
+  .schluessel i.siege { background: var(--lackierung-linie); }
+  .schluessel i.podien { background: color-mix(in srgb, var(--lackierung-linie) 45%, var(--surface)); }
+  .schluessel i.rest { background: var(--surface-3); border: 1px solid var(--s-rest); }
+  .schluessel i.titel { background: var(--ink); border-radius: 50%; width: 0.55rem; height: 0.55rem; }
   .notiz { margin-left: auto; text-wrap: pretty; }
 
-  .als-tabelle { margin-top: 0.75rem; }
-  .als-tabelle summary { cursor: pointer; min-height: 2.25rem; font-size: 0.86rem; font-weight: 600; color: var(--ink); }
-  .als-tabelle .tabelle { margin-top: 0.5rem; box-shadow: none; }
+  .als-tabelle { margin-top: var(--abstand-3); }
+  .als-tabelle summary { cursor: pointer; min-height: 2.25rem; font-size: var(--text-2); font-weight: 600; color: var(--ink); }
+  .als-tabelle .tabelle { margin-top: var(--abstand-2); }
 
   @media (max-width: 34rem) {
     .notiz { margin-left: 0; }

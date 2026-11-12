@@ -3,6 +3,9 @@ import { ein, plakette, prozent as proz, zahl } from '../../lib/format.js'
 import Seite from '../../layouts/Seite.astro'
 import Sprung from '../../components/Sprung.astro'
 import Folgen from '../../components/Folgen.astro'
+import Epochenband from '../../components/Epochenband.astro'
+import { zeitraumImBand } from '../../components/epochen.js'
+import { teamrekordwerte } from '../../components/teamrekordwerte.js'
 import { alle, eine, teamListe, pfad, db } from '../../lib/db.js'
 import { land } from '../../lib/laender.js'
 import {
@@ -101,6 +104,78 @@ const saisons = [...new Set(rennen.map((r) => r.year))].map(
     wmProJahr.get(year) ?? { year, position: null, points: year >= ERSTE_WERTUNG ? 0 : null, won: 0 },
 )
 
+/*
+ * Das Epochenband: Saisons mit mindestens einem Start, Titeljahre aus der
+ * Konstrukteurswertung (docs/DESIGN.md 8.3).
+ */
+const startJahre = [...new Set(rennen.filter((r) => r.autos.some((a) => a.started)).map((r) => r.year))]
+const titelJahre = titel.seasons.filter((s) => s.won).map((s) => s.year)
+
+/*
+ * Den Zeitraum zeigt das Epochenband. In Worten steht er nur, wenn das Band
+ * erstes oder letztes Jahr nicht beschriftet – es lässt eine Zahl weg, die
+ * näher als acht Saisons an einer anderen steht (components/epochen.js).
+ */
+const bandNenntZeitraum = zeitraumImBand(startJahre)
+
+/*
+ * Der Kopfsatz: was keine Zahl sagt, in ganzen Sätzen statt einer Zeile
+ * Eckdaten mit Trennlinien (docs/DESIGN.md 8.2). Titel – ohne Titel der beste
+ * Platz in der Wertung –, Herkunft, voller Name.
+ */
+const vollerName = team.full_name && team.full_name !== team.name ? team.full_name : null
+const herkunft = team.demonym ? `${/^[AEIOU]/.test(team.demonym) ? 'An' : 'A'} ${team.demonym} team` : null
+const kopfsatz = [
+  titelZahl > 1 && `${zahl(titelZahl)} constructors' titles, the last in ${titelJahre.at(-1)}.`,
+  titelZahl === 1 && `One constructors' title, in ${titelJahre[0]}.`,
+  titelZahl === 0 && titel.best.value && `Best finish in the constructors' championship: P${titel.best.value}.`,
+  !bandNenntZeitraum && rennen.length > 0 &&
+    (rennen[0].year === rennen.at(-1).year
+      ? `Raced only in ${rennen[0].year}.`
+      : `First race in ${rennen[0].year}, last in ${rennen.at(-1).year}.`),
+  herkunft && `${herkunft}${vollerName ? `, full name ${vollerName}` : ''}.`,
+  !herkunft && vollerName && `Full name ${vollerName}.`,
+]
+  .filter(Boolean)
+  .join(' ')
+
+/*
+ * Die Kennzahlen der Kopfleiste. Die tragende zuerst: Titel, wenn es welche
+ * gibt; sonst Siege; sonst Rennen (docs/DESIGN.md 8.6). Ohne Titel entfällt
+ * die Titelzahl – der beste Platz steht dann im Kopfsatz.
+ *
+ * Lila heißt „absolute Bestmarke“: Titel, Siege und Pole-Positionen, die den
+ * Allzeitrekord eines Teams halten oder einstellen. Für die übrigen Zählungen
+ * gibt es keine Bestenliste in der Engine, also kein Lila.
+ */
+const REKORD = teamrekordwerte()
+const istRekord = (art, m) => m.value !== null && m.value > 0 && REKORD[art] != null && m.value >= REKORD[art]
+const siege = calculateTeamWins(rennen)
+const kennzahlListe = [
+  { art: 'rennen', label: 'Races', m: calculateTeamStarts(rennen) },
+  { art: 'siege', label: 'Wins', m: siege },
+  { label: 'One-twos', m: calculateOneTwos(rennen), dazu: 'both cars at the front' },
+  { label: 'Races with a podium', m: calculateTeamPodiums(rennen), dazu: 'at least one car in the top three' },
+  { art: 'poles', label: 'Pole positions', m: calculateTeamPoles(rennen) },
+  titelZahl > 0 && {
+    art: 'titel',
+    label: "Constructors' titles",
+    m: titel.titles,
+    dazu: rennen[0]?.year < ERSTE_WERTUNG ? `awarded since ${ERSTE_WERTUNG}` : null,
+  },
+].filter(Boolean)
+const traegt = titelZahl > 0 ? 'titel' : (siege.value ?? 0) > 0 ? 'siege' : 'rennen'
+const kennzahlen = [
+  ...kennzahlListe.filter((k) => k.art === traegt),
+  ...kennzahlListe.filter((k) => k.art !== traegt),
+].map((k) => ({
+  label: k.label,
+  wert: wert(k.m),
+  dazu: k.dazu ?? null,
+  traegt: k.art === traegt,
+  rekord: k.art !== undefined && k.art in REKORD && istRekord(k.art, k.m),
+}))
+
 const ziele = [
   { id: 'zahlen', label: 'Numbers' },
   abstammung.length > 1 && { id: 'linie', label: 'Name changes' },
@@ -110,42 +185,44 @@ const ziele = [
 ---
 
 <Seite
-  titel={`${team.name} – statistics and history`}
+  titel={`${team.name}: statistics and history`}
   beschreibung={`${team.name}: ${zahl(calculateTeamStarts(rennen).value)} races, ${zahl(calculateTeamWins(rennen).value)} wins, ${titel.titles.value} constructors' titles (${zeitraum}).`}
   strukturiert={[sportteam]}
   brotkrumen={[{ name: 'Teams', pfad: '/teams/' }]}
+  lackierung={id}
 >
+  {/*
+    * Der Kopf: Brotkrume, der Name auf dem Streifen seiner Lackierung, ein
+    * Satz mit dem, was keine Zahl sagt, das Epochenband, die Kennzahlen.
+    * Hat teams.css keine Farbe für das Team, bleibt der Streifen Tinte.
+    */}
   <header class="seitenkopf" data-team={id}>
     <span class="wappen" title={heimat.name}>{heimat.code}</span>
     <div>
       <p class="oberzeile">
         <a href={pfad.seite('/teams/')}>Teams</a>
-        <span class="trenner">/</span>
-        <span class="still">{heimat.name}</span>
       </p>
-      <h1>{team.name}</h1>
-      <ul class="eckdaten">
-        {titelZahl > 0 && <li class="stark">{titelZahl}× Constructors' Champion</li>}
-        <li>{zeitraum}</li>
-        {team.full_name !== team.name && <li>{team.full_name}</li>}
-      </ul>
-      <p class="aktionen nur-mit-js">
-        <Folgen art="t" id={id} name={team.name} />
-      </p>
+      <div class="titelblock">
+        <h1>{team.name}</h1>
+        {kopfsatz && <p class="kopfsatz">{kopfsatz}</p>}
+      </div>
+      <Epochenband jahre={startJahre} titel={titelJahre} wort="Seasons" />
     </div>
   </header>
 
   <ul class="kacheln">
-    <li><span>Races</span><b>{wert(calculateTeamStarts(rennen))}</b></li>
-    <li class={calculateTeamWins(rennen).value > 0 ? 'stark' : undefined}><span>Wins</span><b>{wert(calculateTeamWins(rennen))}</b></li>
-    <li><span>One-twos</span><b>{wert(calculateOneTwos(rennen))}</b><i>both cars at the front</i></li>
-    <li><span>Races with a podium</span><b>{wert(calculateTeamPodiums(rennen))}</b><i>at least one car in the top three</i></li>
-    <li><span>Pole positions</span><b>{wert(calculateTeamPoles(rennen))}</b></li>
-    <li class={titelZahl > 0 ? 'stark' : undefined}>
-      <span>Constructors' titles</span><b>{wert(titel.titles)}</b>
-      <i>{rennen[0]?.year < 1958 ? 'awarded since 1958 · ' : ''}best finish {titel.best.value ? 'P' + titel.best.value : '–'}</i>
-    </li>
+    {kennzahlen.map((k) => (
+      <li class={k.traegt ? 'stark' : undefined}>
+        <span>{k.label}</span>
+        <b class={k.rekord ? 'rekord' : undefined}>{k.wert}</b>
+        {(k.dazu || k.rekord) && <i>{[k.rekord && 'All-time record', k.dazu].filter(Boolean).join(', ')}</i>}
+      </li>
+    ))}
   </ul>
+
+  <p class="aktionen nur-mit-js">
+    <Folgen art="t" id={id} name={team.name} />
+  </p>
 
   <Sprung ziele={ziele} />
 
@@ -160,7 +237,7 @@ const ziele = [
       <li><span>Drivers fielded</span><b>{fahrer.length}</b></li>
     </ul>
     <p class="fussnote">
-      “Races” counts weekends, not cars – otherwise every two-car team would have twice as many
+      “Races” counts weekends, not cars; otherwise every two-car team would have twice as many
       starts as races. “Cars finishing”, by contrast, counts cars: each one is a separate test of
       the engineering.
     </p>
@@ -171,7 +248,7 @@ const ziele = [
       <div class="abschnitt-kopf">
         <div>
           <h2>The team through its name changes</h2>
-          <p>The same team under a succession of names – without this lineage, every team's history would end at every sale.</p>
+          <p>The same team under a succession of names.</p>
         </div>
       </div>
       {linie && (
@@ -208,7 +285,7 @@ const ziele = [
           <thead>
             <tr>
               <th scope="col">Season</th><th class="num" scope="col">Championship</th><th class="num" scope="col">Points</th>
-              <th class="num" scope="col">Wins</th><th scope="col">Car · engine</th><th scope="col">Drivers</th>
+              <th class="num" scope="col">Wins</th><th scope="col">Car and engine</th><th scope="col">Drivers</th>
             </tr>
           </thead>
           <tbody>
@@ -221,12 +298,16 @@ const ziele = [
                   <td class="num">{s.position ? <span class={plakette(s.position)}>P{s.position}</span> : '–'}</td>
                   <td class="num">{ein(s.points)}</td>
                   <td class="num">{jahr.filter((r) => r.autos.some((a) => a.position === 1)).length || ''}</td>
+                  {/* Chassis, darunter leise der Motor – zwei Angaben, zwei Zeilen. */}
                   <td class="leise">
                     {technik.get(s.year)?.chassis.join(', ')}
-                    {technik.get(s.year)?.chassis.length > 0 && technik.get(s.year)?.motoren.length > 0 && ' · '}
-                    {technik.get(s.year)?.motoren.map((m, i) => (
-                      <>{i > 0 && ', '}<a class="leise" href={pfad.seite(`/engines/${m.id}/`)}>{m.name}</a></>
-                    ))}
+                    {technik.get(s.year)?.motoren.length > 0 && (
+                      <span class="neben">
+                        {technik.get(s.year).motoren.map((m, i) => (
+                          <>{i > 0 && ', '}<a href={pfad.seite(`/engines/${m.id}/`)}>{m.name}</a></>
+                        ))}
+                      </span>
+                    )}
                   </td>
                   <td class="leise">
                     {namen.map((n, i) => (
@@ -269,17 +350,25 @@ const ziele = [
 </Seite>
 
 <style>
-  .linie-summe { margin: 0 0 0.85rem; color: var(--ink-2); }
+  .aktionen { display: flex; flex-wrap: wrap; gap: var(--abstand-2); margin: 0 0 var(--abstand-6); }
+
+  .linie-summe { max-width: var(--mass); margin: 0 0 var(--abstand-4); color: var(--ink-2); }
   .linie-summe b { color: var(--ink); font-variant-numeric: tabular-nums; }
-  .kette { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin: 0; padding: 0; list-style: none; }
+
+  /*
+   * Die Namen des Teams nacheinander, flach auf der Fläche. Der Name dieser
+   * Seite ist unterstrichen wie der gelesene Reiter der Sprungleiste.
+   */
+  .kette { display: flex; flex-wrap: wrap; align-items: stretch; gap: var(--abstand-2); margin: 0; padding: 0; list-style: none; }
   .kette li {
-    display: grid; padding: 0.6rem 0.9rem; background: var(--surface);
-    border: 1px solid var(--border); border-radius: var(--radius-s); box-shadow: var(--shadow-s);
+    display: grid;
+    padding: var(--abstand-2) var(--abstand-3);
+    background: var(--surface);
+    border-bottom: 3px solid transparent;
   }
-  .kette li + li::before { content: none; }
-  .kette li.hier { border-color: var(--ink); background: var(--surface-2); }
-  .kette a { color: var(--ink); font-weight: 650; text-decoration: none; font-size: 0.92rem; }
-  .kette a:hover { color: var(--link); }
-  .kette li.hier a { color: var(--accent-strong); }
-  .kette span { font-size: 0.76rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .kette li.hier { border-bottom-color: var(--lackierung-linie); }
+  .kette a { font-size: var(--text-3); font-weight: 650; color: var(--ink); text-decoration: none; }
+  .kette a:hover { text-decoration: underline 2px; text-decoration-color: var(--lackierung-linie); }
+  .kette li.hier a { font-weight: 750; }
+  .kette span { font-size: var(--text-2); font-stretch: var(--schmal); color: var(--muted); font-variant-numeric: tabular-nums; }
 </style>

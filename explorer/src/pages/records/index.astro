@@ -49,7 +49,7 @@ const bloecke = (z) => [
     titel: 'Most pole positions',
     liste: meistePoles(d, N, z),
     format: ganz,
-    hinweis: 'Fastest time in qualifying – not the grid position, which penalties shift.',
+    hinweis: 'Fastest time in qualifying, not the grid position, which penalties shift.',
   },
   {
     titel: 'Most starts',
@@ -100,24 +100,28 @@ const ziele = [
   { id: 'serien', label: 'Streaks' },
   { id: 'abstaende', label: 'Winning margins' },
   { id: 'alter', label: 'Age' },
-  { id: 'aufholjagden', label: 'Charges & careers' },
+  { id: 'aufholjagden', label: 'Charges' },
   { id: 'teams', label: 'Teams' },
 ]
 ---
 
 <Seite
-  titel="Formula 1 records – the records set since 1950"
-  beschreibung="Most wins, podiums and pole positions, all time or by era, longest streaks, youngest and oldest record holders – every entry linked to the race."
+  titel="Formula 1 records since 1950"
+  beschreibung="Most wins, podiums and pole positions, all time or by era, longest streaks, youngest and oldest record holders, each linked to the race."
 >
+  {/*
+    * Kopf ohne Lackierung: Die Rekordseite hat keinen Gegenstand (DESIGN.md,
+    * Prinzip 1). Die Herkunft der Zahlen steht im Fuß, nicht im Lead.
+    */}
   <header class="seitenkopf">
     <div>
-      <p class="oberzeile">Analysis</p>
-      <h1>Records</h1>
-      <p class="lead">
-        Every all-time mark since 1950, computed from the race results rather than copied out of
-        a curated list. Each entry links to the driver and, where there is one, to the race.
-        Equal values share a rank: “=1” means joint first.
-      </p>
+      <div class="titelblock">
+        <h1>Records</h1>
+        <p class="lead">
+          The all-time marks since 1950, and by era. Each entry links to the driver and, where
+          there is one, to the race. Equal values share a rank: “=1” means joint first.
+        </p>
+      </div>
     </div>
   </header>
 
@@ -155,7 +159,7 @@ const ziele = [
     <div class="abschnitt-kopf">
       <div>
         <h2>Streaks</h2>
-        <p>Unbroken runs across a driver's starts. A race missed does not break a streak – a driver who was not there had nothing to lose.</p>
+        <p>Unbroken runs across a driver's starts. A race missed does not break a streak: a driver who was not there had nothing to lose.</p>
       </div>
     </div>
     <div class="raster">
@@ -218,7 +222,7 @@ const ziele = [
 
       <div class="rangkarte">
         <h3>Grand Slams</h3>
-        <p class="unter">Pole position, win, fastest lap and every lap led – all in one race.</p>
+        <p class="unter">Pole position, win, fastest lap and every lap led, all in one race.</p>
         <ol class="rangliste">
           {raenge(slams).map((e) => (
             <li data-rang={e.rang} class={e.vorn ? 'vorn' : undefined}>
@@ -233,9 +237,8 @@ const ziele = [
       </div>
     </div>
     <p class="fussnote">
-      The Grand Slam is the one figure on this page that is not recalculated here: “led every
-      lap” appears in no result row, and lap data exists only for part of the races since 1996.
-      It is taken from F1DB as it stands.
+      Grand Slams are taken from F1DB as they stand: “led every lap” appears in no result row,
+      and lap data exists only for part of the races since 1996.
     </p>
   </section>
 
@@ -245,7 +248,7 @@ const ziele = [
         <h2>Age</h2>
         <p>
           Exact to the day: full years, then the days since the last birthday. Drivers whose date
-          of birth is not recorded are missing from these lists – a missing date is not an age of
+          of birth is not recorded are missing from these lists, because a missing date is not an age of
           zero.
         </p>
       </div>
@@ -277,7 +280,7 @@ const ziele = [
         <h2>Charges through the field, and long careers</h2>
         <p>
           Formula 1 races only. The Indianapolis 500 started 33 cars, where thirty places made up
-          was routine – it would otherwise fill eight of the ten places for positions gained.
+          was routine; it would otherwise fill eight of the ten places for positions gained.
         </p>
       </div>
     </div>
@@ -371,10 +374,14 @@ const ziele = [
 </Seite>
 
 <style>
+  /*
+   * Die Ranglisten im Raster. Wie sie aussehen – Turm, Goldplakette für den
+   * Halter, sein Wert in Tinte statt Lila –, steht in theme.css (.rangkarte).
+   */
   .raster {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(min(21rem, 100%), 1fr));
-    gap: 1rem;
+    gap: var(--abstand-6) var(--abstand-5);
   }
 
   .raster[hidden] { display: none; }

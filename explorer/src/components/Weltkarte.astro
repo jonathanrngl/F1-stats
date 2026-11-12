@@ -120,7 +120,7 @@ const ortText = (s: Strecke) =>
   [s.ort && s.ort !== s.name ? s.ort : null, s.landName].filter(Boolean).join(', ')
 const zeitraum = (s: Strecke) => (s.von === s.bis ? `${s.von}` : `${s.von}–${s.bis}`)
 const beschriftet = (s: Strecke) =>
-  `${s.name}${ortText(s) ? `, ${ortText(s)}` : ''} – ${s.rennen} ${s.rennen === 1 ? 'race' : 'races'}, ${zeitraum(s)}`
+  `${s.name}${ortText(s) ? `, ${ortText(s)}` : ''}: ${s.rennen} ${s.rennen === 1 ? 'race' : 'races'}, ${zeitraum(s)}`
 
 /*
  * Die Zeitleiste: Strecken je Saison als schmale Säulen. Sie ist zugleich
@@ -143,7 +143,7 @@ const saeuleB = LEISTE.breite / saeulen.length
 
 <figure class="streckenkarte" data-karte data-regionen={JSON.stringify(Object.fromEntries(REGIONEN.map((r) => [r.id, r.box])))}>
   <div class="karte-leiste nur-mit-js">
-    <div class="regionen" role="group" aria-label="Zoom to a region">
+    <div class="regionen pillen" role="group" aria-label="Zoom to a region">
       {REGIONEN.map((r, i) => (
         <button type="button" data-region={r.id} aria-pressed={i === 0 ? 'true' : 'false'}>{r.label}</button>
       ))}
@@ -154,9 +154,15 @@ const saeuleB = LEISTE.breite / saeulen.length
   </div>
 
   <div class="karte-flaeche">
+    {/*
+      * Eine Gruppe, kein Bild: Die Punkte sind Verweise, und ein Bild darf
+      * keine bedienbaren Teile enthalten. Jeder Punkt trägt seinen Namen als
+      * aria-label – der <title> darin weicht mit Skript der eigenen
+      * Karteikarte und nannte den Verweis danach nicht mehr.
+      */}
     <svg
       viewBox={`0 0 ${KARTE.breite} ${KARTE.hoehe}`}
-      role="img"
+      role="group"
       aria-label={`World map with ${verortet.length} Formula 1 circuits. The full list follows below.`}
     >
       <g class="netz" aria-hidden="true">
@@ -173,6 +179,7 @@ const saeuleB = LEISTE.breite / saeulen.length
           <a
             href={pfadZu(s.id)}
             tabindex="-1"
+            aria-label={beschriftet(s)}
             class={s.bis >= aktuellAb ? 'punkt aktuell' : 'punkt'}
             data-name={s.name}
             data-ort={ortText(s)}
@@ -258,7 +265,8 @@ const saeuleB = LEISTE.breite / saeulen.length
     const svg = figur.querySelector<SVGSVGElement>('.karte-flaeche svg')!
     const flaeche = figur.querySelector<HTMLElement>('.karte-flaeche')!
     const regionen = JSON.parse(figur.dataset.regionen ?? '{}') as Record<string, number[]>
-    const knoepfe = [...figur.querySelectorAll<HTMLButtonElement>('[data-region]')]
+    /* Nur die Knöpfe: Auch die Punkte tragen data-region, und ein Verweis ist kein Umschalter. */
+    const knoepfe = [...figur.querySelectorAll<HTMLButtonElement>('button[data-region]')]
     const punkte = [...figur.querySelectorAll<SVGAElement>('.punkt')]
     const kreise = [...figur.querySelectorAll<SVGCircleElement>('circle[data-r]')]
     const tipp = figur.querySelector<HTMLElement>('[data-tipp]')!
@@ -379,7 +387,7 @@ const saeuleB = LEISTE.breite / saeulen.length
         if (d.erstes === jahr) neu.push(d.name)
       }
       const rest = n - europa
-      let text = `${jahr}: ${n} ${n === 1 ? 'circuit' : 'circuits'} – ${europa} in Europe, ${rest} elsewhere`
+      let text = `${jahr}: ${n} ${n === 1 ? 'circuit' : 'circuits'}, ${europa} in Europe, ${rest} elsewhere`
       if (neu.length && neu.length < n) {
         text += `. New: ${neu.slice(0, 3).join(', ')}${neu.length > 3 ? ` and ${neu.length - 3} more` : ''}`
       }
@@ -489,11 +497,14 @@ const saeuleB = LEISTE.breite / saeulen.length
 </script>
 
 <style>
+  /*
+   * Die Karte steht auf der Fläche, ohne Rahmen und Rundung. Ihre Teile –
+   * Regionen, Meer, Zeitleiste, Legende – trennt der Ton des Meeres und der
+   * Abstand, keine Linie.
+   */
   .streckenkarte {
-    margin: 1.75rem 0 0;
+    margin: 0;
     background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
     overflow: hidden;
   }
 
@@ -504,43 +515,15 @@ const saeuleB = LEISTE.breite / saeulen.length
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 0.6rem 1.25rem;
-    padding: 0.7rem 0.8rem;
-    border-bottom: 1px solid var(--border);
+    gap: var(--abstand-2) var(--abstand-5);
+    padding: var(--abstand-3);
   }
 
-  .regionen {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 2px;
-    padding: 3px;
-    background: var(--surface-3);
-    border-radius: 0.5rem;
-  }
-
-  .regionen button {
-    min-height: 2.1rem;
-    padding: 0.25rem 0.8rem;
-    font-size: 0.84rem;
-    font-weight: 600;
-    color: var(--ink-2);
-    background: none;
-    border: none;
-    border-radius: 0.35rem;
-    cursor: pointer;
-    transition: background-color 0.15s ease, color 0.15s ease;
-  }
-
-  .regionen button:hover { color: var(--ink); }
-  .regionen button[aria-pressed='true'] {
-    color: var(--ink);
-    background: var(--surface);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
-  }
+  /* Die Regionen sind Umschalter wie überall (.pillen in theme.css): gewählt heißt gefüllt in Tinte. */
 
   .saison-text {
     margin: 0;
-    font-size: 0.86rem;
+    font-size: var(--text-2);
     color: var(--muted);
     font-variant-numeric: tabular-nums;
     text-wrap: pretty;
@@ -579,7 +562,6 @@ const saeuleB = LEISTE.breite / saeulen.length
     stroke: var(--punkt-ring);
     stroke-width: 1.4;
     vector-effect: non-scaling-stroke;
-    transition: opacity 0.25s ease, fill-opacity 0.25s ease;
   }
 
   .aktuell .kreis { fill: var(--punkt-aktuell); fill-opacity: 0.9; }
@@ -592,11 +574,12 @@ const saeuleB = LEISTE.breite / saeulen.length
   }
 
   /*
-   * Die Punkte sind nur für Zeiger und Finger da. Aus der Tabulatorfolge
-   * genommen (tabindex -1): 78 Stopps, die ein Vorleser in einem Bild mit
-   * role="img" gar nicht ansagt, waren ein Umweg ohne Ziel. Die Liste unter
-   * der Karte führt zu denselben Seiten. Die unsichtbare Trefferfläche ist
-   * größer als der Punkt – ein Kreis von drei Pixeln trifft kein Finger.
+   * Die Punkte sind für Zeiger und Finger da. Aus der Tabulatorfolge genommen
+   * (tabindex -1): 78 Stopps vor der Liste wären ein Umweg, und die Liste
+   * unter der Karte führt zu denselben Seiten. Ein Vorleser findet sie
+   * trotzdem, jeden mit Namen, Ort, Rennen und Zeitraum. Die unsichtbare
+   * Trefferfläche ist größer als der Punkt – ein Kreis von drei Pixeln trifft
+   * kein Finger.
    */
   .treffer { fill: transparent; }
 
@@ -605,26 +588,27 @@ const saeuleB = LEISTE.breite / saeulen.length
   .mit-saison .punkt.an .kreis { fill-opacity: 1; }
   .mit-saison .punkt.neu .kreis { stroke: var(--ink); stroke-width: 2.2; }
 
+  /* Die Karteikarte liegt über der Karte – darum als einziges hier mit Schatten. */
   .tipp {
     position: absolute;
     z-index: 2;
     display: grid;
-    gap: 0.05rem;
+    gap: 0;
     min-width: 11rem;
     max-width: 16rem;
-    padding: 0.55rem 0.7rem 0.6rem;
-    font-size: 0.8rem;
+    padding: var(--abstand-2) var(--abstand-3);
+    font-size: var(--text-2);
     color: var(--muted);
     background: var(--surface);
     border: 1px solid var(--border-strong);
-    border-radius: 0.45rem;
+    border-radius: var(--radius);
     box-shadow: var(--shadow);
     pointer-events: none;
   }
 
   .tipp[hidden] { display: none; }
-  .tipp b { font-size: 0.95rem; color: var(--ink); font-weight: 700; }
-  .tipp-zahlen { margin-top: 0.25rem; }
+  .tipp b { font-size: var(--text-3); color: var(--ink); font-weight: 700; }
+  .tipp-zahlen { margin-top: var(--abstand-1); }
   .tipp-zahlen strong { color: var(--ink); font-weight: 700; font-variant-numeric: tabular-nums; }
   .tipp-saison { color: var(--ink-2); font-weight: 600; }
   .tipp-saison:empty { display: none; }
@@ -635,25 +619,25 @@ const saeuleB = LEISTE.breite / saeulen.length
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
-    gap: 0.9rem;
-    padding: 0.8rem 0.9rem 0.55rem;
-    border-top: 1px solid var(--border);
+    gap: var(--abstand-4);
+    padding: var(--abstand-3) var(--abstand-3) var(--abstand-2);
   }
 
+  /* Die Hauptaktion der Karte: gefüllt in Tinte, wie jeder erste Knopf. */
   .abspielen {
     display: grid;
     place-items: center;
-    width: 2.6rem;
-    height: 2.6rem;
+    width: 2.5rem;
+    height: 2.5rem;
     padding: 0;
     color: var(--plane);
-    background: var(--link);
+    background: var(--ink);
     border: none;
-    border-radius: 50%;
+    border-radius: var(--radius);
     cursor: pointer;
   }
 
-  .abspielen:hover { background: var(--link-strong); }
+  .abspielen:hover { background: var(--ink-2); }
   .abspielen svg { width: 1.1rem; height: 1.1rem; fill: currentColor; }
   .zeichen-pause { display: none; }
   .spielt .zeichen-play { display: none; }
@@ -672,11 +656,10 @@ const saeuleB = LEISTE.breite / saeulen.length
   .saeulen rect {
     fill: var(--axis);
     cursor: pointer;
-    transition: fill 0.12s ease;
   }
 
   .saeulen rect:hover { fill: var(--muted); }
-  .saeulen rect.an { fill: var(--accent); }
+  .saeulen rect.an { fill: var(--ink); }
 
   /*
    * Der Regler liegt über der Unterkante der Säulen: Die Säulen zeigen, was
@@ -693,22 +676,22 @@ const saeuleB = LEISTE.breite / saeulen.length
     cursor: pointer;
   }
 
-  input[type='range']::-webkit-slider-runnable-track { height: 3px; background: var(--border-strong); border-radius: 2px; }
-  input[type='range']::-moz-range-track { height: 3px; background: var(--border-strong); border-radius: 2px; }
+  input[type='range']::-webkit-slider-runnable-track { height: 3px; background: var(--border-strong); border-radius: var(--radius-s); }
+  input[type='range']::-moz-range-track { height: 3px; background: var(--border-strong); border-radius: var(--radius-s); }
   input[type='range']::-webkit-slider-thumb {
     appearance: none;
     width: 1.05rem;
     height: 1.05rem;
     margin-top: calc(-0.525rem + 1.5px);
     background: var(--surface);
-    border: 3px solid var(--accent);
+    border: 3px solid var(--ink);
     border-radius: 50%;
   }
   input[type='range']::-moz-range-thumb {
     width: 0.8rem;
     height: 0.8rem;
     background: var(--surface);
-    border: 3px solid var(--accent);
+    border: 3px solid var(--ink);
     border-radius: 50%;
   }
 
@@ -718,7 +701,8 @@ const saeuleB = LEISTE.breite / saeulen.length
   .leiste-achse {
     display: flex;
     justify-content: space-between;
-    font-size: 0.72rem;
+    font-size: var(--text-1);
+    font-stretch: var(--schmal);
     color: var(--muted);
     font-variant-numeric: tabular-nums;
   }
@@ -732,14 +716,14 @@ const saeuleB = LEISTE.breite / saeulen.length
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0.35rem 1.1rem;
-    padding: 0.7rem 0.9rem 0.8rem;
-    font-size: 0.78rem;
+    gap: var(--abstand-1) var(--abstand-4);
+    padding: var(--abstand-2) var(--abstand-3) var(--abstand-3);
+    font-size: var(--text-2);
     color: var(--muted);
-    border-top: 1px solid var(--border);
   }
 
-  .schluessel { display: flex; align-items: center; gap: 0.4rem; color: var(--ink-2); }
+  /* Die Zeichen der Legende sind Kreise, weil die Punkte auf der Karte Kreise sind. */
+  .schluessel { display: flex; align-items: center; gap: var(--abstand-2); color: var(--ink-2); }
   .schluessel i {
     width: 0.7rem;
     height: 0.7rem;
@@ -754,9 +738,9 @@ const saeuleB = LEISTE.breite / saeulen.length
   .notiz { margin-left: auto; text-wrap: pretty; }
 
   @media (max-width: 40rem) {
-    .karte-leiste { padding: 0.6rem; }
+    .karte-leiste { padding: var(--abstand-2); }
     .regionen { display: grid; grid-template-columns: 1fr 1fr; width: 100%; }
-    .regionen button { padding-inline: 0.5rem; }
+    .regionen button { padding-inline: var(--abstand-2); }
     .zeitleiste { grid-template-columns: auto minmax(0, 1fr); }
     .alle-saisons { grid-column: 1 / -1; justify-self: start; }
     .notiz { margin-left: 0; }

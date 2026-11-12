@@ -13,6 +13,8 @@ import Karriere from '../../components/Karriere.astro'
 import Sprung from '../../components/Sprung.astro'
 import MehrZeigen from '../../components/MehrZeigen.astro'
 import Folgen from '../../components/Folgen.astro'
+import Epochenband from '../../components/Epochenband.astro'
+import { rekordwerte } from '../../components/rekordwerte.js'
 import { alle, eine, fahrerListe, pfad } from '../../lib/db.js'
 import { land } from '../../lib/laender.js'
 import { db } from '../../lib/db.js'
@@ -69,6 +71,7 @@ const qualiAbstand = qualifyingAbstand(db(), id)
 const abstandText = (a) => (a ? `${a.median > 0 ? '+' : a.median < 0 ? '−' : '±'}${Math.abs(a.median).toFixed(2)}%` : '–')
 const strecken = calculateTrackPerformance(db(), id, 2)
 const zusatz = fahrerZusatz(id)
+const { sprint, besondere, geburt, familie, meilensteine } = zusatz
 
 const namen = new Map(
   alle('SELECT id, display_name AS name FROM driver').map((d) => [d.id, d.name]),
@@ -104,8 +107,26 @@ const spannen = (jahre) => {
   return teile.join(', ')
 }
 const teams = [...proTeam.values()].sort((a, b) => Math.min(...a.jahre) - Math.min(...b.jahre))
-/** Das Team der letzten Saison – seine Farbe trägt der Kopf der Seite (teams.css). */
-const letztesTeam = teams.reduce((a, b) => (Math.max(...b.jahre) >= Math.max(...a.jahre) ? b : a), teams[0])?.id
+
+/*
+ * Die Lackierung der Seite: das Team mit den meisten Starts – das Team der
+ * Karriere, nicht der Stand von heute (docs/DESIGN.md, Prinzip 1). Bei
+ * Gleichstand das jüngere. Der Kopfsatz nennt es, damit die Farbe erklärt ist.
+ */
+const startsJeTeam = new Map()
+for (const r of rennen) if (r.started) startsJeTeam.set(r.constructorId, (startsJeTeam.get(r.constructorId) ?? 0) + 1)
+const lackTeam = [...startsJeTeam.entries()].reduce(
+  (a, b) => (b[1] > a[1] || (b[1] === a[1] && Math.max(...proTeam.get(b[0]).jahre) > Math.max(...proTeam.get(a[0]).jahre)) ? b : a),
+  [null, 0],
+)
+
+/*
+ * Lila heißt „absolute Bestmarke“: Ein Wert, der den Allzeitrekord hält oder
+ * mit ihm gleichauf liegt, steht in Lila – wie die schnellste Zeit auf dem
+ * Zeitnahme-Monitor.
+ */
+const REKORD = rekordwerte()
+const istRekord = (art, m) => m.value !== null && m.value > 0 && REKORD[art] !== null && m.value >= REKORD[art]
 
 /** Zeigt den Wert, oder den Grund, warum es keinen gibt. */
 const wert = (m, f = (v) => zahl(v)) => (m.value === null ? '–' : f(m.value))
@@ -153,6 +174,62 @@ const siege = calculateWins(rennen)
 const titelZahl = titel.titles.value ?? 0
 const titelJahre = titel.seasons.filter((s) => s.won).map((s) => s.year)
 
+/** „2005“, „2005 and 2006“, „2008, 2014 and 2015“ */
+const aufzaehlung = (liste) =>
+  liste.length < 2 ? liste.join('') : `${liste.slice(0, -1).join(', ')} and ${liste.at(-1)}`
+
+/*
+ * Der Kopfsatz: was keine Zahl sagt, in ganzen Sätzen statt einer Zeile
+ * Eckdaten mit Trennlinien. Titeljahre, das Team der Lackierung, Geburt und
+ * Tod, Kürzel und Startnummer, der volle Name.
+ */
+const startsGesamt = calculateStarts(rennen).value ?? 0
+const kopfsatz = [
+  titelJahre.length > 0 && `World Champion in ${aufzaehlung(titelJahre)}.`,
+  lackTeam[0] &&
+    (startsJeTeam.size === 1
+      ? `${startsGesamt === 1 ? 'One start' : `All ${zahl(startsGesamt)} starts`} with ${teamNamen.get(lackTeam[0])}.`
+      : `Most starts with ${teamNamen.get(lackTeam[0])}: ${zahl(lackTeam[1])} of ${zahl(startsGesamt)}.`),
+  fahrer.date_of_birth &&
+    `Born ${datum(fahrer.date_of_birth)}${geburt?.ort ? ` in ${geburt.ort}${geburt.land ? `, ${geburt.land}` : ''}` : ''}.`,
+  fahrer.date_of_death && `Died ${datum(fahrer.date_of_death)}.`,
+  fahrer.abbreviation && `Timing code ${fahrer.abbreviation}${geburt?.nummer ? `, car number ${geburt.nummer}` : ''}.`,
+  fahrer.full_name !== fahrer.display_name && `Full name ${fahrer.full_name}.`,
+]
+  .filter(Boolean)
+  .join(' ')
+
+/*
+ * Die Kennzahlen der Kopfleiste. Die tragende zuerst: Titel, wenn es welche
+ * gibt; sonst Siege; sonst Starts (docs/DESIGN.md 8.6).
+ */
+const starts = calculateStarts(rennen)
+const podien = calculatePodiums(rennen)
+const poles = calculatePoles(rennen)
+const schnellste = calculateFastestLaps(rennen)
+const kennzahlListe = [
+  { art: 'titel', label: 'Titles', m: titel.titles, dazu: titelJahre.length ? null : `best finish ${wert(titel.best, (v) => 'P' + v)}` },
+  { art: 'siege', label: 'Wins', m: siege, dazu: `${proz(calculateWinRate(rennen))} of starts` },
+  { art: 'starts', label: 'Starts', m: starts, dazu: calculateEntries(rennen).value !== starts.value ? `${calculateEntries(rennen).value} entries` : null },
+  { art: 'podien', label: 'Podiums', m: podien, dazu: `${proz(calculatePodiumRate(rennen))} of starts` },
+  { art: 'poles', label: 'Pole positions', m: poles, dazu: `${wert(calculateStartsFromPole(rennen))}× started from P1` },
+  { art: 'schnellste', label: 'Fastest laps', m: schnellste, dazu: null },
+  sprint.starts > 0 && { art: null, label: 'Sprint wins', m: { value: sprint.siege }, dazu: `${sprint.starts} sprints, ${ein(sprint.punkte)} points` },
+  besondere.dotdMoeglich === 1 && { art: null, label: 'Driver of the Day', m: { value: besondere.dotd ?? 0 }, dazu: 'fan vote, since 2016' },
+  besondere.slams > 0 && { art: null, label: 'Grand Slams', m: { value: besondere.slams }, dazu: 'pole, win, fastest lap, every lap led' },
+].filter(Boolean)
+const traegt = titelZahl > 0 ? 'titel' : (siege.value ?? 0) > 0 ? 'siege' : 'starts'
+const kennzahlen = [
+  ...kennzahlListe.filter((k) => k.art === traegt),
+  ...kennzahlListe.filter((k) => k.art !== traegt && !(k.art === 'titel' && titelZahl === 0)),
+].map((k) => ({
+  label: k.label,
+  wert: wert(k.m),
+  dazu: k.dazu,
+  traegt: k.art === traegt,
+  rekord: k.art !== null && istRekord(k.art, k.m),
+}))
+
 /** Nur Abschnitte, die es auf dieser Seite auch gibt. */
 const ziele = [
   { id: 'zahlen', label: 'Numbers' },
@@ -163,7 +240,6 @@ const ziele = [
   strecken.length > 0 && { id: 'strecken', label: 'Circuits' },
 ].filter(Boolean)
 
-const { sprint, besondere, geburt, familie, meilensteine } = zusatz
 const jeSaison = Map.groupBy(zusatz.rennen, (r) => r.jahr)
 const ergebnis = (r) => (r.gewertet ? `P${r.platz}` : r.text)
 
@@ -183,38 +259,28 @@ const person = {
 ---
 
 <Seite
-  titel={`${fahrer.display_name} – statistics and career`}
+  titel={`${fahrer.display_name}: statistics and career`}
   beschreibung={beschreibung}
   strukturiert={[person]}
   brotkrumen={[{ name: 'Drivers', pfad: '/drivers/' }]}
+  lackierung={lackTeam[0]}
 >
-  <header class="seitenkopf" data-team={letztesTeam}>
+  {/*
+    * Der Kopf: Brotkrume, der Name auf dem Streifen seiner Lackierung, ein
+    * Satz mit dem, was keine Zahl sagt, das Epochenband, die Kennzahlen.
+    * Vorher standen hier eine Zeile Eckdaten mit Trennlinien und neun Kacheln
+    * gleichen Gewichts (docs/DESIGN.md 8.2).
+    */}
+  <header class="seitenkopf">
     <span class="wappen" title={heimat.name}>{heimat.code}</span>
     <div>
       <p class="oberzeile">
         <a href={pfad.seite('/drivers/')}>Drivers</a>
-        <span class="trenner">/</span>
-        <span class="still">{heimat.name}</span>
       </p>
-      <h1>{fahrer.display_name}</h1>
-      {/*
-        * Der Name aus dem Pass steht hier und nur hier. In der Überschrift
-        * wäre er falsch am Platz – niemand sucht nach „Andreas Nikolaus
-        * Lauda" –, aber auf der Profilseite gehört er dazu.
-        */}
-      <ul class="eckdaten">
-        {titelZahl > 0 && (
-          <li class="stark">{titelZahl}× World Champion</li>
-        )}
-        <li>{zeitraum}</li>
-        {fahrer.abbreviation && <li>{fahrer.abbreviation}</li>}
-        {geburt?.nummer && <li>Car number {geburt.nummer}</li>}
-        {fahrer.date_of_birth && (
-          <li>Born {datum(fahrer.date_of_birth)}{geburt?.ort && ` in ${geburt.ort}${geburt.land && geburt.land !== heimat.name ? `, ${geburt.land}` : ''}`}</li>
-        )}
-        {fahrer.date_of_death && <li>Died {datum(fahrer.date_of_death)}</li>}
-        {fahrer.full_name !== fahrer.display_name && <li>{fahrer.full_name}</li>}
-      </ul>
+      <div class="titelblock">
+        <h1>{fahrer.display_name}</h1>
+        <p class="kopfsatz">{kopfsatz}</p>
+      </div>
       {familie.length > 0 && (
         <p class="familie">
           Family in Formula 1:{' '}
@@ -226,60 +292,49 @@ const person = {
           ))}
         </p>
       )}
-      <p class="aktionen">
-        <Folgen art="f" id={fahrer.id} name={fahrer.display_name} />
-        <a class="knopf" href={`${pfad.seite('/comparison/')}?a=${fahrer.id}`}>Compare with another driver</a>
-        <a class="knopf leise" href={`${pfad.seite('/explorer/')}?fahrer=${fahrer.id}&d=saison&s=punkte`}>Season by season in the Explorer</a>
-      </p>
+      <Epochenband jahre={saisons.map((s) => s.year)} titel={titelJahre} />
     </div>
   </header>
 
   {!inFormel1 && (
     <p class="hinweis warn">
-      Never drove a Formula 1 race. All of these appearances were at the Indianapolis 500,
-      which counted towards the drivers' championship from 1950 to 1960 but was run to
-      different regulations with a different field.
+      <b>Indianapolis 500 only:</b> never drove a Formula 1 race. All of these appearances were
+      at the Indianapolis 500, which counted towards the drivers' championship from 1950 to 1960
+      but was run to different regulations with a different field.
     </p>
   )}
 
+  {/*
+    * Die Kennzahlen als Leiste. Die tragende Zahl steht zuerst, auf dem
+    * Streifen der Lackierung: Titel, wenn es welche gibt; sonst Siege; sonst
+    * Starts. Ein Allzeitrekord steht in Lila und sagt es in der Unterzeile.
+    */}
   <ul class="kacheln">
-    <li><span>Starts</span><b>{wert(calculateStarts(rennen))}</b>
-      {calculateEntries(rennen).value !== calculateStarts(rennen).value && (
-        <i>{calculateEntries(rennen).value} entries</i>
-      )}
-    </li>
-    <li class={siege.value > 0 ? 'stark' : undefined}>
-      <span>Wins</span><b>{wert(siege)}</b><i>{proz(calculateWinRate(rennen))} of starts</i>
-    </li>
-    <li><span>Podiums</span><b>{wert(calculatePodiums(rennen))}</b><i>{proz(calculatePodiumRate(rennen))} of starts</i></li>
-    <li><span>Pole positions</span><b>{wert(calculatePoles(rennen))}</b>
-      <i>{wert(calculateStartsFromPole(rennen))}× started from P1</i></li>
-    <li><span>Fastest laps</span><b>{wert(calculateFastestLaps(rennen))}</b></li>
-    {sprint.starts > 0 && (
-      <li><span>Sprint wins</span><b>{sprint.siege}</b><i>{sprint.starts} sprints · {ein(sprint.punkte)} points</i></li>
-    )}
-    {besondere.dotdMoeglich === 1 && (
-      <li><span>Driver of the Day</span><b>{besondere.dotd ?? 0}</b><i>fan vote, since 2016</i></li>
-    )}
-    {besondere.slams > 0 && (
-      <li><span>Grand Slams</span><b>{besondere.slams}</b><i>pole, win, fastest lap, every lap led</i></li>
-    )}
-    <li class={titelZahl > 0 ? 'stark' : undefined}>
-      <span>Titles</span><b>{wert(titel.titles)}</b>
-      <i>{titelJahre.length > 0 ? titelJahre.join(', ') : `best finish ${wert(titel.best, (v) => 'P' + v)}`}</i>
-    </li>
+    {kennzahlen.map((k) => (
+      <li class={k.traegt ? 'stark' : undefined}>
+        <span>{k.label}</span>
+        <b class={k.rekord ? 'rekord' : undefined}>{k.wert}</b>
+        {(k.dazu || k.rekord) && <i>{[k.rekord && 'All-time record', k.dazu].filter(Boolean).join(', ')}</i>}
+      </li>
+    ))}
   </ul>
+
+  <p class="aktionen">
+    <Folgen art="f" id={fahrer.id} name={fahrer.display_name} />
+    <a class="knopf" href={`${pfad.seite('/comparison/')}?a=${fahrer.id}`}>Compare with another driver</a>
+    <a class="knopf leise" href={`${pfad.seite('/explorer/')}?fahrer=${fahrer.id}&d=saison&s=punkte`}>Season by season in the Explorer</a>
+  </p>
 
   <Sprung ziele={ziele} />
 
   <section class="abschnitt" id="zahlen">
-    <div class="abschnitt-kopf"><div><h2>Career numbers</h2></div></div>
+    <div class="abschnitt-kopf"><div><h2>Numbers in detail</h2></div></div>
     <ul class="daten">
       <li><span>Avg grid position</span><b>{ein(calculateAverageStart(rennen).value)}</b></li>
       <li><span>Avg finish</span><b>{ein(calculateAverageFinish(rennen).value)}</b></li>
       <li><span>Retirement rate</span><b>{proz(calculateDNFRate(rennen))}</b></li>
       <li><span>Pole-to-win conversion</span><b>{proz(calculatePoleToWinRate(rennen))}</b></li>
-      <li><span>Positions gained</span><b>{wert(calculatePositionsGained(rennen), (v) => (v > 0 ? '+' : '') + zahl(v))}</b></li>
+      <li><span>Positions gained</span><b>{wert(calculatePositionsGained(rennen), (v) => (v > 0 ? '+' : v < 0 ? '−' : '') + zahl(Math.abs(v)))}</b></li>
       <li><span>Points scored</span><b>{ein(calculatePoints(rennen).value)}</b></li>
       <li><span>Longest winning streak</span><b>{serien.wins.length || '–'}</b></li>
       <li><span>Longest podium streak</span><b>{serien.podiums.length || '–'}</b></li>
@@ -289,7 +344,7 @@ const person = {
         <b>
           {teams.map((t, i) => (
             <>
-              {i > 0 && ' · '}
+              {i > 0 && ', '}
               <a href={pfad.team(t.id)}>{teamNamen.get(t.id)}</a> ({spannen(t.jahre)})
             </>
           ))}
@@ -298,21 +353,21 @@ const person = {
     </ul>
     <p class="fussnote">
       Pole position means the fastest time in qualifying. That is not the same as a start from
-      P1 – grid penalties move a driver down the grid. Up to the 2000s the two numbers
+      P1: grid penalties move a driver down the grid. Up to the 2000s the two numbers
       coincide.
     </p>
   </section>
 
   {karriere.length > 1 && (
     <section class="abschnitt" id="karriere">
-      <div class="abschnitt-kopf"><div><h2>The career at a glance</h2></div></div>
+      <div class="abschnitt-kopf"><div><h2>Career at a glance</h2></div></div>
       <Karriere saisons={karriere} name={fahrer.display_name} tabelle={false} />
     </section>
   )}
 
   {saisons.length > 0 && (
     <section class="abschnitt" id="saisons">
-      <div class="abschnitt-kopf"><div><h2>Season by season</h2></div></div>
+      <div class="abschnitt-kopf"><div><h2>Seasons</h2></div></div>
       <div class="tabelle">
         <table>
           <thead>
@@ -352,7 +407,7 @@ const person = {
   <section class="abschnitt" id="rennen">
     <div class="abschnitt-kopf">
       <div>
-        <h2>Every race</h2>
+        <h2>Races</h2>
         <p>
           {zusatz.rennen.length} {zusatz.rennen.length === 1 ? 'entry' : 'entries'}
           {calculateStarts(rennen).value !== zusatz.rennen.length && `, ${calculateStarts(rennen).value} of them started`}.
@@ -366,7 +421,7 @@ const person = {
           <li>
             <span>{m.was}</span>
             <a href={pfad.rennen(m.r.id)}>{m.r.name} {m.r.jahr}</a>
-            <i>{ergebnis(m.r)} · {m.r.team}</i>
+            <i>{ergebnis(m.r)}, {m.r.team}</i>
           </li>
         ))}
       </ul>
@@ -409,7 +464,7 @@ const person = {
     <section class="abschnitt" id="teamkollegen">
       <div class="abschnitt-kopf">
         <div>
-          <h2>Against team-mates</h2>
+          <h2>Team-mates</h2>
           <p>
             Same car, same races. In the race only those where both reached the finish count –
             a retirement says nothing about the head-to-head.
@@ -441,7 +496,7 @@ const person = {
                     Die Vergleichsseite liest a und b aus der Adresse. */}
                 <td class="num">
                   <a
-                    class="vergleichen"
+                    class="knopf leise vergleichen"
                     href={`${pfad.seite('/comparison/')}?a=${fahrer.id}&b=${d.driverId}`}
                   >
                     Compare
@@ -455,7 +510,7 @@ const person = {
       {duelle.length > 8 && <MehrZeigen anzahl={duelle.length - 8} wort="team-mates" />}
       <p class="fussnote">
         Green: {fahrer.display_name} came out ahead in that duel. Quali gap: the median difference
-        in the last session both set a time in, as a share of the lap – minus is faster. At least
+        in the last session both set a time in, as a share of the lap; minus is faster. At least
         three sessions; a dash where there were fewer.
       </p>
     </section>
@@ -463,7 +518,7 @@ const person = {
 
   {strecken.length > 0 && (
     <section class="abschnitt" id="strecken">
-      <div class="abschnitt-kopf"><div><h2>Strongest circuits</h2><p>Circuits with at least two starts, most wins first.</p></div></div>
+      <div class="abschnitt-kopf"><div><h2>Circuits</h2><p>Circuits with at least two starts, most wins first.</p></div></div>
       <div class="tabelle">
         <table>
           <thead>
@@ -491,48 +546,38 @@ const person = {
 </Seite>
 
 <style>
-  .familie { margin: 0.6rem 0 0; font-size: 0.9rem; color: var(--ink-2); }
-  .aktionen { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.9rem 0 0; }
+  .familie { max-width: var(--mass); margin: var(--abstand-2) 0 0; color: var(--ink-2); }
+  .aktionen { display: flex; flex-wrap: wrap; gap: var(--abstand-2); margin: 0 0 var(--abstand-6); }
 
+  /* Die Meilensteine: flach auf der Fläche, ohne Rahmen und Rundung. */
   .meilensteine {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(min(15rem, 100%), 1fr));
-    gap: 0.5rem;
-    margin: 0 0 0.9rem;
+    gap: var(--abstand-2);
+    margin: 0 0 var(--abstand-4);
     padding: 0;
     list-style: none;
   }
 
   .meilensteine li {
     display: grid;
-    gap: 0.1rem;
-    padding: 0.65rem 0.85rem;
+    gap: var(--abstand-1);
+    padding: var(--abstand-3) var(--abstand-4);
     background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-s);
   }
 
-  .meilensteine span { font-size: 0.85rem; font-weight: 600; color: var(--muted); font-family: var(--display); }
+  .meilensteine span { font-size: var(--text-2); font-weight: 600; color: var(--muted); }
   .meilensteine a { font-weight: 650; color: var(--ink); text-decoration: none; }
-  .meilensteine a:hover { color: var(--link); text-decoration: underline; }
-  .meilensteine i { font-style: normal; font-size: 0.84rem; color: var(--muted); }
+  .meilensteine a:hover { text-decoration: underline 2px; text-decoration-color: var(--lackierung-linie); }
+  .meilensteine i { font-style: normal; font-size: var(--text-2); color: var(--muted); }
 
   .alle-rennen summary { cursor: pointer; min-height: 2.25rem; font-weight: 600; color: var(--ink); }
-  .alle-rennen .tabelle { margin-top: 0.5rem; }
+  .alle-rennen .tabelle { margin-top: var(--abstand-2); }
 
+  /* „Compare“ in jeder Zeile: ein leiser Knopf, kleiner, damit die Zeile nicht höher wird. */
   .vergleichen {
-    display: inline-flex;
-    align-items: center;
     min-height: 2rem;
-    padding: 0.2rem 0.65rem;
-    font-size: 0.8rem;
-    font-weight: 650;
-    color: var(--ink-2);
-    text-decoration: none;
+    padding: 0 var(--abstand-3);
     white-space: nowrap;
-    border: 1px solid var(--border);
-    border-radius: 999px;
   }
-
-  .vergleichen:hover { color: var(--link); border-color: var(--link); }
 </style>
