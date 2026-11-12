@@ -551,7 +551,7 @@ Link. **Keine getönte Leiste.**
   Namen mit eigener Seite sind Links; ein Team ohne Seite steht in Tinte 400.
 - **Knopf:** gefüllt Tinte, Schrift `--plane` (Hauptaktion, höchstens einer je
   Ansicht); leise: Rand `--border-input`, Schrift Tinte.
-- **Gewählt** (Chips, Optionen): gefüllt Tinte. Nicht gewählt: Rand.
+- **Gewählt** (Chips, Pillen): gefüllt Tinte. Nicht gewählt: Rand. Große Optionskarten: gewählt mit doppeltem Rahmen und Häkchen, nicht gefüllt (gefüllt ist die Hauptaktion).
 - **Fokus:** 2 px Tinte, Abstand 2 px, auf jedem Grund sichtbar; auf dem
   Monitor in dessen Tinte.
 
@@ -857,3 +857,18 @@ Wo die Abweichung eine Regel ändert, gilt die Regel hier.
 | Filter auf /circuits/ | – | unverändert | Er zählt alle Tabellenzeilen der Seite (104 statt 78 Strecken), weil dort zwei Tabellen stehen. So war es vorher auch. |
 | Rohe Maße | nur Tokens | zwei Ausnahmen | Der Reglerknopf der Weltkarte ist mit `0.525rem` über seiner Säule ausgerichtet; die Beschriftung der Lagekarte steht in SVG-Einheiten (`4.6px`, skaliert etwa 12 px). |
 | Bildmarken | Recraft zuerst | von Hand | Recraft war nicht angebunden (§ 8.13). |
+| Gewählte Optionskarten (Quiz-Schwierigkeit) | gefüllt Tinte | doppelter Rahmen in Tinte und ein Häkchen | Eine schwarze Kachel konkurrierte mit dem Startknopf, der einzigen gefüllten Fläche der Seite. Kleine Chips und Pillen bleiben gefüllt. |
+
+### Spiegeltest
+
+Zum Schluss fiel auf jeder Seite das Element weg, das am wenigsten sagt:
+
+| Seiten | Entfernt | Warum es nichts sagte |
+|---|---|---|
+| alle Übersichten und Werkzeuge (Drivers, Teams, Engines, Tyres, Races, Seasons, Circuits, Records, Changes, Team-mates, Compare, Explorer, Quiz, API, 404) | die Oberzeile ohne Verweis („Analysis“, „Data“, „Drivers“ …) | Sie wiederholte den aktiven Menüpunkt über dem Titel – genau das Etikett über der Überschrift, das § 12 verbietet. |
+| Fahrer, Team, Motor, Reifen, Strecke | das Land hinter der Brotkrume | Es steht im Länderkürzel daneben und im Kopfsatz. |
+| Rennen | „Round 20“ in der Brotkrume | Der Kopfsatz beginnt damit. |
+| Startseite | der Ort in der Zeile unter „Next: Las Vegas Grand Prix“ | Er steht im Namen des Rennens. |
+
+Eine Brotkrume steht damit nur noch dort, wo sie zurückführt (Fahrer → Drivers,
+Saison → Seasons).

@@ -83,7 +83,7 @@ const letzteMarke = datenStand
       <section class="abschnitt naechstes" aria-labelledby="naechstes-titel">
         <h2 id="naechstes-titel">Next: {naechstes.grandPrixVoll ?? naechstes.grandPrix}</h2>
         <p class="wann">
-          Round {naechstes.runde}, {naechstes.strecke}, {datum(naechstes.datum)}.
+          Round {naechstes.runde}, {datum(naechstes.datum)}.
         </p>
         <p class="countdown"><Countdown datum={naechstes.datum} zeit={naechstes.zeit} /></p>
         {titelSatz && <p class="titelsatz">{titelSatz}</p>}
