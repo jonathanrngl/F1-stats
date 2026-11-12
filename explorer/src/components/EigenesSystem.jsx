@@ -345,7 +345,7 @@ export default function EigenesSystem({ jahr, amtlich, mitStreichung }) {
           <p className="fussnote">
             Amber: the position differs from the official result.{' '}
             {ergebnis.mitGeteiltenFahrten > 0 &&
-              `Points for a shared car are split, as the era split them – ${ergebnis.mitGeteiltenFahrten} drivers are affected. `}
+              `Points for a shared car are split, as the era split them; ${ergebnis.mitGeteiltenFahrten} drivers are affected. `}
             {ergebnis.sprintPunkte > 0 && 'Sprint points are left unchanged. '}
             {ergebnis.ausgeschlossen.length > 0 &&
               `${ergebnis.ausgeschlossen.map((a) => a.name).join(' and ')} stays excluded from the championship, as decided at the time. `}

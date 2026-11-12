@@ -141,7 +141,7 @@ const ereignis = {
 ---
 
 <Seite
-  titel={`${name} – ${d.gefahren ? 'result' : 'upcoming'}`}
+  titel={`${name}: ${d.gefahren ? 'result' : 'upcoming'}`}
   beschreibung={d.gefahren
     ? `Round ${rennen.round} of the ${rennen.year} season in ${rennen.ort ?? rennen.strecke}${sieger ? `, won by ${sieger.fahrer}` : ''}: result, qualifying, grid, pit stops and the championship after the race.`
     : `Round ${rennen.round} of the ${rennen.year} season in ${rennen.ort ?? rennen.strecke}, on ${datum(rennen.date)}.`}
@@ -182,7 +182,7 @@ const ereignis = {
     <section class="abschnitt bevorstehend">
       <p class="countdown"><Countdown datum={rennen.date} zeit={rennen.time} /></p>
       <p>
-        This race has not been run yet – there is no result in the data.
+        This race has not been run yet; there is no result in the data.
         {istNaechstes
           ? <> It is the next race of the season: <a href={pfad.seite('/preview/')}>read the preview</a> for the circuit, the standings and the marks within reach.</>
           : <> See how the <a href={pfad.strecke(rennen.circuit_id)}>circuit</a> has gone in earlier years.</>}
@@ -306,7 +306,7 @@ const ereignis = {
       <p class="fussnote">
         A number in the first column means classified. DNF, DNQ and DNS stand for retirement,
         did not qualify and did not start. ‘shared’ marks a car that two drivers shared between
-        them – permitted in the 1950s, and both were classified.
+        them. That was permitted in the 1950s, and both were classified.
       </p>
     </section>
   )}
@@ -323,7 +323,7 @@ const ereignis = {
   {d.runden?.mitAbstand && (
     <section class="abschnitt" id="abstand">
       <div class="abschnitt-kopf">
-        <div><h2>Gap to the leader</h2><p>How far behind each driver was as every lap ended – the margins the running order hides.</p></div>
+        <div><h2>Gap to the leader</h2><p>How far behind each driver was as every lap ended: the margins the running order hides.</p></div>
       </div>
       <Abstandsverlauf fahrer={d.runden.fahrer} anzahl={d.runden.anzahl} rundeMs={d.runden.rundeMs} />
     </section>
@@ -411,7 +411,7 @@ const ereignis = {
                 <th scope="row"><a class="zeile" href={pfad.fahrer(g.fahrerId)}>{g.fahrer}</a></th>
                 <td class="num">{g.quali ? `P${g.quali}` : '–'}</td>
                 <td class="num fett">{g.position ? `P${g.position}` : (g.text ?? '–')}</td>
-                <td class="leise">{[g.strafPlaetze && `${g.strafPlaetze} places`, g.strafe].filter(Boolean).join(' – ')}</td>
+                <td class="leise">{[g.strafPlaetze && `${g.strafPlaetze} places`, g.strafe].filter(Boolean).join(', ')}</td>
               </tr>
             ))}
           </tbody>

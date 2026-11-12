@@ -120,7 +120,7 @@ const ortText = (s: Strecke) =>
   [s.ort && s.ort !== s.name ? s.ort : null, s.landName].filter(Boolean).join(', ')
 const zeitraum = (s: Strecke) => (s.von === s.bis ? `${s.von}` : `${s.von}–${s.bis}`)
 const beschriftet = (s: Strecke) =>
-  `${s.name}${ortText(s) ? `, ${ortText(s)}` : ''} – ${s.rennen} ${s.rennen === 1 ? 'race' : 'races'}, ${zeitraum(s)}`
+  `${s.name}${ortText(s) ? `, ${ortText(s)}` : ''}: ${s.rennen} ${s.rennen === 1 ? 'race' : 'races'}, ${zeitraum(s)}`
 
 /*
  * Die Zeitleiste: Strecken je Saison als schmale Säulen. Sie ist zugleich
@@ -387,7 +387,7 @@ const saeuleB = LEISTE.breite / saeulen.length
         if (d.erstes === jahr) neu.push(d.name)
       }
       const rest = n - europa
-      let text = `${jahr}: ${n} ${n === 1 ? 'circuit' : 'circuits'} – ${europa} in Europe, ${rest} elsewhere`
+      let text = `${jahr}: ${n} ${n === 1 ? 'circuit' : 'circuits'}, ${europa} in Europe, ${rest} elsewhere`
       if (neu.length && neu.length < n) {
         text += `. New: ${neu.slice(0, 3).join(', ')}${neu.length > 3 ? ` and ${neu.length - 3} more` : ''}`
       }

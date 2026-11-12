@@ -56,7 +56,7 @@ export function GET() {
 
   const xml = `<?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
-  <title>Formula 1 Statistics – results and record changes</title>
+  <title>Formula 1 Statistics: results and record changes</title>
   <subtitle>${x(`New race results and every movement of an all-time mark, from F1DB ${version ?? ''}.`)}</subtitle>
   <id>${x(url('/'))}</id>
   <link rel="self" href="${x(url('/feed.xml'))}"/>

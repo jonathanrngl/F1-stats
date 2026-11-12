@@ -259,7 +259,7 @@ const person = {
 ---
 
 <Seite
-  titel={`${fahrer.display_name} – statistics and career`}
+  titel={`${fahrer.display_name}: statistics and career`}
   beschreibung={beschreibung}
   strukturiert={[person]}
   brotkrumen={[{ name: 'Drivers', pfad: '/drivers/' }]}
@@ -355,7 +355,7 @@ const person = {
     </ul>
     <p class="fussnote">
       Pole position means the fastest time in qualifying. That is not the same as a start from
-      P1 – grid penalties move a driver down the grid. Up to the 2000s the two numbers
+      P1: grid penalties move a driver down the grid. Up to the 2000s the two numbers
       coincide.
     </p>
   </section>
@@ -512,7 +512,7 @@ const person = {
       {duelle.length > 8 && <MehrZeigen anzahl={duelle.length - 8} wort="team-mates" />}
       <p class="fussnote">
         Green: {fahrer.display_name} came out ahead in that duel. Quali gap: the median difference
-        in the last session both set a time in, as a share of the lap – minus is faster. At least
+        in the last session both set a time in, as a share of the lap; minus is faster. At least
         three sessions; a dash where there were fewer.
       </p>
     </section>

@@ -88,7 +88,7 @@ const rekordeNachFahrer = rekorde.reduce((karte, r) => {
 }, new Map())
 
 const gpName = rennen ? (rennen.grandPrixVoll ?? `${rennen.grandPrix} Grand Prix`) : null
-const titel = rennen ? `${gpName} ${rennen.jahr} – preview` : 'Race preview'
+const titel = rennen ? `${gpName} ${rennen.jahr}: preview` : 'Race preview'
 
 const ziele = rennen
   ? [
@@ -118,7 +118,7 @@ const ziele = rennen
           <p class="lead">
             No race is still outstanding in the data. The season is over and next year’s
             calendar is not in the data yet
-            {quelle.stand && <> – the most recent result is the {quelle.stand.grandPrix} on {datum(quelle.stand.datum)}</>}.
+            {quelle.stand && <>; the most recent result is the {quelle.stand.grandPrix} on {datum(quelle.stand.datum)}</>}.
           </p>
         </div>
       </header>
@@ -165,7 +165,7 @@ const ziele = rennen
           <b>The drivers’ title can be settled here.</b>{' '}
           {fuehrender.name} leads {zweiter.name} by {ein(vorsprung)} points. This weekend offers
           {' '}up to {stand.maxDiesesRennen}, and after it at most {stand.maxDanach} remain to be won.
-          Whether that actually settles it depends on the result – the number says only that it
+          Whether that actually settles it depends on the result. The number says only that it
           is arithmetically possible.
         </p>
       )}

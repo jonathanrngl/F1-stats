@@ -148,7 +148,7 @@ function neueRunde(pool, wahl) {
 
 function urteil(richtig, gesamt) {
   const anteil = gesamt ? richtig / gesamt : 0
-  if (anteil === 1) return 'Grand slam – every answer right.'
+  if (anteil === 1) return 'Grand slam: every answer right.'
   if (anteil >= 0.8) return 'On the podium.'
   if (anteil >= 0.5) return 'In the points.'
   if (anteil > 0) return 'Outside the points this time.'
@@ -332,7 +332,7 @@ export default function Quiz({ bereiche, stufen }) {
               {wahl.bereiche.length === 0
                 ? 'Choose at least one topic.'
                 : verfuegbar < wahl.laenge
-                  ? `Only ${verfuegbar} questions match – the round will be shorter.`
+                  ? `Only ${verfuegbar} questions match, so the round will be shorter.`
                   : `${verfuegbar.toLocaleString('en-GB')} questions match. Questions you have already seen come last.`}
             </p>
           </div>
@@ -467,7 +467,7 @@ export default function Quiz({ bereiche, stufen }) {
           {beantwortet && (
             <div className={`aufloesung ${korrekt ? 'gut' : 'schlecht'}`}>
               <p>
-                <b>{korrekt ? 'Correct.' : `Not quite – it's ${frage.o[0]}.`}</b> {frage.e}
+                <b>{korrekt ? 'Correct.' : `Not quite. It's ${frage.o[0]}.`}</b> {frage.e}
               </p>
               <div className="aufloesung-fuss">
                 {verweis(frage)}

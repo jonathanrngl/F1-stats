@@ -68,7 +68,7 @@ const ziele = [
 ---
 
 <Seite
-  titel="Changes – what is moving in the record lists"
+  titel="Changes: what is moving in the record lists"
   beschreibung="Which Formula 1 record fell most recently, what is still within reach this season, and who is closest to the all-time marks."
 >
   {/*
@@ -108,7 +108,7 @@ const ziele = [
           <div>
             <h2>Recently fallen</h2>
             <p>
-              To break a record you must first equal it – so each broken record carries the date
+              To break a record you must first equal it, so each broken record carries the date
               it was equalled, often weeks earlier.
             </p>
           </div>
@@ -160,7 +160,7 @@ const ziele = [
         <div class="abschnitt-kopf">
           <div>
             <h2>Being extended</h2>
-            <p>A record holder who is still racing adds to it in every successful race – gathered here as one gain rather than one entry per race.</p>
+            <p>A record holder who is still racing adds to it in every successful race. Here that counts as one gain, not one entry per race.</p>
           </div>
         </div>
         <div class="tabelle">
@@ -233,7 +233,7 @@ const ziele = [
                   ? `Already level with the record; every further success sets a new one.`
                   : m.brechenMoeglich
                     ? `${m.fehltZumBrechen} more needed to break it, with ${stand.offen} races remaining.`
-                    : `With ${stand.offen} races left it can still be equalled – ${m.fehltZumEinstellen} more – but no longer broken.`}
+                    : `With ${stand.offen} races left it can still be equalled (${m.fehltZumEinstellen} more), but no longer broken.`}
               </p>
             </li>
           ))}
@@ -252,7 +252,7 @@ const ziele = [
             <h2>Closest to the all-time records</h2>
             <p>
               The nearest challenger to each record. The gap is a fact; the projection beside it is
-              not – it carries forward the strike rate of the past three seasons.
+              not: it carries forward the strike rate of the past three seasons.
             </p>
           </div>
         </div>
@@ -284,7 +284,7 @@ const ziele = [
                           <a href={zielVon(a.kategorie, h.id)}>{h.name}</a>
                         </>
                       ))}
-                      {a.halterAktiv && ' – still racing, so the record keeps growing'}
+                      {a.halterAktiv && ', still racing, so the record keeps growing'}
                     </span>
                   </td>
                   <td class="num">{zahl(a.eigene)}</td>
@@ -301,7 +301,7 @@ const ziele = [
                         <span class="neben">
                           ≈ {ein(a.saisonNoetig)} seasons
                           {a.alterAmZiel !== null &&
-                            ` – aged ${Math.round(a.alterAmZiel)} by then`}
+                            `, aged ${Math.round(a.alterAmZiel)} by then`}
                         </span>
                       </>
                     )}
@@ -377,20 +377,20 @@ const ziele = [
       <p>
         <b>Counting is by starts, not by entries.</b> That shifts individual dates away from the
         record books, which often count entries. Räikkönen, for instance, reached Barrichello's
-        322 starts at Mugello in 2020 and passed him two races later at Sochi – his 326th
+        322 starts at Mugello in 2020 and passed him two races later at Sochi. His 326th
         <i>entry</i>, the mark usually quoted, did not fall until the Eifel Grand Prix. Both
         statements are correct; they count different things.
       </p>
       <p>
         <b>A projection is not a prediction.</b> It takes the strike rate of the past three
         seasons and carries it forward. A driver with too few starts in that window, or no
-        success of that kind at all, gets no number – "infinitely many races" would be false
+        success of that kind at all, gets no number: "infinitely many races" would be false
         precision. Where the record is held by a driver who is still racing, it keeps growing while the
         challenger closes in; that is noted on the relevant row.
       </p>
       <p>
         The all-time points table is deliberately absent. The scoring systems have changed more
-        than a dozen times – a record of that kind mostly measures the system.
+        than a dozen times. A record of that kind mostly measures the system.
       </p>
       <p>
         The full lists are under <a href={pfad.seite('/records/')}>Records</a>, and the next race

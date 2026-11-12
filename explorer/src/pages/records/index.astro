@@ -49,7 +49,7 @@ const bloecke = (z) => [
     titel: 'Most pole positions',
     liste: meistePoles(d, N, z),
     format: ganz,
-    hinweis: 'Fastest time in qualifying – not the grid position, which penalties shift.',
+    hinweis: 'Fastest time in qualifying, not the grid position, which penalties shift.',
   },
   {
     titel: 'Most starts',
@@ -106,8 +106,8 @@ const ziele = [
 ---
 
 <Seite
-  titel="Formula 1 records – the records set since 1950"
-  beschreibung="Most wins, podiums and pole positions, all time or by era, longest streaks, youngest and oldest record holders – each entry linked to the race."
+  titel="Formula 1 records since 1950"
+  beschreibung="Most wins, podiums and pole positions, all time or by era, longest streaks, youngest and oldest record holders, each linked to the race."
 >
   {/*
     * Kopf ohne Lackierung: Die Rekordseite hat keinen Gegenstand (DESIGN.md,
@@ -160,7 +160,7 @@ const ziele = [
     <div class="abschnitt-kopf">
       <div>
         <h2>Streaks</h2>
-        <p>Unbroken runs across a driver's starts. A race missed does not break a streak – a driver who was not there had nothing to lose.</p>
+        <p>Unbroken runs across a driver's starts. A race missed does not break a streak: a driver who was not there had nothing to lose.</p>
       </div>
     </div>
     <div class="raster">
@@ -223,7 +223,7 @@ const ziele = [
 
       <div class="rangkarte">
         <h3>Grand Slams</h3>
-        <p class="unter">Pole position, win, fastest lap and every lap led – all in one race.</p>
+        <p class="unter">Pole position, win, fastest lap and every lap led, all in one race.</p>
         <ol class="rangliste">
           {raenge(slams).map((e) => (
             <li data-rang={e.rang} class={e.vorn ? 'vorn' : undefined}>
@@ -249,7 +249,7 @@ const ziele = [
         <h2>Age</h2>
         <p>
           Exact to the day: full years, then the days since the last birthday. Drivers whose date
-          of birth is not recorded are missing from these lists – a missing date is not an age of
+          of birth is not recorded are missing from these lists, because a missing date is not an age of
           zero.
         </p>
       </div>
@@ -281,7 +281,7 @@ const ziele = [
         <h2>Charges through the field, and long careers</h2>
         <p>
           Formula 1 races only. The Indianapolis 500 started 33 cars, where thirty places made up
-          was routine – it would otherwise fill eight of the ten places for positions gained.
+          was routine; it would otherwise fill eight of the ten places for positions gained.
         </p>
       </div>
     </div>

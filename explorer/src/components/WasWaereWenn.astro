@@ -91,7 +91,7 @@ const amtlichKurz = amtlich.map(({ id, name, position, points, meister }) => ({ 
         <div class="whatif-variante" data-variante={v.schluessel} hidden={v !== vorwahl}>
           <p class="whatif-text">
             {v.system.id === eigenes.id
-              ? <>The system in force at the time, but <b>every result counts</b> – nothing dropped.</>
+              ? <>The system in force at the time, but <b>every result counts</b>, nothing dropped.</>
               : <>Scored <b>{v.system.beschreibung.replace(/\.$/, '')}</b>{v.streich ? ', with the dropped-scores rule of the time.' : ', every result counted.'}</>}
           </p>
 
@@ -142,7 +142,7 @@ const amtlichKurz = amtlich.map(({ id, name, position, points, meister }) => ({ 
             {neu.mitGeteiltenFahrten > 0 && (
               <>
                 In this season drivers shared a car. The points for a shared position are split,
-                just as the era itself split them – {neu.mitGeteiltenFahrten}
+                just as the era itself split them; {neu.mitGeteiltenFahrten}
                 {' '}drivers are affected.{' '}
               </>
             )}
@@ -155,7 +155,7 @@ const amtlichKurz = amtlich.map(({ id, name, position, points, meister }) => ({ 
                 championship, as decided at the time.{' '}
               </>
             )}
-            A calculation, not a rewriting of history – drivers would have raced differently if
+            A calculation, not a rewriting of history: drivers would have raced differently if
             different points had been at stake.
           </p>
         </div>

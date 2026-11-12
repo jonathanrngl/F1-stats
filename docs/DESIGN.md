@@ -837,4 +837,23 @@ Geschärft nach diesem Abgleich:
 
 ## Abweichungen
 
-*(nach der Umsetzung)*
+Was bei der Umsetzung (Phase 3) anders kam als oben beschrieben, mit Grund.
+Wo die Abweichung eine Regel ändert, gilt die Regel hier.
+
+| Wo | Plan | Umgesetzt | Warum |
+|---|---|---|---|
+| Ergebnismatrix der Saison | Ausfall rot gerahmt | leise (`--muted`), wie vorher | Die Matrix hatte nie einen Rahmen; mit ihm wurde 1988 eine Wand aus über 100 roten Zellen, die mit dem Turm konkurrierte. In Ergebnistabellen bleibt `.pos.aus` rot gerahmt. |
+| Lila | Rekordseite in Tinte, Lila anderswo | zusätzlich kein Lila auf /changes/ | Dort steht nur, was Rekord ist oder wird – Lila an jedem Eintrag wäre wieder Rot an allem. |
+| Lila auf Teamseiten | wie Fahrerseite | nur Titel, Siege, Poles | Nur für diese drei liefert die Engine eine Bestenliste in derselben Definition (für alle 187 Teams geprüft). Motor- und Reifenseiten haben kein Lila: keine Bestenliste. |
+| Lila auf Streckenseiten | – | der Rundenrekord des Layouts | Die schnellste Rennrunde, die je auf diesem Layout gefahren wurde, ist die absolute Bestmarke der Seite. |
+| Podium (Rennseite) | Turm | Turm; beim Sieger die Renndauer im Wert, die Abstandsspalte entfällt nur dort | So enden Zeit und Rückstände auf einer Kante. Global wäre das falsch: Auf Start- und Saisonseite muss der Wert des Führenden auf der Kante der übrigen Werte stehen. |
+| Vorschau | Struktur bleibt | die beiden Wertungen als Turm (je zehn) | Regel aus § 8.5: ein Wert mit Abstand ist ein Turm. In der Fahrerzeile steht das Team als Text, nicht als Link. |
+| Quiz | – | richtig in `--good`, falsch in `--danger-fg`, jeweils mit Wort | Richtig/falsch ist ein Status; dafür gelten Grün und Rot, nie ohne Text. |
+| Fahrerseite | Sprungleiste = Titel oder erstes Wort | Abschnittstitel angepasst: „Numbers in detail“, „Career at a glance“, „Seasons“, „Races“, „Team-mates“, „Circuits“ | Die Beschriftungen der Leiste blieben, die Titel folgen ihnen. Ebenso auf Saison- („Progression“, „Calendar“), Rekord- und Änderungsseite. |
+| Motor- und Reifenseiten | tragende Zahl | Titel zuerst, die Titelkachel auch bei 0 | § 8.6 gilt für alle Seiten mit Kennzahlen; auf der Teamseite entfällt die Kachel bei 0, der beste Platz steht dann im Kopfsatz. |
+| Kopfsatz | Zeitraum nur im Epochenband | im Kopfsatz, wenn das Band erstes oder letztes Jahr nicht beschriftet | Die Achse lässt Zahlen weg, die näher als acht Saisons an einer anderen stehen (Mercedes 1954, Connaught); verloren gehen darf keine Angabe. |
+| Weltkarte | Gestaltung | dazu ein Fehler im Skript behoben | Die Auswahl der Regionsknöpfe traf auch die 78 Punkt-Links: Sie bekamen `aria-pressed`, ein Klick auf einen Punkt wechselte die Region. |
+| Texte aus der Engine | ohne Mittelpunkt und Gedankenstrich | bleiben, wie die Engine sie schreibt | `engine/` ist eingefroren: Erklärungen im Quiz („Michael Schumacher 77 · Lewis Hamilton 70“) und Sätze der Rekordbewegungen. |
+| Filter auf /circuits/ | – | unverändert | Er zählt alle Tabellenzeilen der Seite (104 statt 78 Strecken), weil dort zwei Tabellen stehen. So war es vorher auch. |
+| Rohe Maße | nur Tokens | zwei Ausnahmen | Der Reglerknopf der Weltkarte ist mit `0.525rem` über seiner Säule ausgerichtet; die Beschriftung der Lagekarte steht in SVG-Einheiten (`4.6px`, skaliert etwa 12 px). |
+| Bildmarken | Recraft zuerst | von Hand | Recraft war nicht angebunden (§ 8.13). |

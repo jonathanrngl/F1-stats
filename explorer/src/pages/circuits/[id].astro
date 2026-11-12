@@ -4,6 +4,7 @@ import Seite from '../../layouts/Seite.astro'
 import Sprung from '../../components/Sprung.astro'
 import Lagekarte from '../../components/Lagekarte.astro'
 import Epochenband from '../../components/Epochenband.astro'
+import { zeitraumImBand } from '../../components/epochen.js'
 import { eine, streckenListe, pfad, db } from '../../lib/db.js'
 import { land } from '../../lib/laender.js'
 import {
@@ -59,14 +60,9 @@ const jahreHier = [...new Set(rennen.map((r) => r.year))].sort((a, b) => a - b)
 /*
  * Den Zeitraum zeigt das Epochenband. In Worten steht er nur, wenn das Band
  * erstes oder letztes Jahr nicht beschriftet – es lässt eine Zahl weg, die
- * näher als acht Saisons an einer anderen steht (Epochenband.astro).
+ * näher als acht Saisons an einer anderen steht (components/epochen.js).
  */
-const achse = eine('SELECT MIN(year) AS von, MAX(year) AS bis FROM season')
-const marken = []
-for (const j of [achse.von, achse.bis, jahreHier[0], jahreHier.at(-1)]) {
-  if (j !== undefined && !marken.includes(j) && !marken.some((m) => Math.abs(m - j) < 8)) marken.push(j)
-}
-const bandNenntZeitraum = jahreHier.length > 0 && marken.includes(jahreHier[0]) && marken.includes(jahreHier.at(-1))
+const bandNenntZeitraum = zeitraumImBand(jahreHier)
 
 /*
  * Der Kopfsatz: was keine Zahl sagt, in ganzen Sätzen statt einer Zeile
@@ -99,7 +95,7 @@ const ziele = [
 ---
 
 <Seite
-  titel={`${strecke.name} – Formula 1 circuit statistics`}
+  titel={`${strecke.name}: Formula 1 circuit statistics`}
   beschreibung={`${rennen.length} Formula 1 races in ${strecke.place_name} (${zeitraum}): winners, pole-sitters, specialists, lap records and every result.`}
   strukturiert={[ort]}
   brotkrumen={[{ name: 'Circuits', pfad: '/circuits/' }]}
@@ -196,7 +192,7 @@ const ziele = [
           <h2>Circuit specialists</h2>
           <p>
             A driver's average finish here, set against the same driver's average everywhere
-            else – so a driver who wins everywhere is no specialist here. At least three starts
+            else, so a driver who wins everywhere is no specialist here. At least three starts
             here and three elsewhere.
           </p>
         </div>
@@ -232,7 +228,7 @@ const ziele = [
       <div class="abschnitt-kopf">
         <div>
           <h2>Layouts</h2>
-          <p>The circuit has been rebuilt. Comparing lap times across a change of layout is not valid – each layout has its own lap record.</p>
+          <p>The circuit has been rebuilt. Comparing lap times across a change of layout is not valid; each layout has its own lap record.</p>
         </div>
       </div>
       <div class="tabelle schmal">

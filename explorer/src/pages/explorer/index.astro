@@ -42,14 +42,14 @@ const BEISPIELE = [
   },
   {
     frage: 'Who scored the highest share of the points on offer, era for era?',
-    wie: 'Sort by “Share of possible points”, with at least 50 starts – a win was 9 points in 1955 and 26 in 2024, and this share evens that out.',
+    wie: 'Sort by “Share of possible points”, with at least 50 starts. A win was 9 points in 1955 and 26 in 2024, and this share evens that out.',
     q: { k: 'starts,siege,punkte,normiert', s: 'normiert', b: 'starts>=50' },
   },
 ]
 ---
 
 <Seite
-  titel="Statistics Explorer – your own queries across the whole of Formula 1 history"
+  titel="Statistics Explorer: your own queries across Formula 1 history"
   beschreibung={`Freely combinable queries across ${z.n.toLocaleString('en-GB')} result rows: group, filter, sort, share as a link, export.`}
 >
   <header class="seitenkopf">
@@ -82,7 +82,7 @@ const BEISPIELE = [
 
   <p class="hinweis nur-ohne-js">
     The Explorer runs in your browser and needs JavaScript. Everything it counts is also on the
-    static pages – start from the <a href={pfad.seite('/records/')}>records</a>, a
+    static pages: start from the <a href={pfad.seite('/records/')}>records</a>, a
     {' '}<a href={pfad.seite('/seasons/')}>season</a> or a <a href={pfad.seite('/drivers/')}>driver</a>.
   </p>
 

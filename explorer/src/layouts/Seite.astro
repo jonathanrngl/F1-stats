@@ -113,7 +113,8 @@ const werkzeugAktiv = WERKZEUGE.some((w) => istAktiv(w.pfad))
  */
 const MARKE = 'Formula 1 Statistics'
 const istStart = hier === '/'
-const seitentitel = istStart ? titel : `${titel} · ${MARKE}`
+/* Ein Trennstrich, kein Mittelpunkt: „A · B“ ist die Metazeile, die § 12 von DESIGN.md verbietet. */
+const seitentitel = istStart ? titel : `${titel} | ${MARKE}`
 const kanonisch = new URL(Astro.url.pathname, Astro.site ?? 'https://jonathanrngl.github.io').href
 const vorschaubild = new URL(`${BASIS}/og.png`, Astro.site ?? 'https://jonathanrngl.github.io').href
 
@@ -127,7 +128,7 @@ if (brotkrumen.length) {
   ld.push({
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
-    itemListElement: [{ name: 'Home', pfad: '/' }, ...brotkrumen, { name: titel.split(' – ')[0], pfad: hier }].map((b, i) => ({
+    itemListElement: [{ name: 'Home', pfad: '/' }, ...brotkrumen, { name: titel.split(/: | – /)[0], pfad: hier }].map((b, i) => ({
       '@type': 'ListItem',
       position: i + 1,
       name: b.name,
@@ -153,7 +154,7 @@ const ldText = ld.length ? JSON.stringify(ld.length === 1 ? ld[0] : ld).replace(
     <meta name="description" content={beschreibung} />
     {ohneIndex ? <meta name="robots" content="noindex" /> : <link rel="canonical" href={kanonisch} />}
     <link rel="sitemap" type="application/xml" href={`${BASIS}/sitemap.xml`} />
-    <link rel="alternate" type="application/atom+xml" title="Formula 1 Statistics – changes" href={`${BASIS}/feed.xml`} />
+    <link rel="alternate" type="application/atom+xml" title="Formula 1 Statistics: record changes" href={`${BASIS}/feed.xml`} />
     <meta property="og:site_name" content={MARKE} />
     <meta property="og:title" content={titel} />
     <meta property="og:description" content={beschreibung} />

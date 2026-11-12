@@ -97,7 +97,7 @@ const ZEILEN = [
     label: 'Share of possible points',
     f: proz,
     besser: 'gross',
-    hinweis: 'Points scored against the most each start could have brought under the rules of its own year – a win was 9 points in 1955 and 26 in 2024.',
+    hinweis: 'Points scored against the most each start could have brought under the rules of its own year. A win was 9 points in 1955 and 26 in 2024.',
   },
   {
     k: 'punkteProStart',
@@ -258,7 +258,7 @@ export default function Vergleich() {
       {bereit && !vollstaendig && !laedt && (
         <div className="leer">
           <p className="status">
-            Choose two drivers. The comparison is worked out in your browser – including for a
+            Choose two drivers. The comparison is worked out in your browser, including for a
             period you set yourself.
           </p>
           {vorschlaege.length > 0 && (
@@ -363,7 +363,7 @@ export default function Vergleich() {
               <h2>As team-mates</h2>
               <p>
                 The two of them drove the same car in {duell.jahre.join(', ')}. That is the only
-                genuinely fair comparison there is – same machinery, same races.
+                genuinely fair comparison there is: same machinery, same races.
               </p>
               <table className="gegen">
                 <tbody>
@@ -373,7 +373,7 @@ export default function Vergleich() {
                 </tbody>
               </table>
               <p className="fuss">
-                In the race, only those in which both reached the finish are counted – a
+                In the race, only those in which both reached the finish are counted, because a
                 retirement says nothing about the head-to-head.
               </p>
             </section>
@@ -521,7 +521,7 @@ function Auswahl({ index, wert, gesperrt, label, fokus, onWahl }) {
             onKeyDown={taste}
           />
           {zeigeListe && (
-            <ul id={`${id}-liste`} role="listbox" aria-label={`${label} – matches`}>
+            <ul id={`${id}-liste`} role="listbox" aria-label={`${label}: matches`}>
               {treffer.length === 0 && <li className="kein-treffer">No driver matches “{frage.trim()}”.</li>}
               {treffer.map((f, i) => (
                 <li key={f.id} id={`${id}-o${i}`} role="option" aria-selected={i === aktiv}

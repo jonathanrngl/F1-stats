@@ -4,6 +4,7 @@ import Seite from '../../layouts/Seite.astro'
 import Sprung from '../../components/Sprung.astro'
 import Folgen from '../../components/Folgen.astro'
 import Epochenband from '../../components/Epochenband.astro'
+import { zeitraumImBand } from '../../components/epochen.js'
 import { teamrekordwerte } from '../../components/teamrekordwerte.js'
 import { alle, eine, teamListe, pfad, db } from '../../lib/db.js'
 import { land } from '../../lib/laender.js'
@@ -113,14 +114,9 @@ const titelJahre = titel.seasons.filter((s) => s.won).map((s) => s.year)
 /*
  * Den Zeitraum zeigt das Epochenband. In Worten steht er nur, wenn das Band
  * erstes oder letztes Jahr nicht beschriftet – es lässt eine Zahl weg, die
- * näher als acht Saisons an einer anderen steht (Epochenband.astro).
+ * näher als acht Saisons an einer anderen steht (components/epochen.js).
  */
-const achse = eine('SELECT MIN(year) AS von, MAX(year) AS bis FROM season')
-const marken = []
-for (const j of [achse.von, achse.bis, startJahre[0], startJahre.at(-1)]) {
-  if (j !== undefined && !marken.includes(j) && !marken.some((m) => Math.abs(m - j) < 8)) marken.push(j)
-}
-const bandNenntZeitraum = startJahre.length > 0 && marken.includes(startJahre[0]) && marken.includes(startJahre.at(-1))
+const bandNenntZeitraum = zeitraumImBand(startJahre)
 
 /*
  * Der Kopfsatz: was keine Zahl sagt, in ganzen Sätzen statt einer Zeile
@@ -189,7 +185,7 @@ const ziele = [
 ---
 
 <Seite
-  titel={`${team.name} – statistics and history`}
+  titel={`${team.name}: statistics and history`}
   beschreibung={`${team.name}: ${zahl(calculateTeamStarts(rennen).value)} races, ${zahl(calculateTeamWins(rennen).value)} wins, ${titel.titles.value} constructors' titles (${zeitraum}).`}
   strukturiert={[sportteam]}
   brotkrumen={[{ name: 'Teams', pfad: '/teams/' }]}
@@ -243,7 +239,7 @@ const ziele = [
       <li><span>Drivers fielded</span><b>{fahrer.length}</b></li>
     </ul>
     <p class="fussnote">
-      “Races” counts weekends, not cars – otherwise every two-car team would have twice as many
+      “Races” counts weekends, not cars; otherwise every two-car team would have twice as many
       starts as races. “Cars finishing”, by contrast, counts cars: each one is a separate test of
       the engineering.
     </p>

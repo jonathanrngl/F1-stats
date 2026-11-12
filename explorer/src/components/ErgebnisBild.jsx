@@ -67,7 +67,7 @@ export default function ErgebnisBild({ reihen, kennzahl, label, zeitlich, zeige,
     <figure className="ergebnisbild" ref={ref}>
       <figcaption>
         <b>{titel}</b>
-        {zeitlich && <span aria-live="polite">{ziel ? anzeige : `Highest – ${anzeige}`}</span>}
+        {zeitlich && <span aria-live="polite">{ziel ? anzeige : `Highest: ${anzeige}`}</span>}
       </figcaption>
       {breite > 0 && (zeitlich
         ? <Saeulen liste={liste} kennzahl={kennzahl} breite={breite} min={min} spanne={spanne} ziel={ziel} setZiel={setZiel} zeige={zeige} label={label} />

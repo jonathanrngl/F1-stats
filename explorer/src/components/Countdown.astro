@@ -61,7 +61,7 @@ const { datum, zeit = null } = Astro.props
        * Seite so tut, als stünde das Rennen noch bevor.
        */
       b.textContent = String(Math.abs(n))
-      s.textContent = Math.abs(n) === 1 ? 'day ago – result not yet in the data' : 'days ago – result not yet in the data'
+      s.textContent = Math.abs(n) === 1 ? 'day ago, result not yet in the data' : 'days ago, result not yet in the data'
     }
     el.replaceChildren(b, ...(s.textContent ? [document.createTextNode(' '), s] : []))
   }

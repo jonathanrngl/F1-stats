@@ -204,7 +204,7 @@ export default function Explorer({ groesse = '' }) {
       await navigator.clipboard.writeText(window.location.href)
       setKopiert('Link copied.')
     } catch {
-      setKopiert('Copy the address from the address bar – this browser did not allow it here.')
+      setKopiert('Copy the address from the address bar; this browser did not allow it here.')
     }
   }
 
@@ -220,7 +220,7 @@ export default function Explorer({ groesse = '' }) {
   return (
     <div className="explorer">
       <form className="frage" onSubmit={wendeFrageAn}>
-        <label htmlFor="frage-feld">Ask a question – in English or German</label>
+        <label htmlFor="frage-feld">Ask a question in English or German</label>
         <div className="zeile">
           <input
             id="frage-feld"
@@ -242,7 +242,7 @@ export default function Explorer({ groesse = '' }) {
             {uebersetzt.unverstanden.map((u, i) => <p key={i} className="luecke">{u}</p>)}
             <p className="quelle">
               The question only sets the controls below. The calculation runs over all{' '}
-              {daten.rennzeilen.toLocaleString('en-GB')} result rows – the figures come from the
+              {daten.rennzeilen.toLocaleString('en-GB')} result rows. The figures come from the
               data, not from the translation.
             </p>
           </div>
@@ -371,7 +371,7 @@ export default function Explorer({ groesse = '' }) {
       </p>
       {zeigtTitel && ergebnis.titelOhneSinn && (
         <p className="hinweis">
-          <b>Note:</b> titles belong to a season, not to a circuit, a team or an engine – with those filters set,
+          <b>Note:</b> titles belong to a season, not to a circuit, a team or an engine, so with those filters set
           the title column stays empty.
         </p>
       )}

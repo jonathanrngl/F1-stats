@@ -10,6 +10,7 @@ import Seite from '../../layouts/Seite.astro'
 import Karriere from '../../components/Karriere.astro'
 import Sprung from '../../components/Sprung.astro'
 import Epochenband from '../../components/Epochenband.astro'
+import { zeitraumImBand } from '../../components/epochen.js'
 import { ein, prozent, raenge, zahl } from '../../lib/format.js'
 import { alle, db, eine, pfad } from '../../lib/db.js'
 import { land } from '../../lib/laender.js'
@@ -87,14 +88,9 @@ const titelJahre = titel.map((t) => t.jahr)
 /*
  * Den Zeitraum zeigt das Epochenband. In Worten steht er nur, wenn das Band
  * erstes oder letztes Jahr nicht beschriftet – es lässt eine Zahl weg, die
- * näher als acht Saisons an einer anderen steht (Epochenband.astro).
+ * näher als acht Saisons an einer anderen steht (components/epochen.js).
  */
-const achse = eine('SELECT MIN(year) AS von, MAX(year) AS bis FROM season')
-const marken = []
-for (const j of [achse.von, achse.bis, startJahre[0], startJahre.at(-1)]) {
-  if (j !== undefined && !marken.includes(j) && !marken.some((m) => Math.abs(m - j) < 8)) marken.push(j)
-}
-const bandNenntZeitraum = startJahre.length > 0 && marken.includes(startJahre[0]) && marken.includes(startJahre.at(-1))
+const bandNenntZeitraum = zeitraumImBand(startJahre)
 
 /*
  * Der Kopfsatz: Herkunft und wie viele Teams den Motor fuhren, in einem Satz
@@ -141,7 +137,7 @@ const ziele = [
 ].filter(Boolean)
 ---
 
-<Seite titel={`${motor.name} – Formula 1 engine statistics`} beschreibung={beschreibung} brotkrumen={[{ name: 'Engines', pfad: '/engines/' }]}>
+<Seite titel={`${motor.name}: Formula 1 engine statistics`} beschreibung={beschreibung} brotkrumen={[{ name: 'Engines', pfad: '/engines/' }]}>
   <header class="seitenkopf">
     <span class="wappen" title={heimat.name}>{heimat.code}</span>
     <div>
@@ -170,7 +166,7 @@ const ziele = [
 
   <p class="fussnote">
     Counted per race, not per car: an engine that powered four cars in one race was in one
-    race. A win means that a car with this engine won – it was not necessarily a works team.
+    race. A win means that a car with this engine won, not necessarily a works team.
   </p>
 
   <Sprung ziele={ziele} />
@@ -187,7 +183,7 @@ const ziele = [
       <div class="abschnitt-kopf">
         <div>
           <h2>Drivers' titles won with this engine</h2>
-          <p>The engine does not win the championship – the driver does. These are the seasons in which the champion raced with it.</p>
+          <p>The engine does not win the championship; the driver does. These are the seasons in which the champion raced with it.</p>
         </div>
       </div>
       <ul class="titelliste">

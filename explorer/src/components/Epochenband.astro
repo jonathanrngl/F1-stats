@@ -13,6 +13,7 @@
  * das Meisterband: kein Bereichsattribut an 77 Feldern.
  */
 import { saisonListe } from '../lib/db.js'
+import { epochenMarken } from './epochen.js'
 
 interface Props {
   /** Die Jahre, in denen der Gegenstand dabei war. */
@@ -27,7 +28,6 @@ const { jahre, titel = [], wort = 'Seasons' } = Astro.props
 const an = new Set(jahre)
 const titelJahre = new Set(titel)
 const alle = saisonListe().map((s) => s.jahr).sort((a, b) => a - b)
-const von = alle[0]
 const bis = alle.at(-1)
 
 /** 1950, 1951, 1952, 1955 → „1950–1952, 1955“ */
@@ -43,21 +43,13 @@ const spannen = (menge: Set<number>) => {
   return teile.join(', ')
 }
 
-const gefahren = [...an].sort((a, b) => a - b)
-const erstes = gefahren[0]
-const letztes = gefahren.at(-1)
-
 /*
  * Beschriftet werden die Enden der Achse und das erste und letzte Jahr des
- * Gegenstands. Steht eine Zahl näher als acht Saisons an einer anderen, die
- * schon steht, entfällt sie – sonst liefen sie am Telefon ineinander.
+ * Gegenstands; eine Zahl näher als acht Saisons an einer anderen entfällt,
+ * sonst liefen sie am Telefon ineinander. Die Regel steht in epochen.js, weil
+ * Seiten danach entscheiden, ob sie den Zeitraum noch in Worten nennen.
  */
-const marken: number[] = []
-for (const j of [von, bis, erstes, letztes]) {
-  if (j === undefined || marken.includes(j)) continue
-  if (marken.some((m) => Math.abs(m - j) < 8)) continue
-  marken.push(j)
-}
+const marken = epochenMarken(an)
 
 const satz =
   `${wort}: ${an.size ? spannen(an) : 'none'}.` + (titelJahre.size ? ` Titles: ${spannen(titelJahre)}.` : '')
