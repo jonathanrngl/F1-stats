@@ -781,7 +781,16 @@ Die festgelegten technischen Punkte stehen als L1–L23 in
 | D3 | Wann wischt das Band auf? | Bei jedem Laden der Startseite |
 | D4 | Ist der Turm zu nah an der TV-Grafik der Formel 1? | Nein, die Form ist allgemein; keine F1-Schrift, kein F1-Rot |
 
-Die Antworten werden hier eingetragen.
+Antworten vom 12. November 2026: alle vier wie empfohlen.
+
+| # | Entscheidung |
+|---|---|
+| D1 | Die Höhe bleibt der Anteil an den möglichen Punkten aus den eigenen Starts; jeder Balken nennt die Zahlen. |
+| D2 | Die Monitorfläche ist auch im hellen Modus dunkel. |
+| D3 | Das Band wischt bei jedem Laden der Startseite auf (nur CSS). |
+| D4 | Der Turm bleibt; keine F1-Schrift, kein F1-Rot, kein Logo. |
+
+Die Freigabe ist damit erteilt; die Fragerunde ist geschlossen.
 
 ## Abweichungen
 
