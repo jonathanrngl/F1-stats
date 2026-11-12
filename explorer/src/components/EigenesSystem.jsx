@@ -89,13 +89,14 @@ export default function EigenesSystem({ jahr, amtlich, mitStreichung }) {
     setFehler('')
     fetch(`${BASIS}/data/ergebnisse/${jahr}.json`)
       .then((r) => {
-        if (!r.ok) throw new Error(`The results of ${jahr} could not be loaded.`)
+        if (!r.ok) throw new Error(String(r.status))
         return r.json()
       })
       .then(setDaten)
-      .catch((e) => {
+      // Ein Fehler sagt, was trotzdem geht (docs/DESIGN.md 8.14) – nicht die Meldung des Browsers.
+      .catch(() => {
         angefragt.current = false
-        setFehler(e.message)
+        setFehler(`Could not load the results of ${jahr}. The points systems above still work.`)
       })
   }, [system, jahr])
 
@@ -154,9 +155,9 @@ export default function EigenesSystem({ jahr, amtlich, mitStreichung }) {
       {systeme.length > 0 && (
         <fieldset className="whatif-wahl">
           <legend className="sr-only">Your points systems</legend>
-          <div className="chips">
+          <div className="chips wahl-chips">
             {systeme.map((s) => (
-              <label key={s.id} className="chip">
+              <label key={s.id} className="chip wahl-chip">
                 <input
                   type="radio"
                   name={`eigen-${jahr}`}
@@ -257,7 +258,7 @@ export default function EigenesSystem({ jahr, amtlich, mitStreichung }) {
               >
                 Edit “{system.name}”
               </button>
-              <button type="button" className="leise-knopf eigenes-weg" onClick={loeschen}>
+              <button type="button" className="leise-knopf" onClick={loeschen}>
                 Delete
               </button>
             </>
@@ -272,7 +273,7 @@ export default function EigenesSystem({ jahr, amtlich, mitStreichung }) {
         </p>
       )}
 
-      {fehler && <p className="hinweis warn">{fehler}</p>}
+      {fehler && <p className="hinweis">{fehler}</p>}
       {system && !ergebnis && !fehler && <p className="eigenes-hilfe">Loading the results of {jahr} …</p>}
 
       {system && ergebnis && !entwurf && (

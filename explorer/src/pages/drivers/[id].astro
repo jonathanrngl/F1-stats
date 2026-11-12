@@ -330,13 +330,13 @@ const person = {
   <Sprung ziele={ziele} />
 
   <section class="abschnitt" id="zahlen">
-    <div class="abschnitt-kopf"><div><h2>Career numbers</h2></div></div>
+    <div class="abschnitt-kopf"><div><h2>Numbers in detail</h2></div></div>
     <ul class="daten">
       <li><span>Avg grid position</span><b>{ein(calculateAverageStart(rennen).value)}</b></li>
       <li><span>Avg finish</span><b>{ein(calculateAverageFinish(rennen).value)}</b></li>
       <li><span>Retirement rate</span><b>{proz(calculateDNFRate(rennen))}</b></li>
       <li><span>Pole-to-win conversion</span><b>{proz(calculatePoleToWinRate(rennen))}</b></li>
-      <li><span>Positions gained</span><b>{wert(calculatePositionsGained(rennen), (v) => (v > 0 ? '+' : '') + zahl(v))}</b></li>
+      <li><span>Positions gained</span><b>{wert(calculatePositionsGained(rennen), (v) => (v > 0 ? '+' : v < 0 ? '−' : '') + zahl(Math.abs(v)))}</b></li>
       <li><span>Points scored</span><b>{ein(calculatePoints(rennen).value)}</b></li>
       <li><span>Longest winning streak</span><b>{serien.wins.length || '–'}</b></li>
       <li><span>Longest podium streak</span><b>{serien.podiums.length || '–'}</b></li>
@@ -346,7 +346,7 @@ const person = {
         <b>
           {teams.map((t, i) => (
             <>
-              {i > 0 && ' · '}
+              {i > 0 && ', '}
               <a href={pfad.team(t.id)}>{teamNamen.get(t.id)}</a> ({spannen(t.jahre)})
             </>
           ))}
@@ -362,14 +362,14 @@ const person = {
 
   {karriere.length > 1 && (
     <section class="abschnitt" id="karriere">
-      <div class="abschnitt-kopf"><div><h2>The career at a glance</h2></div></div>
+      <div class="abschnitt-kopf"><div><h2>Career at a glance</h2></div></div>
       <Karriere saisons={karriere} name={fahrer.display_name} tabelle={false} />
     </section>
   )}
 
   {saisons.length > 0 && (
     <section class="abschnitt" id="saisons">
-      <div class="abschnitt-kopf"><div><h2>Season by season</h2></div></div>
+      <div class="abschnitt-kopf"><div><h2>Seasons</h2></div></div>
       <div class="tabelle">
         <table>
           <thead>
@@ -409,7 +409,7 @@ const person = {
   <section class="abschnitt" id="rennen">
     <div class="abschnitt-kopf">
       <div>
-        <h2>Every race</h2>
+        <h2>Races</h2>
         <p>
           {zusatz.rennen.length} {zusatz.rennen.length === 1 ? 'entry' : 'entries'}
           {calculateStarts(rennen).value !== zusatz.rennen.length && `, ${calculateStarts(rennen).value} of them started`}.
@@ -423,7 +423,7 @@ const person = {
           <li>
             <span>{m.was}</span>
             <a href={pfad.rennen(m.r.id)}>{m.r.name} {m.r.jahr}</a>
-            <i>{ergebnis(m.r)} · {m.r.team}</i>
+            <i>{ergebnis(m.r)}, {m.r.team}</i>
           </li>
         ))}
       </ul>
@@ -466,7 +466,7 @@ const person = {
     <section class="abschnitt" id="teamkollegen">
       <div class="abschnitt-kopf">
         <div>
-          <h2>Against team-mates</h2>
+          <h2>Team-mates</h2>
           <p>
             Same car, same races. In the race only those where both reached the finish count –
             a retirement says nothing about the head-to-head.
@@ -498,7 +498,7 @@ const person = {
                     Die Vergleichsseite liest a und b aus der Adresse. */}
                 <td class="num">
                   <a
-                    class="vergleichen"
+                    class="knopf leise vergleichen"
                     href={`${pfad.seite('/comparison/')}?a=${fahrer.id}&b=${d.driverId}`}
                   >
                     Compare
@@ -520,7 +520,7 @@ const person = {
 
   {strecken.length > 0 && (
     <section class="abschnitt" id="strecken">
-      <div class="abschnitt-kopf"><div><h2>Strongest circuits</h2><p>Circuits with at least two starts, most wins first.</p></div></div>
+      <div class="abschnitt-kopf"><div><h2>Circuits</h2><p>Circuits with at least two starts, most wins first.</p></div></div>
       <div class="tabelle">
         <table>
           <thead>
@@ -551,45 +551,35 @@ const person = {
   .familie { max-width: var(--mass); margin: var(--abstand-2) 0 0; color: var(--ink-2); }
   .aktionen { display: flex; flex-wrap: wrap; gap: var(--abstand-2); margin: 0 0 var(--abstand-6); }
 
+  /* Die Meilensteine: flach auf der Fläche, ohne Rahmen und Rundung. */
   .meilensteine {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(min(15rem, 100%), 1fr));
-    gap: 0.5rem;
-    margin: 0 0 0.9rem;
+    gap: var(--abstand-2);
+    margin: 0 0 var(--abstand-4);
     padding: 0;
     list-style: none;
   }
 
   .meilensteine li {
     display: grid;
-    gap: 0.1rem;
-    padding: 0.65rem 0.85rem;
+    gap: var(--abstand-1);
+    padding: var(--abstand-3) var(--abstand-4);
     background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-s);
   }
 
-  .meilensteine span { font-size: 0.85rem; font-weight: 600; color: var(--muted); font-family: var(--display); }
+  .meilensteine span { font-size: var(--text-2); font-weight: 600; color: var(--muted); }
   .meilensteine a { font-weight: 650; color: var(--ink); text-decoration: none; }
-  .meilensteine a:hover { color: var(--link); text-decoration: underline; }
-  .meilensteine i { font-style: normal; font-size: 0.84rem; color: var(--muted); }
+  .meilensteine a:hover { text-decoration: underline 2px; text-decoration-color: var(--lackierung-linie); }
+  .meilensteine i { font-style: normal; font-size: var(--text-2); color: var(--muted); }
 
   .alle-rennen summary { cursor: pointer; min-height: 2.25rem; font-weight: 600; color: var(--ink); }
-  .alle-rennen .tabelle { margin-top: 0.5rem; }
+  .alle-rennen .tabelle { margin-top: var(--abstand-2); }
 
+  /* „Compare“ in jeder Zeile: ein leiser Knopf, kleiner, damit die Zeile nicht höher wird. */
   .vergleichen {
-    display: inline-flex;
-    align-items: center;
     min-height: 2rem;
-    padding: 0.2rem 0.65rem;
-    font-size: 0.8rem;
-    font-weight: 650;
-    color: var(--ink-2);
-    text-decoration: none;
+    padding: 0 var(--abstand-3);
     white-space: nowrap;
-    border: 1px solid var(--border);
-    border-radius: 999px;
   }
-
-  .vergleichen:hover { color: var(--link); border-color: var(--link); }
 </style>

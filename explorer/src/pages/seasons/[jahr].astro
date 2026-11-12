@@ -243,7 +243,7 @@ const ziele = [
 
   {verlauf.length > 0 && verlaufRunden.length > 1 && (
     <section class="abschnitt" id="verlauf">
-      <div class="abschnitt-kopf"><div><h2>Points progression</h2></div></div>
+      <div class="abschnitt-kopf"><div><h2>Progression</h2></div></div>
       <Verlauf fahrer={verlauf} runden={verlaufRunden} streichresultate={saison.dropped_scores === 1} />
       {teamVerlauf.length > 1 && (
         <details class="team-verlauf">
@@ -321,7 +321,7 @@ const ziele = [
       <div class="abschnitt-kopf">
         <div>
           <h2>Results grid</h2>
-          <p>Every driver in every race: the finishing position, or why there was none. Gold, silver and bronze for the podium, green for points.</p>
+          <p>Every driver in every race: the finishing position, or why there was none. Gold, silver and bronze for the podium.</p>
         </div>
       </div>
       <div class="tabelle matrix">
@@ -367,7 +367,7 @@ const ziele = [
   )}
 
   <section class="abschnitt" id="kalender">
-    <div class="abschnitt-kopf"><div><h2>Race calendar</h2></div></div>
+    <div class="abschnitt-kopf"><div><h2>Calendar</h2></div></div>
     <div class="tabelle">
       <table>
         <thead>
@@ -458,15 +458,15 @@ const ziele = [
     .strecke { display: none; }
   }
 
-  /* Fahrer- und Teamwertung nebeneinander: Man liest sie zusammen. */
+  /* Fahrer- und Teamwertung nebeneinander, in den Spalten der Türme oben (7 zu 5): Man liest sie zusammen. */
   .wertungen {
     display: grid;
-    grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
     align-items: start;
-    gap: 1.25rem;
+    gap: var(--abstand-6) var(--abstand-7);
   }
 
-  @media (max-width: 60rem) {
+  @media (max-width: 56rem) {
     .wertungen { grid-template-columns: minmax(0, 1fr); }
   }
 
@@ -484,23 +484,25 @@ const ziele = [
   }
 
   .punktesystem { max-width: var(--mass); margin: 0 0 var(--abstand-4); color: var(--ink-2); }
-  .team-verlauf { margin-top: 1rem; }
-  .team-verlauf summary { cursor: pointer; min-height: 2.25rem; font-weight: 600; color: var(--ink); margin-bottom: 0.5rem; }
+  .team-verlauf { margin-top: var(--abstand-4); }
+  .team-verlauf summary { cursor: pointer; min-height: 2.25rem; font-weight: 600; color: var(--ink); margin-bottom: var(--abstand-2); }
 
   /*
-   * Die Matrix: klein und dicht, aber jede Zelle ist lesbar. Die Farbe trägt
-   * nie allein – in jeder Zelle steht die Zahl oder das Kürzel.
+   * Die Matrix: dicht, aber jede Zelle ist lesbar – schmale Ziffern statt
+   * kleiner. Die Farbe trägt nie allein: In jeder Zelle steht die Zahl oder
+   * das Kürzel. Gold, Silber, Bronze fürs Podium; Ausfall und Nichtstart
+   * leise. Eine Farbe für „in den Punkten“ gibt es nicht mehr – die Punkte
+   * stehen in ihrer Spalte (docs/DESIGN.md 8.7).
    */
-  .matrix table { font-size: 0.8rem; }
-  .matrix th, .matrix td { padding: 0.35rem 0.4rem; }
+  .matrix th, .matrix td { padding: var(--abstand-1); }
   .matrix thead th { text-align: center; }
   .matrix .zelle { text-align: center; min-width: 2rem; font-weight: 650; }
   .matrix .p1 { background: var(--gold); color: var(--podest-ink); }
   .matrix .p2 { background: var(--silber); color: var(--podest-ink); }
   .matrix .p3 { background: var(--bronze); color: var(--podest-ink); }
-  .matrix .punkte { background: var(--good-wash); color: var(--ink); }
-  .matrix .ziel { color: var(--ink-2); }
+  .matrix .punkte,
+  .matrix .ziel { color: var(--ink); }
   .matrix .aus, .matrix .nicht { color: var(--muted); font-weight: 500; }
-  .matrix sup { font-size: 0.75em; font-weight: 750; margin-left: 0.05rem; }
-  .sprintmarke { display: block; font-size: 0.75rem; color: var(--muted); }
+  .matrix sup { font-size: var(--text-1); font-weight: 750; }
+  .sprintmarke { display: block; color: var(--muted); }
 </style>
