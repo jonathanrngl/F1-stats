@@ -36,11 +36,8 @@ const gewicht = startplatzGewicht(db(), { ab: GEWICHT_AB, minRennen: GEWICHT_MIN
   <header class="seitenkopf">
     <div>
       <p class="oberzeile">Circuits</p>
-      <h1>Every circuit since 1950</h1>
-      <p class="lead">
-        {strecken.length} circuits have hosted a World Championship round. Zoom into a region,
-        step through the seasons, or find a circuit in the list below.
-      </p>
+      <h1>All circuits since 1950</h1>
+      <p class="lead">{strecken.length} circuits have hosted a World Championship round.</p>
     </div>
   </header>
 
@@ -71,7 +68,7 @@ const gewicht = startplatzGewicht(db(), { ab: GEWICHT_AB, minRennen: GEWICHT_MIN
           {strecken.map((z) => (
             <tr data-name={z.name}>
               <td>
-                <span class="kuerzel" title={z.landName ?? ''}>{z.land ?? '—'}</span>
+                <span class="kuerzel" title={z.landName ?? ''}>{z.land ?? '–'}</span>
                 <a class="zeile" href={pfad.strecke(z.id)}>{z.name}</a>
               </td>
               <td class="leise">{z.ort}</td>

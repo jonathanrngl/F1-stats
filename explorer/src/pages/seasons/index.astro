@@ -24,11 +24,8 @@ const jahrzehnte = [...proJahrzehnt.entries()]
   <header class="seitenkopf">
     <div>
       <p class="oberzeile">Seasons</p>
-      <h1>Every season since 1950</h1>
-      <p class="lead">
-        {saisons.length} years of the World Championship, with standings, calendar and the
-        points progression of each.
-      </p>
+      <h1>All seasons since 1950</h1>
+      <p class="lead">{saisons.length} seasons of the World Championship, by decade.</p>
     </div>
   </header>
 
@@ -36,7 +33,8 @@ const jahrzehnte = [...proJahrzehnt.entries()]
 
   {jahrzehnte.map(([j, liste]) => (
     <section class="abschnitt" id={`j${j}`}>
-      <div class="abschnitt-kopf"><div><h2>The {j}s</h2></div></div>
+      {/* Die Überschrift ist zugleich die Beschriftung in der Sprungleiste (docs/DESIGN.md 8.9). */}
+      <div class="abschnitt-kopf"><div><h2>{j}s</h2></div></div>
       <ul class="saisons">
         {liste.map((s) => (
           <li>
@@ -70,9 +68,9 @@ const jahrzehnte = [...proJahrzehnt.entries()]
 
 <style>
   /*
-   * Jedes Jahrzehnt als eine Tafel wie auf der Startseite: zehn Felder in zwei
-   * Reihen, getrennt durch Haarlinien. Einzelne Karten mit Abstand ließen die
-   * Seite in achtzig gleich wichtige Kästchen zerfallen.
+   * Jedes Jahrzehnt als eine Tafel auf der Fläche: zehn Felder in zwei Reihen,
+   * getrennt durch Haarlinien, ohne Rahmen und Rundung. Einzelne Karten mit
+   * Abstand ließen die Seite in achtzig gleich wichtige Kästchen zerfallen.
    */
   .saisons {
     display: grid;
@@ -81,35 +79,32 @@ const jahrzehnte = [...proJahrzehnt.entries()]
     padding: 0;
     list-style: none;
     background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
     overflow: hidden;
   }
 
+  /* Die Haarlinien rechts und unter jedem Feld; die am Rand der Tafel schneidet overflow ab. */
   .saisons li { box-shadow: 1px 0 0 var(--border), 0 1px 0 var(--border); }
 
   .saisons a {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: 0.1rem;
+    gap: 0;
     height: 100%;
-    padding: 0.9rem 1.05rem 1rem;
+    padding: var(--abstand-3) var(--abstand-4) var(--abstand-4);
     color: inherit;
     text-decoration: none;
-    transition: background-color 0.12s ease;
   }
 
   .saisons a:hover { background: var(--surface-2); }
-  .saisons a:hover .jahr { color: var(--link); }
 
-  .kopfzeile { display: flex; align-items: baseline; justify-content: space-between; width: 100%; margin-bottom: 0.3rem; }
-  .jahr { font-size: 1.85rem; font-weight: 750; line-height: 1; color: var(--ink); font-variant-numeric: tabular-nums; transition: color 0.12s ease; }
-  .rennen { font-size: 0.76rem; color: var(--muted); }
-  .wer { font-size: 0.92rem; font-weight: 600; color: var(--ink-2); }
-  .team { font-size: 0.8rem; color: var(--muted); }
-  .laeuft { font-size: 0.88rem; font-weight: 600; color: var(--accent); }
-  .etikett { margin: 0.35rem 0 0; }
+  .kopfzeile { display: flex; align-items: baseline; justify-content: space-between; width: 100%; margin-bottom: var(--abstand-1); }
+  .jahr { font-size: var(--text-7); line-height: 1; color: var(--ink); }
+  .rennen { font-size: var(--text-2); color: var(--muted); font-variant-numeric: tabular-nums; }
+  .wer { font-size: var(--text-3); font-weight: 600; color: var(--ink); }
+  .team { font-size: var(--text-2); color: var(--muted); }
+  .laeuft { font-size: var(--text-3); font-weight: 600; color: var(--ink); }
+  .etikett { margin: var(--abstand-2) 0 0; }
 
   @media (max-width: 56rem) {
     .saisons { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -117,6 +112,6 @@ const jahrzehnte = [...proJahrzehnt.entries()]
 
   @media (max-width: 34rem) {
     .saisons { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .saisons a { padding: 0.75rem 0.8rem 0.85rem; }
+    .saisons a { padding: var(--abstand-3); }
   }
 </style>

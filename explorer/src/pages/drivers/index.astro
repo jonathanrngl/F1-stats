@@ -15,17 +15,14 @@ const neuestesJahr = Math.max(...fahrer.map((f) => f.bis ?? 0))
 ---
 
 <Seite
-  titel="Every Formula 1 driver since 1950"
+  titel="All Formula 1 drivers since 1950"
   beschreibung={`${zahl(fahrer.length)} drivers with starts, wins, podiums and titles.`}
 >
   <header class="seitenkopf">
     <div>
       <p class="oberzeile">Drivers</p>
-      <h1>Every driver since 1950</h1>
-      <p class="lead">
-        {zahl(fahrer.length)} drivers who were entered at least once. Type a name, or pick a
-        quick filter; click a column heading to sort.
-      </p>
+      <h1>All drivers since 1950</h1>
+      <p class="lead">{zahl(fahrer.length)} drivers who were entered at least once.</p>
     </div>
   </header>
 
@@ -60,7 +57,7 @@ const neuestesJahr = Math.max(...fahrer.map((f) => f.bis ?? 0))
         {nachSiegen.map((f) => (
           <tr data-name={f.nachname ?? f.name}>
             <td>
-              <span class="kuerzel" title={f.landName ?? ''}>{f.land ?? '—'}</span>
+              <span class="kuerzel" title={f.landName ?? ''}>{f.land ?? '–'}</span>
               <a class="zeile" href={pfad.fahrer(f.id)}>{f.name}</a>
               {f.inFormel1 === 0 && <span class="etikett" title="Indianapolis 500 only – never drove a Formula 1 race">Indy</span>}
             </td>

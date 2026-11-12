@@ -70,9 +70,9 @@ const ziel = `${pfad.seite('/circuits/')}?strecke=${strecke.id}`
       {nachbarn.map((s) => (
         <circle class={s.bis >= aktuellAb ? 'nachbar aktuell' : 'nachbar'} cx={s.px} cy={s.py} r="1.2" />
       ))}
-      <circle class="puls" cx={cx} cy={cy} r="2.9" />
       <circle class={aktuell ? 'hier aktuell' : 'hier'} cx={cx} cy={cy} r="2.5" />
-      <text x={links ? cx - 4.5 : cx + 4.5} y={cy} text-anchor={links ? 'end' : 'start'} dominant-baseline="middle">{strecke.name}</text>
+      <circle class="ring" cx={cx} cy={cy} r="4.4" />
+      <text x={links ? cx - 6 : cx + 6} y={cy} text-anchor={links ? 'end' : 'start'} dominant-baseline="middle">{strecke.name}</text>
     </svg>
     <span class="unterzeile">
       <span>{nachbarn.length ? `${nachbarn.length} other ${nachbarn.length === 1 ? 'circuit' : 'circuits'} nearby` : 'No other circuit nearby'}</span>
@@ -82,22 +82,18 @@ const ziel = `${pfad.seite('/circuits/')}?strecke=${strecke.id}`
 )}
 
 <style>
+  /*
+   * Flach auf der Fläche, ohne Rahmen und Rundung. Wo der Ausschnitt im Kopf
+   * steht, legt die Seite fest. Dass er ein Verweis ist, sagt die
+   * unterstrichene Zeile darunter – wie jeder Verweis im Text.
+   */
   .lage {
     display: block;
-    flex: 0 0 min(19rem, 36%);
-    align-self: flex-start;
-    margin-left: auto;
     overflow: hidden;
     color: inherit;
     text-decoration: none;
     background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    transition: border-color 0.12s ease;
   }
-
-  .lage:hover { border-color: var(--border-input); }
-  .lage:hover .weiter { color: var(--link); }
 
   svg { display: block; width: 100%; height: auto; }
 
@@ -123,28 +119,26 @@ const ziel = `${pfad.seite('/circuits/')}?strecke=${strecke.id}`
 
   .hier.aktuell { fill: var(--punkt-aktuell); }
 
-  /* Ein Ring, der sich vom Punkt löst – der Blick findet ihn, ohne zu suchen. */
-  .puls {
+  /*
+   * Ein Ring in Tinte um die Strecke dieser Seite: Der Blick findet sie unter
+   * den Nachbarn, ohne zu suchen. Er steht still – das Pulsieren, das vorher
+   * diese Aufgabe hatte, entfällt (docs/DESIGN.md 9).
+   */
+  .ring {
     fill: none;
-    stroke: var(--accent);
+    stroke: var(--ink);
     stroke-width: 1.5;
     vector-effect: non-scaling-stroke;
-    transform-box: fill-box;
-    transform-origin: center;
-    animation: puls 2.4s ease-out infinite;
   }
 
-  @keyframes puls {
-    from { transform: scale(1); opacity: 0.8; }
-    to { transform: scale(3.2); opacity: 0; }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .puls { animation: none; opacity: 0; }
-  }
-
+  /*
+   * Die Größe steht in Einheiten des Ausschnitts, nicht in rem: Das SVG wird
+   * skaliert, und 4,6 Einheiten ergeben bei der Breite im Kopf rund 12 px –
+   * Stufe 1, die Größe für Diagrammbeschriftungen.
+   */
   text {
-    font: 700 4.6px var(--sans);
+    font-size: 4.6px;
+    font-weight: 700;
     fill: var(--ink);
     paint-order: stroke;
     stroke: var(--karte-land);
@@ -154,19 +148,23 @@ const ziel = `${pfad.seite('/circuits/')}?strecke=${strecke.id}`
 
   .unterzeile {
     display: flex;
+    flex-wrap: wrap;
     justify-content: space-between;
-    gap: 0.75rem;
-    padding: 0.5rem 0.75rem;
-    font-size: 0.78rem;
+    gap: var(--abstand-1) var(--abstand-3);
+    padding: var(--abstand-2) var(--abstand-3);
+    font-size: var(--text-2);
     color: var(--muted);
-    border-top: 1px solid var(--border);
   }
 
-  .weiter { font-weight: 600; color: var(--ink-2); white-space: nowrap; transition: color 0.12s ease; }
-
-  /* Schmal: unter den Kopf, über die volle Breite. */
-  @media (max-width: 48rem) {
-    :global(.seitenkopf):has(> .lage) { flex-wrap: wrap; }
-    .lage { flex-basis: 100%; margin-left: 0; }
+  .weiter {
+    font-weight: 600;
+    color: var(--ink);
+    white-space: nowrap;
+    text-decoration: underline;
+    text-decoration-color: var(--lackierung-linie);
+    text-decoration-thickness: 2px;
+    text-underline-offset: 0.2em;
   }
+
+  .lage:hover .weiter { text-decoration-thickness: 3px; }
 </style>

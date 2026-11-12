@@ -5,13 +5,15 @@
  * Die Seite ist statisch und hängt allein an den Daten: „Das nächste Rennen“
  * ist das erste ohne Ergebnis in der gepinnten F1DB-Fassung. Wie viele Tage
  * es noch sind, rechnet der Browser beim Ansehen (Countdown.astro); welche
- * Fassung dahintersteht, steht sichtbar darunter.
+ * Fassung dahintersteht, steht im Fuß, und bis zu welcher Runde die Wertung
+ * reicht, über der Wertung.
  */
-import { datum, ein, km, plakette, prozent as proz, raenge, zahl } from '../../lib/format.js'
+import { datum, ein, km, plakette, prozent as proz, raenge } from '../../lib/format.js'
 import Seite from '../../layouts/Seite.astro'
 import Sprung from '../../components/Sprung.astro'
 import Countdown from '../../components/Countdown.astro'
-import { db, herkunft, pfad } from '../../lib/db.js'
+import Turm from '../../components/Turm.astro'
+import { alle, db, herkunft, pfad } from '../../lib/db.js'
 import { land } from '../../lib/laender.js'
 import {
   circuitLeaders, circuitRaces, circuitSpecialists, circuitStats, circuitTeamLeaders,
@@ -46,8 +48,32 @@ const letzteHier = rennen
 
 const heimat = rennen ? land(rennen.demonym, rennen.land, rennen.ioc) : null
 
-const ART = { RACE: 'Permanent circuit', STREET: 'Street circuit', ROAD: 'Road course' }
+const ART = { RACE: 'a permanent circuit', STREET: 'a street circuit', ROAD: 'a road course' }
 const RICHTUNG = { CLOCKWISE: 'clockwise', ANTI_CLOCKWISE: 'anti-clockwise' }
+
+/*
+ * Der Satz über der Strecke, in ganzen Sätzen statt einer Zeile mit
+ * Mittelpunkten: voller Name, Art und Fahrtrichtung, dann die Geschichte hier.
+ */
+const streckeVoll = rennen?.streckeVoll && rennen.streckeVoll !== rennen.strecke ? rennen.streckeVoll : null
+const art = rennen
+  ? [ART[rennen.art], RICHTUNG[rennen.richtung] && `run ${RICHTUNG[rennen.richtung]}`].filter(Boolean).join(', ')
+  : ''
+const streckeSatz = rennen
+  ? [
+      streckeVoll && art && `${streckeVoll}: ${art}.`,
+      streckeVoll && !art && `${streckeVoll}.`,
+      !streckeVoll && art && `${art[0].toUpperCase()}${art.slice(1)}.`,
+      historie?.rennen
+        ? `${historie.rennen} Formula 1 ${historie.rennen === 1 ? 'race' : 'races'} here, ${historie.von === historie.bis ? historie.von : `${historie.von}–${historie.bis}`}.`
+        : 'First time on the Formula 1 calendar.',
+    ]
+      .filter(Boolean)
+      .join(' ')
+  : ''
+
+/* Die Kürzel für den Turm der Wertung, wie auf der Startseite. */
+const kuerzel = new Map(alle('SELECT id, abbreviation AS k FROM driver').map((d) => [d.id, d.k]))
 
 /* Kann der Fahrertitel hier fallen? Die Rechnung und ihre Grenzen: vorschau.js. */
 const fuehrender = stand?.fahrer?.[0] ?? null
@@ -102,6 +128,11 @@ const ziele = rennen
 
   {rennen && (
     <>
+      {/*
+        * Der Kopf: Brotkrume, der Grand Prix, ein Satz mit Strecke, Ort und
+        * Datum statt einer Zeile Eckdaten. Keine Lackierung – das Rennen hat
+        * noch keinen Sieger (docs/DESIGN.md, Prinzip 1).
+        */}
       <header class="seitenkopf">
         <span class="wappen" title={heimat?.name}>{heimat?.code}</span>
         <div>
@@ -110,27 +141,24 @@ const ziele = rennen
             <span class="trenner">/</span>
             <span class="still">Round {rennen.runde} of {rennen.rennenImJahr}</span>
           </p>
-          <h1>{gpName} {rennen.jahr}</h1>
-          <ul class="eckdaten">
-            <li><a href={pfad.strecke(rennen.streckeId)}>{rennen.strecke}</a></li>
-            {rennen.ort && rennen.ort !== rennen.strecke && <li>{rennen.ort}</li>}
-            <li>{datum(rennen.datum)}</li>
-            {rennen.mitSprint === 1 && <li class="stark">Sprint weekend</li>}
-          </ul>
+          <div class="titelblock">
+            <h1>{gpName} {rennen.jahr}</h1>
+            <p class="kopfsatz">
+              At <a href={pfad.strecke(rennen.streckeId)}>{rennen.strecke}</a>
+              {rennen.ort && rennen.ort !== rennen.strecke && <> in {rennen.ort}</>}
+              {' '}on {datum(rennen.datum)}.
+              {rennen.mitSprint === 1 && ' A sprint weekend.'}
+              {rennen.offiziell && <> Officially the <i>{rennen.offiziell}</i>.</>}
+            </p>
+          </div>
         </div>
       </header>
 
-      {/* Der Countdown: groß, weil er die Frage ist, mit der man hierher kommt. */}
-      <div class="countdown">
-        <div class="tage">
-          <Countdown datum={rennen.datum} zeit={rennen.zeit} />
-        </div>
-        <p>
-          The numbers on this page come from F1DB {quelle.version}
-          {stand && !stand.vorsaison && `, up to round ${stand.bezug.runde} (${stand.bezug.grandPrix})`}.
-          {rennen.offiziell && <> Officially: <i>{rennen.offiziell}</i>.</>}
-        </p>
-      </div>
+      {/*
+        * Die Tage bis zum Rennen: eine ruhige Zeile wie auf der Startseite, die
+        * Zahl groß und eng – die Frage, mit der man hierher kommt.
+        */}
+      <p class="countdown"><Countdown datum={rennen.datum} zeit={rennen.zeit} /></p>
 
       {titelMoeglich && (
         <p class="hinweis akzent">
@@ -175,7 +203,7 @@ const ziele = rennen
             <a class="knopf leise" href={`webcal://jonathanrngl.github.io${pfad.seite('/calendar.ics')}`}>
               Subscribe to the {rennen.jahr} calendar
             </a>
-            <a class="leise" href={pfad.seite('/calendar.ics')} download>Download .ics</a>
+            <a href={pfad.seite('/calendar.ics')} download>Download .ics</a>
             <span>Every session of the season, in your own time zone.</span>
           </p>
         </section>
@@ -185,16 +213,7 @@ const ziele = rennen
         <div class="abschnitt-kopf">
           <div>
             <h2>The circuit</h2>
-            <p>
-              {[
-                rennen.streckeVoll && rennen.streckeVoll !== rennen.strecke ? rennen.streckeVoll : null,
-                ART[rennen.art] ?? null,
-                RICHTUNG[rennen.richtung] ?? null,
-                historie?.rennen
-                  ? `${historie.rennen} Formula 1 races here, ${historie.von}–${historie.bis}`
-                  : 'First time on the Formula 1 calendar',
-              ].filter(Boolean).join(' · ')}
-            </p>
+            <p>{streckeSatz}</p>
           </div>
           <a class="mehr" href={pfad.strecke(rennen.streckeId)}>Circuit page</a>
         </div>
@@ -325,44 +344,41 @@ const ziele = rennen
             </div>
           </div>
 
+          {/*
+            * Zwei Türme: Punkte und Abstand zum Führenden – eine Rangliste mit
+            * einem Wert, wie auf der Start- und der Saisonseite.
+            */}
           <div class="wertungen">
             <div>
               <h3>Drivers</h3>
-              <div class="tabelle">
-                <table>
-                  <thead>
-                    <tr><th class="num">Pos</th><th>Driver</th><th>Team</th><th class="num">Points</th></tr>
-                  </thead>
-                  <tbody>
-                    {stand.fahrer.map((f) => (
-                      <tr>
-                        <td class="num"><span class={plakette(f.position)}>{f.position ?? '–'}</span></td>
-                        <td><a class="zeile" href={pfad.fahrer(f.id)}>{f.name}</a></td>
-                        <td class="leise">{f.teamId ? <a class="leise" href={pfad.team(f.teamId)}>{f.team}</a> : '–'}</td>
-                        <td class="num fett">{ein(f.punkte)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <Turm
+                einheit="points"
+                zeilen={stand.fahrer.map((f, i) => ({
+                  platz: f.position,
+                  teamId: f.teamId,
+                  code: kuerzel.get(f.id),
+                  name: f.name,
+                  href: pfad.fahrer(f.id),
+                  team: f.team,
+                  wert: ein(f.punkte),
+                  abstand: i > 0 ? `−${ein(stand.fahrer[0].punkte - f.punkte)}` : null,
+                }))}
+              />
             </div>
 
             <div>
               <h3>Constructors</h3>
-              <div class="tabelle">
-                <table>
-                  <thead><tr><th class="num">Pos</th><th>Team</th><th class="num">Points</th></tr></thead>
-                  <tbody>
-                    {stand.teams.map((t) => (
-                      <tr>
-                        <td class="num"><span class={plakette(t.position)}>{t.position ?? '–'}</span></td>
-                        <td><a class="zeile" href={pfad.team(t.id)}>{t.name}</a></td>
-                        <td class="num fett">{ein(t.punkte)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <Turm
+                einheit="points"
+                zeilen={stand.teams.map((t, i) => ({
+                  platz: t.position,
+                  teamId: t.id,
+                  name: t.name,
+                  href: pfad.team(t.id),
+                  wert: ein(t.punkte),
+                  abstand: i > 0 ? `−${ein(stand.teams[0].punkte - t.punkte)}` : null,
+                }))}
+              />
             </div>
           </div>
         </section>
@@ -406,30 +422,23 @@ const ziele = rennen
 </Seite>
 
 <style>
-  .countdown {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.75rem 1.75rem;
-    margin: 0 0 1.5rem;
-    padding: 1.1rem 1.35rem;
-    color: var(--muted);
-    background: var(--surface-2);
-    border-left: 3px solid var(--ink);
-    border-radius: 0 var(--radius) var(--radius) 0;
+  /*
+   * Die Tage bis zum Rennen, wie auf der Startseite: eine ruhige Zeile, die
+   * Zahl groß und eng. :global, weil Zahl und Beschriftung aus Countdown.astro
+   * kommen – teils erst vom Skript im Browser geschrieben, also ohne die
+   * Kennung dieser Seite.
+   */
+  .countdown { margin: 0 0 var(--abstand-6); color: var(--muted); }
+  .countdown :global(b) {
+    font-size: var(--text-7);
+    font-stretch: var(--eng);
+    font-weight: 700;
+    line-height: 1;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
   }
 
-  /*
-   * :global, weil Zahl und Beschriftung aus Countdown.astro kommen – teils erst
-   * vom Skript im Browser geschrieben, also ohne die Kennung dieser Seite.
-   */
-  .countdown .tage { flex: none; }
-  .countdown .tage :global(.countdown-wert) { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem; }
-  .countdown .tage :global(b) { font-size: 2.6rem; font-weight: 800; line-height: 1; letter-spacing: -0.04em; color: var(--kopf-ink); }
-  .countdown .tage :global(span span) { font-size: 0.95rem; font-weight: 600; color: var(--kopf-ink); }
-  .countdown p { flex: 1 1 22rem; margin: 0; font-size: 0.86rem; text-wrap: pretty; }
-
-  /* Der Zeitplan: eine Zeile je Session, das Rennen hervorgehoben. */
+  /* Der Zeitplan: eine Zeile je Session, das Rennen fett. */
   /*
    * auto-fit: Fünf Sessions füllen eine Reihe. Mit auto-fill und 15rem
    * standen vier oben und das Rennen – der Grund, warum man nachsieht – allein
@@ -438,69 +447,68 @@ const ziele = rennen
   .zeitplan {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(10.5rem, 100%), 1fr));
-    gap: 0.5rem;
+    gap: var(--abstand-2);
     margin: 0;
     padding: 0;
     list-style: none;
   }
 
+  /* Flach auf der Fläche, ohne Rahmen. Das Rennen hebt sich durch das Gewicht ab, nicht durch eine Kante. */
   .zeitplan li {
     display: flex;
     flex-direction: column;
-    gap: 0.15rem;
-    padding: 0.7rem 0.9rem;
+    gap: var(--abstand-1);
+    padding: var(--abstand-3) var(--abstand-4);
     background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
   }
 
-  .zeitplan .session { font-size: 0.85rem; font-weight: 500; color: var(--muted); font-family: var(--display); }
-  .zeitplan time { font-weight: 650; color: var(--ink); font-variant-numeric: tabular-nums; }
-  .zeitplan .rennen { border-left: 4px solid var(--accent); }
-  .zeitplan .rennen .session { color: var(--accent-strong); }
+  .zeitplan .session { font-size: var(--text-2); font-weight: 500; color: var(--muted); }
+  .zeitplan time { font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .zeitplan .rennen .session { font-weight: 700; color: var(--ink); }
+  .zeitplan .rennen time { font-weight: 800; }
 
   .kalender {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0.5rem 1.1rem;
-    margin: 0.9rem 0 0;
-    font-size: 0.86rem;
+    gap: var(--abstand-2) var(--abstand-4);
+    margin: var(--abstand-3) 0 0;
+    font-size: var(--text-2);
     color: var(--muted);
   }
 
-  .kalender a.leise:not(.knopf) { font-weight: 600; color: var(--ink-2); text-decoration: underline; text-underline-offset: 0.2em; }
+  .kalender a:not(.knopf) { font-weight: 600; }
 
   /* Zwei Spalten am Telefon: Das Rennen als fünfte Karte bekommt die ganze Breite statt einer halben Zeile. */
   @media (max-width: 34rem) {
     .zeitplan .rennen:last-child:nth-child(odd) { grid-column: 1 / -1; }
   }
 
-  .unten { margin-top: 1.25rem; }
+  .unten { margin-top: var(--abstand-5); }
 
+  /* Fahrer und Teams nebeneinander, 7 zu 5 Spalten des Rasters; unter 56rem untereinander. */
   .wertungen {
     display: grid;
-    grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
     align-items: start;
-    gap: 1.25rem;
+    gap: var(--abstand-6) var(--abstand-5);
   }
 
-  @media (max-width: 60rem) {
+  @media (max-width: 56rem) {
     .wertungen { grid-template-columns: minmax(0, 1fr); }
   }
 
   .marken {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(min(20rem, 100%), 1fr));
-    gap: 0.75rem;
+    gap: var(--abstand-2);
     margin: 0;
     padding: 0;
     list-style: none;
   }
 
-  .marken > li > ul { margin: 0.45rem 0 0; padding-left: 1.1rem; display: grid; gap: 0.2rem; }
-  .marken > li > ul > li { font-size: 0.88rem; color: var(--ink-2); text-wrap: pretty; }
-  /* Eine Bestmarke wiegt schwerer als eine runde Zahl - das darf man sehen. */
+  .marken > li > ul { margin: var(--abstand-2) 0 0; padding-left: var(--abstand-5); display: grid; gap: var(--abstand-1); }
+  .marken > li > ul > li { font-size: var(--text-3); color: var(--ink-2); text-wrap: pretty; }
+  /* Eine Bestmarke wiegt schwerer als eine runde Zahl – das darf man sehen. */
   .marken li.strecke, .marken li.bestenliste { color: var(--ink); font-weight: 600; }
-  .marken li.strecke::marker, .marken li.bestenliste::marker { color: var(--accent); }
 </style>
