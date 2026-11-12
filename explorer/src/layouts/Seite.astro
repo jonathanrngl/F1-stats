@@ -15,6 +15,13 @@
  * Libre Franklin kannte nur das Gewicht, und alles sah gleich laut aus.
  */
 import '@fontsource-variable/archivo/wdth.css'
+/*
+ * Die lateinische Datei wird vorgeladen: Archivo ist breit gesetzt viel breiter
+ * als die Systemschrift, und ohne Vorladen bräche ein Titel erst um, wenn die
+ * Schrift da ist. Dieselbe Datei, auf die wdth.css zeigt – Vite gibt ihr
+ * denselben Namen.
+ */
+import archivoLatein from '@fontsource-variable/archivo/files/archivo-latin-wdth-normal.woff2?url'
 import '../styles/theme.css'
 import '../styles/teams.css'
 import Suche from '../components/Suche.astro'
@@ -137,6 +144,7 @@ const ldText = ld.length ? JSON.stringify(ld.length === 1 ? ld[0] : ld).replace(
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     {/* Fremde Ziele erfahren die Herkunft, nicht die besuchte Unterseite. */}
     <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <link rel="preload" href={archivoLatein} as="font" type="font/woff2" crossorigin />
     <link rel="icon" type="image/svg+xml" href={`${BASIS}/favicon.svg`} />
     {/* Der Grund der Seite: hell Beton, dunkel Asphalt (theme.css, --plane). */}
     <meta name="theme-color" content="#eef1f2" media="(prefers-color-scheme: light)" />
