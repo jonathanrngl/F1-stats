@@ -55,26 +55,29 @@ const BEISPIELE = [
   <header class="seitenkopf">
     <div>
       <p class="oberzeile">Analysis</p>
-      <h1>Explorer</h1>
-      <p class="lead">
-        Ask anything of {z.n.toLocaleString('en-GB')} result rows going back to 1950. Pick what to
-        count and what to count it over – the answer appears at once, because the whole dataset
-        is already in your browser. Every query is in the address, so a result can be shared like
-        any page.
-      </p>
+      <div class="titelblock">
+        <h1>Explorer</h1>
+        <p class="lead">
+          Choose what to count and how to group it, across {z.n.toLocaleString('en-GB')} result
+          rows since 1950. The query is kept in the address, so a result can be shared as a link.
+        </p>
+      </div>
     </div>
   </header>
 
-  <details class="beispiele">
+  {/* Zugeklappt wie jede Erklärung (.erklaerung in theme.css): Wer fragen will, fragt. */}
+  <details class="erklaerung beispiele">
     <summary>Example questions and how to ask them</summary>
-    <dl>
-      {BEISPIELE.map((b) => (
-        <>
-          <dt><a href={`${pfad.seite('/explorer/')}?${new URLSearchParams(b.q)}`}>{b.frage}</a></dt>
-          <dd>{b.wie}</dd>
-        </>
-      ))}
-    </dl>
+    <div>
+      <dl>
+        {BEISPIELE.map((b) => (
+          <>
+            <dt><a href={`${pfad.seite('/explorer/')}?${new URLSearchParams(b.q)}`}>{b.frage}</a></dt>
+            <dd>{b.wie}</dd>
+          </>
+        ))}
+      </dl>
+    </div>
   </details>
 
   <p class="hinweis nur-ohne-js">
@@ -83,238 +86,196 @@ const BEISPIELE = [
     {' '}<a href={pfad.seite('/seasons/')}>season</a> or a <a href={pfad.seite('/drivers/')}>driver</a>.
   </p>
 
-  <div class="nur-mit-js">
+  <div class="nur-mit-js explorer-insel">
     <Explorer client:load groesse={groesse} />
   </div>
 </Seite>
 
 <style is:global>
-  .beispiele {
-    margin-top: 1.5rem;
-    padding: 0.85rem 1rem;
-    background: var(--surface-2);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-  }
+  .erklaerung.beispiele { margin: 0 0 var(--abstand-6); }
+  .beispiele dl { display: grid; gap: var(--abstand-3); margin: var(--abstand-2) 0 0; }
+  .beispiele dt { font-size: var(--text-3); font-weight: 600; }
+  .beispiele dd { margin: var(--abstand-1) 0 0; font-size: var(--text-2); color: var(--muted); text-wrap: pretty; }
 
-  .beispiele summary { cursor: pointer; font-size: 0.88rem; font-weight: 600; color: var(--ink); }
-  .beispiele dl { margin: 0.85rem 0 0; display: grid; gap: 0.6rem; }
-  .beispiele dt { font-size: 0.9rem; font-weight: 600; }
-  .beispiele dd { margin: 0.15rem 0 0; font-size: 0.84rem; color: var(--muted); }
-
-  .explorer { margin-top: 1.75rem; }
-
-  .steuerung { display: grid; gap: 1rem; }
+  /*
+   * Die Bedienung steht auf dem Grund, in Gruppen ohne Kasten: Beschriftung,
+   * darunter die Wahl. Gewählt heißt gefüllt in Tinte (.wahl-chip in theme.css).
+   */
+  .steuerung { display: grid; gap: var(--abstand-5); }
 
   .steuerung fieldset {
-    margin: 0;
-    padding: 0.8rem 1rem 0.9rem;
     min-width: 0;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
+    margin: 0;
+    padding: 0;
+    border: none;
   }
 
   .steuerung legend {
-    padding: 0 0.35rem;
-    font-size: 0.85rem;
+    margin-bottom: var(--abstand-2);
+    padding: 0;
+    font-size: var(--text-2);
     font-weight: 600;
-    font-family: var(--display);
     color: var(--muted);
   }
 
   .felder {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(11rem, 100%), 1fr));
-    gap: 0.6rem 0.8rem;
+    gap: var(--abstand-2) var(--abstand-3);
   }
 
-  .felder label { display: grid; gap: 0.2rem; font-size: 0.8rem; color: var(--muted); }
+  .felder label { display: grid; gap: var(--abstand-1); font-size: var(--text-2); color: var(--muted); }
 
   .felder input,
   .felder select,
   .bedingung input,
   .bedingung select {
+    min-width: 0;
     min-height: 2.25rem;
-    padding: 0.35rem 0.5rem;
+    padding: var(--abstand-1) var(--abstand-2);
     font: inherit;
-    font-size: 0.88rem;
+    font-size: var(--text-2);
     color: var(--ink);
     background: var(--surface);
     border: 1px solid var(--border-input);
-    border-radius: 0.35rem;
-    min-width: 0;
+    border-radius: var(--radius);
   }
 
-  .bedingungen { display: grid; gap: 0.5rem; margin-top: 0.85rem; justify-items: start; }
-  .bedingung { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }
+  .bedingungen { display: grid; gap: var(--abstand-2); margin-top: var(--abstand-3); justify-items: start; }
+  .bedingung { display: flex; flex-wrap: wrap; gap: var(--abstand-2); align-items: center; }
   .bedingung input { width: 6rem; }
 
-  .leise-knopf {
-    min-height: 2.25rem;
-    padding: 0.3rem 0.75rem;
-    font: inherit;
-    font-size: 0.84rem;
-    font-weight: 600;
-    color: var(--accent-strong);
-    background: none;
-    border: 1px dashed var(--border-input);
-    border-radius: 0.4rem;
-    cursor: pointer;
-  }
-
-  .leise-knopf:hover { border-style: solid; border-color: var(--link); }
-
-  .schalter { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; margin-top: 0.85rem; }
-  .schalter label { display: flex; align-items: center; gap: 0.45rem; min-height: 2rem; font-size: 0.86rem; color: var(--ink-2); }
-  .schalter input { width: 1.1rem; height: 1.1rem; accent-color: var(--accent); }
+  .schalter { display: flex; flex-wrap: wrap; gap: var(--abstand-2) var(--abstand-5); margin-top: var(--abstand-3); }
+  .schalter label { display: flex; align-items: center; gap: var(--abstand-2); min-height: 2rem; font-size: var(--text-2); color: var(--ink-2); }
+  .schalter input { width: 1.1rem; height: 1.1rem; margin: 0; accent-color: var(--ink); }
 
   .kopfzeile {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 0.75rem;
-    margin-top: 1.5rem;
+    gap: var(--abstand-3);
+    margin-top: var(--abstand-6);
   }
 
-  .kopfzeile p { margin: 0; font-size: 0.88rem; color: var(--muted); }
+  .kopfzeile p { margin: 0; color: var(--muted); }
   .kopfzeile b { color: var(--ink); font-variant-numeric: tabular-nums; }
 
-  .beschreibung { margin: 0.4rem 0 0.9rem; font-size: 0.85rem; color: var(--ink-2); text-wrap: pretty; }
+  .beschreibung { max-width: var(--mass); margin: var(--abstand-2) 0 var(--abstand-4); color: var(--ink-2); text-wrap: pretty; }
 
-  .export { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+  /* Leise Knöpfe wie .knopf.leise in theme.css, eine Stufe kleiner. */
+  .export { display: flex; flex-wrap: wrap; gap: var(--abstand-1); }
 
   .export button {
     min-height: 2.25rem;
-    padding: 0.3rem 0.8rem;
+    padding: var(--abstand-1) var(--abstand-3);
     font: inherit;
-    font-size: 0.84rem;
+    font-size: var(--text-2);
     font-weight: 600;
+    color: var(--ink);
+    background: transparent;
+    border: 1px solid var(--border-input);
+    border-radius: var(--radius);
+    cursor: pointer;
+  }
+
+  .export button:hover { background: var(--surface-2); border-color: var(--ink); }
+
+  /* Namen in der Tabelle: Verweise in Tinte, der Strich kommt mit dem Zeiger (wie a.zeile). */
+  .explorer td a { color: var(--ink); font-weight: 600; text-decoration: none; }
+  .explorer td a:hover,
+  .explorer td a:focus-visible { text-decoration: underline; text-decoration-thickness: 2px; text-decoration-color: var(--lackierung-linie); }
+
+  .mehr-zeilen { margin-top: var(--abstand-3); font-size: var(--text-2); color: var(--muted); }
+
+  .explorer .hinweis { margin: var(--abstand-4) 0; }
+  .explorer-insel .status { margin: 0; color: var(--muted); }
+
+  /* Ein Fehler ist eine blaue Flagge wie jeder Hinweis – Rot heißt hier „Ausfall“. */
+  .explorer-insel .fehler {
+    max-width: 50rem;
+    margin: 0;
+    padding: var(--abstand-3) var(--abstand-4);
     color: var(--ink-2);
     background: var(--surface);
-    border: 1px solid var(--border-input);
-    border-radius: 0.4rem;
-    cursor: pointer;
-  }
-
-  .export button:hover { border-color: var(--link); color: var(--link); }
-
-  .explorer th button:not(.info) {
-    min-height: 2rem;
-    padding: 0;
-    font: inherit;
-    font-size: inherit;
-    letter-spacing: inherit;
-    text-transform: inherit;
-    color: var(--muted);
-    background: none;
-    border: none;
-    cursor: pointer;
-  }
-
-  .explorer th button:not(.info):hover { color: var(--link); }
-  .explorer td a { color: var(--ink); font-weight: 600; text-decoration: none; }
-  .explorer td a:hover { color: var(--link); text-decoration: underline; }
-
-  .mehr-zeilen { margin-top: 0.75rem; font-size: 0.86rem; color: var(--muted); }
-
-  .explorer .hinweis,
-  .explorer .status,
-  .explorer .fehler {
-    margin-top: 1rem;
-    padding: 0.8rem 1rem;
-    font-size: 0.88rem;
-    background: var(--surface-2);
-    border: 1px solid var(--border);
-    border-radius: 0.5rem;
-  }
-
-  .explorer .fehler {
-    color: var(--danger-fg);
-    background: var(--danger-bg);
-    border-color: var(--danger-border);
+    border-left: 4px solid var(--flagge-blau);
+    text-wrap: pretty;
   }
 </style>
 
 <style is:global>
-  .frage {
-    margin-bottom: 1rem;
-    padding: 0.9rem 1rem 1rem;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-left: 3px solid var(--accent);
-    border-radius: var(--radius);
-  }
+  /* Die Frage in eigenen Worten: ein Feld und die eine Hauptaktion der Seite, gefüllt in Tinte. */
+  .frage { margin-bottom: var(--abstand-6); }
 
   .frage > label {
     display: block;
-    margin-bottom: 0.4rem;
-    font-size: 0.85rem;
+    margin-bottom: var(--abstand-2);
+    font-size: var(--text-2);
     font-weight: 600;
-    font-family: var(--display);
     color: var(--muted);
   }
 
-  .frage .zeile { display: flex; gap: 0.5rem; }
+  .frage .zeile { display: flex; gap: var(--abstand-2); max-width: 46rem; }
 
   .frage input {
     flex: 1;
     min-width: 0;
-    min-height: 2.5rem;
-    padding: 0.55rem 0.75rem;
+    min-height: 2.75rem;
+    padding: var(--abstand-2) var(--abstand-3);
     font: inherit;
     color: var(--ink);
-    background: var(--surface-2);
+    background: var(--surface);
     border: 1px solid var(--border-input);
-    border-radius: 0.45rem;
+    border-radius: var(--radius);
     appearance: none;
   }
 
-  .frage input:focus-visible { border-color: var(--link); outline: 2px solid var(--link); outline-offset: 1px; }
+  .frage input:hover { border-color: var(--ink); }
+  .frage input:focus-visible { border-color: var(--ink); outline: 2px solid var(--ink); outline-offset: 1px; }
 
   .frage button {
     flex: none;
-    padding: 0.55rem 1rem;
+    padding: var(--abstand-2) var(--abstand-4);
     font: inherit;
-    font-weight: 600;
-    color: var(--accent-ink);
-    background: var(--accent);
-    border: none;
-    border-radius: 0.45rem;
+    font-weight: 650;
+    color: var(--plane);
+    background: var(--ink);
+    border: 1px solid var(--ink);
+    border-radius: var(--radius);
     cursor: pointer;
   }
 
-  .verstanden { margin-top: 0.75rem; font-size: 0.86rem; }
-  .verstanden p { margin: 0 0 0.3rem; color: var(--ink-2); }
-  .verstanden ul { margin: 0 0 0.5rem; padding-left: 1.1rem; }
+  .frage button:hover { background: var(--ink-2); border-color: var(--ink-2); }
+
+  .verstanden { max-width: var(--mass); margin-top: var(--abstand-3); }
+  .verstanden p { margin: 0 0 var(--abstand-1); color: var(--ink-2); }
+  .verstanden ul { margin: 0 0 var(--abstand-2); padding-left: var(--abstand-5); }
   .verstanden li { color: var(--ink); }
   .verstanden li span { color: var(--muted); }
   .verstanden b { color: var(--ink); }
   .verstanden .luecke { color: var(--warn); font-weight: 600; }
-  .verstanden .quelle { font-size: 0.8rem; color: var(--muted); text-wrap: pretty; }
+  .verstanden .quelle { font-size: var(--text-2); color: var(--muted); text-wrap: pretty; }
 </style>
 
 <style is:global>
   /*
-   * Das Ergebnis als Bild (ErgebnisBild.jsx): eine Reihe, die Akzentfarbe, die
-   * Reihe unter dem Zeiger dunkler. Global, weil React die Elemente erzeugt.
+   * Das Ergebnis als Bild (ErgebnisBild.jsx): eine Reihe, in Tinte, die Reihe
+   * unter dem Zeiger etwas heller. Keine Legende – die Überschrift nennt die
+   * Kennzahl. Global, weil React die Elemente erzeugt.
    */
   .ergebnisbild {
-    margin: 0 0 1rem;
-    padding: 0.8rem 1rem 0.6rem;
+    margin: 0 0 var(--abstand-4);
+    padding: var(--abstand-4) var(--abstand-4) var(--abstand-3);
     background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
   }
 
   .ergebnisbild figcaption {
     display: flex;
     flex-wrap: wrap;
     justify-content: space-between;
-    gap: 0.25rem 1rem;
-    margin-bottom: 0.5rem;
-    font-size: 0.84rem;
+    gap: var(--abstand-1) var(--abstand-4);
+    margin-bottom: var(--abstand-2);
+    font-size: var(--text-2);
     color: var(--muted);
     font-variant-numeric: tabular-nums;
   }
@@ -322,14 +283,17 @@ const BEISPIELE = [
   .ergebnisbild figcaption b { color: var(--ink); font-weight: 650; }
   .ergebnisbild svg { display: block; overflow: visible; }
   .ergebnisbild .treffer { fill: transparent; }
-  .ergebnisbild .balken { fill: var(--accent); transition: fill 0.1s ease; }
-  .ergebnisbild .reihe.an .balken { fill: var(--accent-strong); }
+  .ergebnisbild .balken { fill: var(--ink); }
+  .ergebnisbild .reihe.an .balken { fill: var(--ink-2); }
   .ergebnisbild .reihe.an .treffer { fill: var(--surface-2); }
-  .ergebnisbild .name { font-size: 13px; font-weight: 600; fill: var(--ink); }
-  .ergebnisbild .name a { fill: var(--ink); }
-  .ergebnisbild .name a:hover { fill: var(--link); text-decoration: underline; }
-  .ergebnisbild .wert { font-size: 12.5px; font-weight: 650; fill: var(--ink-2); font-variant-numeric: tabular-nums; }
-  .ergebnisbild .achse { font-size: 11px; fill: var(--muted); font-variant-numeric: tabular-nums; }
+  .ergebnisbild .name { font-size: var(--text-1); font-weight: 600; fill: var(--ink); }
+  /* Ein Name ist ein Verweis wie in der Tabelle: ohne Strich, der kommt mit dem Zeiger. */
+  .ergebnisbild .name a { fill: var(--ink); text-decoration: none; }
+  .ergebnisbild .name a:hover,
+  .ergebnisbild .name a:focus-visible { text-decoration: underline; }
+  .ergebnisbild .wert { font-size: var(--text-1); font-stretch: var(--schmal); font-weight: 650; fill: var(--ink-2); font-variant-numeric: tabular-nums; }
+  .ergebnisbild .achse { font-size: var(--text-1); font-stretch: var(--schmal); fill: var(--muted); font-variant-numeric: tabular-nums; }
   .ergebnisbild .gitter { stroke: var(--grid); }
-  .ergebnisbild .grundlinie, .ergebnisbild .null { stroke: var(--axis); }
+  /* Die Achse und die Null in Tinte, wie auf dem Monitor. */
+  .ergebnisbild .grundlinie, .ergebnisbild .null { stroke: var(--ink); }
 </style>

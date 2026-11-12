@@ -371,7 +371,7 @@ export default function Explorer({ groesse = '' }) {
       </p>
       {zeigtTitel && ergebnis.titelOhneSinn && (
         <p className="hinweis">
-          Titles belong to a season, not to a circuit, a team or an engine – with those filters set,
+          <b>Note:</b> titles belong to a season, not to a circuit, a team or an engine – with those filters set,
           the title column stays empty.
         </p>
       )}

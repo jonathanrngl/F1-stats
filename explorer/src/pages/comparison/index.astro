@@ -20,12 +20,13 @@ import { pfad } from '../../lib/db.js'
   <header class="seitenkopf">
     <div>
       <p class="oberzeile">Analysis</p>
-      <h1>Compare two drivers</h1>
-      <p class="lead">
-        Two careers side by side – in full or over a period you choose. If they were ever
-        team-mates, the direct head-to-head sits below: same car, same races. Every comparison
-        has its own address, so it can be shared.
-      </p>
+      <div class="titelblock">
+        <h1>Compare two drivers</h1>
+        <p class="lead">
+          Two careers side by side, in full or over a period you choose. If the two were
+          team-mates, their head-to-head in the same car follows below.
+        </p>
+      </div>
     </div>
   </header>
 
@@ -36,26 +37,33 @@ import { pfad } from '../../lib/db.js'
     {' '}<a href={pfad.seite('/teammates/')}>team-mate ratings</a>.
   </p>
 
-  <div class="nur-mit-js">
+  <div class="nur-mit-js vergleich">
     <Vergleich client:load />
   </div>
 </Seite>
 
 <style is:global>
-  .vgl { margin-top: 1.75rem; }
+  /*
+   * Die Farben der beiden Fahrer: das geprüfte erste Paar der Serienpalette.
+   * Dieselben an den Köpfen, an den Linien des Bildes und an den Balken der
+   * Tabelle – wer A in Rot sieht, sieht ihn überall in Rot.
+   */
+  .vgl {
+    --farbe-0: var(--s1);
+    --farbe-1: var(--s2);
+  }
 
   .waehler {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr));
-    gap: 1rem;
+    gap: var(--abstand-4);
   }
 
   .auswahl > label {
     display: block;
-    margin-bottom: 0.35rem;
-    font-size: 0.85rem;
+    margin-bottom: var(--abstand-2);
+    font-size: var(--text-2);
     font-weight: 600;
-    font-family: var(--display);
     color: var(--muted);
   }
 
@@ -63,31 +71,32 @@ import { pfad } from '../../lib/db.js'
 
   .auswahl input {
     width: 100%;
-    padding: 0.65rem 0.8rem;
+    min-height: 2.75rem;
+    padding: var(--abstand-2) var(--abstand-3);
     font: inherit;
     color: var(--ink);
     background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-s);
+    border: 1px solid var(--border-input);
+    border-radius: var(--radius);
     appearance: none;
   }
 
-  .auswahl input { border-color: var(--border-input); }
-  .auswahl input:hover { border-color: var(--link); }
-  .auswahl input:focus-visible { border-color: var(--link); outline: 2px solid var(--link); outline-offset: 1px; }
+  .auswahl input:hover { border-color: var(--ink); }
+  .auswahl input:focus-visible { border-color: var(--ink); outline: 2px solid var(--ink); outline-offset: 1px; }
 
+  /* Die Trefferliste liegt über der Seite – sie darf einen Schatten haben. */
   .auswahl ul {
     position: absolute;
     z-index: 5;
-    top: calc(100% + 0.3rem);
+    top: calc(100% + var(--abstand-1));
     left: 0;
     right: 0;
     margin: 0;
-    padding: 0.25rem;
+    padding: var(--abstand-1);
     list-style: none;
     background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-s);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
     box-shadow: var(--shadow);
   }
 
@@ -95,130 +104,132 @@ import { pfad } from '../../lib/db.js'
   .auswahl .gewaehlt {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: var(--abstand-2);
     width: 100%;
     min-height: 2.75rem;
-    padding: 0.5rem 0.55rem;
+    padding: var(--abstand-2);
     text-align: left;
     background: none;
     border: none;
-    border-radius: 0.4rem;
+    border-radius: var(--radius-s);
     cursor: pointer;
     font: inherit;
   }
 
   .auswahl .gewaehlt {
-    padding: 0.6rem 0.7rem;
+    padding: var(--abstand-2) var(--abstand-3);
     background: var(--surface);
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-input);
+    border-radius: var(--radius);
   }
 
-  .auswahl .gewaehlt { border-color: var(--border-input); }
-  .auswahl .gewaehlt:hover { border-color: var(--link); }
-  .auswahl li[aria-selected='true'] { background: var(--surface-3); }
-  .auswahl .kein-treffer { padding: 0.6rem 0.65rem; font-size: 0.88rem; color: var(--muted); }
+  .auswahl .gewaehlt:hover { border-color: var(--ink); }
+  .auswahl li[aria-selected='true'] { background: var(--surface-2); }
+  .auswahl .kein-treffer { padding: var(--abstand-2) var(--abstand-3); font-size: var(--text-2); color: var(--muted); }
   .auswahl b { flex: 1; min-width: 0; color: var(--ink); font-weight: 600;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .auswahl i { font-style: normal; font-size: 0.78rem; color: var(--muted); flex: none; }
+  .auswahl i { flex: none; font-style: normal; font-size: var(--text-2); color: var(--muted); font-variant-numeric: tabular-nums; }
 
-  .vgl .kuerzel {
-    display: inline-block; min-width: 2.6rem; padding: 0.1rem 0.3rem; margin: 0;
-    font-size: 0.85rem; font-weight: 600; text-align: center;
-    color: var(--muted); background: var(--surface-3); border-radius: 0.25rem; flex: none;
-  }
+  /* Das Länderkürzel: der Rahmen aus theme.css, ohne dessen Abstand nach rechts. */
+  .vgl .kuerzel { margin: 0; flex: none; }
 
+  /* Der Zeitraum: eine Zeile Bedienung auf dem Grund, kein Kasten. */
   .zeitwahl {
     min-width: 0;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0.5rem 1rem;
-    margin-top: 1.5rem;
-    padding: 0.8rem 1rem;
-    background: var(--surface-2);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
+    gap: var(--abstand-2) var(--abstand-4);
+    margin: var(--abstand-5) 0 0;
+    padding: 0;
+    border: none;
   }
 
   .zeitwahl > legend {
     float: left;
-    margin-right: 0.5rem;
-    font-size: 0.85rem; font-weight: 600;
-    font-family: var(--display);
+    margin-right: var(--abstand-2);
+    padding: 0;
+    font-size: var(--text-2);
+    font-weight: 600;
     color: var(--muted);
   }
 
-  .zeitwahl .knoepfe { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+  .zeitwahl .knoepfe { display: flex; flex-wrap: wrap; gap: var(--abstand-1); }
 
+  /* Gedrückt heißt gefüllt in Tinte, wie bei den Pillen in theme.css. */
   .zeitwahl button {
     min-height: 2.25rem;
-    padding: 0.3rem 0.8rem;
+    padding: var(--abstand-1) var(--abstand-3);
     font: inherit;
-    font-size: 0.82rem;
-    color: var(--ink-2);
+    font-size: var(--text-2);
+    font-weight: 550;
+    color: var(--ink);
     background: var(--surface);
     border: 1px solid var(--border-input);
-    border-radius: 999px;
+    border-radius: var(--radius);
     cursor: pointer;
   }
 
-  .zeitwahl button:hover { border-color: var(--link); }
-  .zeitwahl button[aria-pressed='true'] { color: var(--plane); background: var(--link); border-color: var(--link); }
+  .zeitwahl button:hover { border-color: var(--ink); }
+  .zeitwahl button[aria-pressed='true'] { color: var(--plane); background: var(--ink); border-color: var(--ink); }
 
-  .zeitwahl .regler { display: flex; gap: 0.75rem; margin-left: auto; }
-  .zeitwahl .regler label { display: flex; align-items: center; gap: 0.35rem;
-    font-size: 0.8rem; color: var(--muted); }
+  .zeitwahl .regler { display: flex; gap: var(--abstand-3); margin-left: auto; }
+  .zeitwahl .regler label { display: flex; align-items: center; gap: var(--abstand-2);
+    font-size: var(--text-2); color: var(--muted); }
   .zeitwahl .regler input {
-    width: 5rem; min-height: 2.25rem; padding: 0.25rem 0.4rem; font: inherit; font-size: 0.85rem;
+    width: 5rem; min-height: 2.25rem; padding: var(--abstand-1) var(--abstand-2); font: inherit; font-size: var(--text-2);
     color: var(--ink); background: var(--surface);
-    border: 1px solid var(--border-input); border-radius: 0.35rem;
+    border: 1px solid var(--border-input); border-radius: var(--radius);
     font-variant-numeric: tabular-nums;
   }
 
   .vgl-kopf {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 0.75rem;
-    margin-top: 1.5rem;
+    gap: var(--abstand-3);
+    margin-top: var(--abstand-5);
   }
 
+  /*
+   * Der Kopf je Fahrer: flach auf der Fläche. Der Streifen oben ist der
+   * Schlüssel zu Linie und Balken darunter – er trägt eine Bedeutung.
+   */
   .kopfkarte {
     display: grid;
-    gap: 0.15rem;
-    padding: 0.85rem 1rem;
+    gap: var(--abstand-1);
+    padding: var(--abstand-3) var(--abstand-4);
     background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
   }
 
-  .kopfkarte.s0 { border-top: 3px solid var(--accent); }
-  .kopfkarte.s1 { border-top: 3px solid var(--s2); }
+  .kopfkarte.s0 { border-top: 4px solid var(--farbe-0); }
+  .kopfkarte.s1 { border-top: 4px solid var(--farbe-1); }
   .kopfkarte a { color: var(--ink); font-weight: 650; text-decoration: none; }
-  .kopfkarte a:hover { color: var(--link); }
-  .kopfkarte i { font-style: normal; font-size: 0.76rem; color: var(--muted); }
-  .kopfkarte .kuerzel { justify-self: start; margin-bottom: 0.25rem; }
+  .kopfkarte a:hover { text-decoration: underline; text-decoration-thickness: 2px; }
+  .kopfkarte i { font-style: normal; font-size: var(--text-2); color: var(--muted); }
+  .kopfkarte .kuerzel { justify-self: start; margin-bottom: var(--abstand-1); }
 
-  table.gegen { width: 100%; border-collapse: collapse; margin-top: 1.25rem; }
+  table.gegen { width: 100%; border-collapse: collapse; margin-top: var(--abstand-5); background: var(--surface); }
+
+  table.gegen tr.gruppe,
+  table.gegen tr.gruppe:hover { background: none; }
 
   table.gegen tr.gruppe th {
-    padding: 1rem 0 0.35rem;
-    font-size: 0.85rem;
+    padding: var(--abstand-4) 0 var(--abstand-2);
+    font-size: var(--text-2);
     font-weight: 600;
-    font-family: var(--display);
     color: var(--muted);
     text-align: center;
+    background: none;
     border: none;
   }
 
   table.gegen th[scope='row'] {
     width: 34%;
-    padding: 0.45rem 0.6rem;
+    padding: var(--abstand-2) var(--abstand-3);
     text-align: center;
-    font-size: 0.78rem;
-    font-weight: 500;
-    color: var(--muted);
-    text-transform: none;
-    letter-spacing: 0;
+    font-size: var(--text-2);
+    font-weight: 600;
+    color: var(--ink-2);
     border-bottom: 1px solid var(--border);
     white-space: normal;
   }
@@ -226,23 +237,23 @@ import { pfad } from '../../lib/db.js'
   /* Die Erklärung einer Zeile, sichtbar statt als Tooltip hinter einem „?“. */
   table.gegen th small {
     display: block;
-    margin-top: 0.15rem;
-    font-size: 0.75rem;
+    margin-top: var(--abstand-1);
+    font-size: var(--text-2);
+    font-weight: 400;
     line-height: 1.35;
     color: var(--muted);
     text-wrap: pretty;
   }
-
-  table.gegen th[scope='row'] { color: var(--ink-2); font-weight: 600; font-size: 0.86rem; }
 
   /* Der Balken läuft von der Mitte nach außen: So zeigt die Länge sofort,
      wer bei welcher Zeile vorn liegt, ohne dass man Zahlen vergleichen muss. */
   td.wert {
     position: relative;
     width: 33%;
-    padding: 0.45rem 0.7rem;
+    padding: var(--abstand-2) var(--abstand-3);
     border-bottom: 1px solid var(--border);
-    font-variant-numeric: tabular-nums;
+    font-stretch: var(--schmal);
+    font-variant-numeric: tabular-nums lining-nums;
     color: var(--ink-2);
   }
 
@@ -252,10 +263,9 @@ import { pfad } from '../../lib/db.js'
 
   td.wert .balken {
     position: absolute;
-    top: 0.35rem;
-    bottom: 0.35rem;
+    top: var(--abstand-1);
+    bottom: var(--abstand-1);
     background: var(--surface-3);
-    border-radius: 0.2rem;
   }
 
   td.wert .balken.b0 { width: 0%; }
@@ -280,128 +290,126 @@ import { pfad } from '../../lib/db.js'
   td.wert .balken.b19 { width: 95%; }
   td.wert .balken.b20 { width: 100%; }
 
-  td.links .balken { right: 0.35rem; }
-  td.rechts .balken { left: 0.35rem; }
+  /* Bündig an der Mittelspalte: b20 ist so breit wie die Zelle und ragt nicht hinaus. */
+  td.links .balken { right: 0; }
+  td.rechts .balken { left: 0; }
 
+  /* Wer vorn liegt: die Zahl fett, der Balken in der Farbe des Fahrers getönt. */
   td.fuehrt b { color: var(--ink); font-weight: 700; }
-  td.links.fuehrt .balken { background: var(--accent-wash); }
-  td.rechts.fuehrt .balken { background: color-mix(in srgb, var(--s2) 18%, transparent); }
+  td.links.fuehrt .balken { background: color-mix(in srgb, var(--farbe-0) 18%, var(--surface)); }
+  td.rechts.fuehrt .balken { background: color-mix(in srgb, var(--farbe-1) 18%, var(--surface)); }
 
-  .vgl .status, .vgl .fehler, .vgl .hinweis {
-    margin-top: 1.5rem;
-    padding: 0.85rem 1rem;
-    font-size: 0.88rem;
-    background: var(--surface-2);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-s);
+  .vergleich .status { margin: var(--abstand-5) 0 0; color: var(--muted); text-wrap: pretty; }
+  .vergleich .leer .status { color: var(--ink-2); }
+  .vgl .hinweis { margin: var(--abstand-5) 0 0; }
+
+  /* Ein Fehler ist eine blaue Flagge wie jeder Hinweis – Rot heißt hier „Ausfall“. */
+  .vergleich .fehler {
+    max-width: 50rem;
+    margin: var(--abstand-5) 0 0;
+    padding: var(--abstand-3) var(--abstand-4);
+    color: var(--ink-2);
+    background: var(--surface);
+    border-left: 4px solid var(--flagge-blau);
     text-wrap: pretty;
   }
 
-  .vgl .fehler { color: var(--danger-fg); background: var(--danger-bg); border-color: var(--danger-border); }
-  .vgl .hinweis { border-left: 3px solid var(--axis); }
-
   /* Der leere Zustand: kein Hinweis auf eine Sackgasse, sondern der Einstieg. */
   .vgl .anstoss {
-    margin: 1.75rem 0 0.75rem;
-    font-size: 0.85rem;
+    margin: var(--abstand-6) 0 var(--abstand-3);
+    font-size: var(--text-2);
     font-weight: 600;
-    font-family: var(--display);
     color: var(--muted);
   }
 
   .vgl .paarungen {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(min(15rem, 100%), 1fr));
-    gap: 0.6rem;
+    gap: var(--abstand-2);
     margin: 0;
     padding: 0;
     list-style: none;
   }
 
+  /* Wie .karte in theme.css: flach auf der Fläche, beim Überfahren eine Linie in Tinte. */
   .vgl .paarungen a {
     display: block;
-    width: 100%;
-    padding: 0.8rem 0.95rem;
-    font: inherit;
-    text-align: left;
+    height: 100%;
+    padding: var(--abstand-3) var(--abstand-4);
     color: inherit;
     background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
     text-decoration: none;
   }
 
-  .vgl .paarungen a:hover { border-color: var(--link); }
+  .vgl .paarungen a:hover { box-shadow: inset 0 -3px 0 var(--ink); }
   .vgl .paarungen b { display: block; color: var(--ink); font-weight: 650; }
-  .vgl .paarungen span { font-size: 0.82rem; color: var(--muted); }
+  .vgl .paarungen span { font-size: var(--text-2); color: var(--muted); }
 
-  .duell { margin-top: 3rem; padding-top: 1.5rem; border-top: 2px solid var(--border); }
-  .duell h2 { font-size: 1.15rem; margin: 0 0 0.5rem; }
-  .duell p { max-width: 46rem; color: var(--muted); font-size: 0.88rem; text-wrap: pretty; }
-  .duell .fuss { margin-top: 0.75rem; font-size: 0.79rem; }
+  .duell { margin-top: var(--abstand-7); }
+  .duell h2 { margin: 0 0 var(--abstand-2); }
+  .duell p { max-width: var(--mass); margin: 0; color: var(--muted); text-wrap: pretty; }
+  .duell .fuss { margin-top: var(--abstand-3); font-size: var(--text-2); }
 
   @media (max-width: 40rem) {
     .zeitwahl .regler { margin-left: 0; }
-    table.gegen th[scope='row'] { width: 40%; font-size: 0.75rem; }
+    table.gegen th[scope='row'] { width: 40%; }
   }
 </style>
 
 <style is:global>
   /*
-   * Die beiden Karrieren als Linien (KarrierenBild.jsx). Erster Fahrer in der
-   * Akzentfarbe, zweiter in --s2 – dieselben wie an den Köpfen darüber.
+   * Die beiden Karrieren als Linien (KarrierenBild.jsx). Die Farben kommen
+   * aus .vgl – dieselben wie an den Köpfen darüber.
    */
   .karrieren {
-    --farbe-0: var(--accent);
-    --farbe-1: var(--s2);
-    margin: 1rem 0 1.25rem;
-    padding: 0.85rem 1rem 0.5rem;
+    margin: var(--abstand-4) 0 var(--abstand-5);
+    padding: var(--abstand-4) var(--abstand-4) var(--abstand-3);
     background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
   }
 
-  .karrieren-kopf { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 0.6rem 1rem; }
-  .karrieren figcaption { display: grid; gap: 0.1rem; font-size: 0.8rem; color: var(--muted); }
-  .karrieren figcaption b { font-size: 0.95rem; color: var(--ink); font-weight: 650; }
+  .karrieren-kopf { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: var(--abstand-2) var(--abstand-4); }
+  .karrieren figcaption { display: grid; gap: var(--abstand-1); font-size: var(--text-2); color: var(--muted); }
+  .karrieren figcaption b { font-size: var(--text-3); color: var(--ink); font-weight: 650; }
 
-  .masswahl { display: flex; gap: 2px; padding: 3px; background: var(--surface-3); border-radius: 0.5rem; }
+  /* Welche Zahl gezeichnet wird: gedrückt heißt gefüllt in Tinte, wie bei den Pillen. */
+  .masswahl { display: flex; flex-wrap: wrap; gap: var(--abstand-1); }
   .masswahl button {
-    min-height: 2rem;
-    padding: 0.2rem 0.75rem;
+    min-height: 2.25rem;
+    padding: var(--abstand-1) var(--abstand-3);
     font: inherit;
-    font-size: 0.82rem;
-    font-weight: 600;
-    color: var(--ink-2);
-    background: none;
-    border: none;
-    border-radius: 0.35rem;
+    font-size: var(--text-2);
+    font-weight: 550;
+    color: var(--ink);
+    background: var(--surface);
+    border: 1px solid var(--border-input);
+    border-radius: var(--radius);
     cursor: pointer;
   }
-  .masswahl button:hover { color: var(--ink); }
-  .masswahl button[aria-pressed='true'] { color: var(--ink); background: var(--surface); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12); }
+  .masswahl button:hover { border-color: var(--ink); }
+  .masswahl button[aria-pressed='true'] { color: var(--plane); background: var(--ink); border-color: var(--ink); }
 
   .karrieren-stand {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.2rem 1.25rem;
+    gap: var(--abstand-1) var(--abstand-5);
     min-height: 1.4rem;
-    margin: 0.6rem 0 0.2rem;
-    font-size: 0.84rem;
+    margin: var(--abstand-2) 0 var(--abstand-1);
+    font-size: var(--text-2);
     color: var(--ink-2);
     font-variant-numeric: tabular-nums;
   }
-  .karrieren-stand span { display: inline-flex; align-items: center; gap: 0.4rem; }
+  .karrieren-stand span { display: inline-flex; align-items: center; gap: var(--abstand-2); }
   .karrieren-stand b { color: var(--ink); }
   /* Ein kurzer Strich in der Farbe der Linie, kein Kästchen. */
-  .karrieren-stand i { width: 1rem; height: 3px; border-radius: 2px; }
+  .karrieren-stand i { width: 1rem; height: 3px; }
   .karrieren-stand .s0 i { background: var(--farbe-0); }
   .karrieren-stand .s1 i { background: var(--farbe-1); }
 
   .karrieren svg { display: block; overflow: visible; touch-action: pan-y; }
   .karrieren .gitter { stroke: var(--grid); }
-  .karrieren .grundlinie { stroke: var(--axis); }
-  .karrieren .achse { font-size: 11px; fill: var(--muted); font-variant-numeric: tabular-nums; }
+  /* Die Achse in Tinte, wie auf dem Monitor. */
+  .karrieren .grundlinie { stroke: var(--ink); }
+  .karrieren .achse { font-size: var(--text-1); font-stretch: var(--schmal); fill: var(--muted); font-variant-numeric: tabular-nums; }
   .karrieren .fadenkreuz { stroke: var(--border-input); stroke-dasharray: 3 3; }
   .karrieren .linie polyline { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
   .karrieren .linie circle { stroke: var(--surface); stroke-width: 1.5; }
@@ -410,5 +418,5 @@ import { pfad } from '../../lib/db.js'
   .karrieren .linie.s0 circle, .karrieren .zeiger.s0 { fill: var(--farbe-0); }
   .karrieren .linie.s1 circle, .karrieren .zeiger.s1 { fill: var(--farbe-1); }
   .karrieren .zeiger { stroke: var(--surface); stroke-width: 2; }
-  .karrieren .ende { font-size: 12.5px; font-weight: 650; fill: var(--ink); font-variant-numeric: tabular-nums; }
+  .karrieren .ende { font-size: var(--text-1); font-weight: 650; fill: var(--ink); font-variant-numeric: tabular-nums; }
 </style>

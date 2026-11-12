@@ -325,7 +325,7 @@ export default function Vergleich() {
                 <a href={`${BASIS}/drivers/${p.id}/`}>{p.name}</a>
                 <i>
                   {werte[i].von ? `${werte[i].von}–${werte[i].bis}` : 'no races in this period'}
-                  {werte[i].teams.length > 0 && ` · ${werte[i].teams.slice(0, 3).join(', ')}`}
+                  {werte[i].teams.length > 0 && `, ${werte[i].teams.slice(0, 3).join(', ')}`}
                 </i>
               </div>
             ))}
@@ -333,7 +333,7 @@ export default function Vergleich() {
 
           {werte.some((w) => w.starts === 0) && (
             <p className="hinweis">
-              At least one of the two did not contest a race in this period. The rates stay empty
+              <b>Note:</b> at least one of the two did not contest a race in this period. The rates stay empty
               rather than claim a zero.
             </p>
           )}
@@ -385,7 +385,8 @@ export default function Vergleich() {
 }
 
 /*
- * Eine Vergleichszeile mit Balken. Der bessere Wert trägt die Akzentfarbe.
+ * Eine Vergleichszeile mit Balken. Der bessere Wert ist fett, sein Balken in
+ * der Farbe des Fahrers getönt (--s1 für den ersten, --s2 für den zweiten).
  * Die Balkenbreite geht über eine CSS-Variable in einer Klasse von 0 bis 20:
  * Die Inhaltsrichtlinie blockiert style-Attribute nicht bei React (es setzt
  * sie über die CSSOM), aber so bleibt es auch dann richtig, wenn sie es täte.
@@ -496,7 +497,7 @@ function Auswahl({ index, wert, gesperrt, label, fokus, onWahl }) {
           aria-label={`${label}: ${gewaehlt.name}. Change`}>
           <span className="kuerzel" aria-hidden="true">{gewaehlt.land ?? '—'}</span>
           <b>{gewaehlt.name}</b>
-          <i>{gewaehlt.von}–{gewaehlt.bis} · change</i>
+          <i>{gewaehlt.von}–{gewaehlt.bis}, change</i>
         </button>
       ) : (
         <div className="feld">
@@ -527,7 +528,7 @@ function Auswahl({ index, wert, gesperrt, label, fokus, onWahl }) {
                   onMouseDown={(e) => e.preventDefault()} onClick={() => nimm(f)} onMouseEnter={() => setAktiv(i)}>
                   <span className="kuerzel" aria-hidden="true">{f.land ?? '—'}</span>
                   <b>{f.name}</b>
-                  <i>{f.von}–{f.bis} · {f.siege ? `${f.siege} wins` : `${f.starts ?? 0} starts`}</i>
+                  <i>{f.von}–{f.bis}, {f.siege ? `${f.siege} wins` : `${f.starts ?? 0} starts`}</i>
                 </li>
               ))}
             </ul>
