@@ -4,6 +4,7 @@ import Seite from '../layouts/Seite.astro'
 import Countdown from '../components/Countdown.astro'
 import Gefolgt from '../components/Gefolgt.astro'
 import Meisterband from '../components/Meisterband.astro'
+import Turm from '../components/Turm.astro'
 import { alle, db, eine, saisonListe, pfad } from '../lib/db.js'
 import { naechstesRennen, standVorRennen, titelKannFallen } from '../engine/vorschau.js'
 import { datenstand, juengsteAenderungen, rekordVerlaeufe, zahlwort } from '../engine/aenderungen.js'
@@ -99,17 +100,20 @@ const letzteMarke = datenStand
           * Der Turm: Position, Teamstreifen, Kürzel, Name, Punkte, Abstand zum
           * Führenden. Am Telefon die ersten fünf, sonst zehn.
           */}
-        <ol class="turm">
-          {stand.fahrer.map((f, i) => (
-            <li data-team={f.teamId ?? undefined} class:list={{ weitere: i >= 5 }}>
-              <span class:list={['platz', { p1: f.position === 1, p2: f.position === 2, p3: f.position === 3 }]}>{f.position}</span>
-              <span class="code" aria-hidden="true">{kuerzel.get(f.id)}</span>
-              <span class="wer"><a class="zeile" href={pfad.fahrer(f.id)}>{f.name}</a> <i>{f.team}</i></span>
-              <b class="wert">{zahl(f.punkte)}<span class="sr-only"> points</span></b>
-              <span class="abstand">{i > 0 && <>−{zahl(fuehrend.punkte - f.punkte)}<span class="sr-only"> behind</span></>}</span>
-            </li>
-          ))}
-        </ol>
+        <Turm
+          einheit="points"
+          zeilen={stand.fahrer.map((f, i) => ({
+            platz: f.position,
+            teamId: f.teamId,
+            code: kuerzel.get(f.id),
+            name: f.name,
+            href: pfad.fahrer(f.id),
+            team: f.team,
+            wert: zahl(f.punkte),
+            abstand: i > 0 ? `−${zahl(fuehrend.punkte - f.punkte)}` : null,
+            weitere: i >= 5,
+          }))}
+        />
         <p class="weiter"><a href={`${pfad.saison(stand.bezug.jahr)}#wertung`}>Full standings</a></p>
       </section>
     )}
@@ -334,10 +338,6 @@ const letzteMarke = datenStand
     .start-raster > .naechstes { margin-top: 0; }
   }
 
-  /* Am Telefon fünf Zeilen im Turm: Sonst rückte das nächste Rennen aus den ersten 800 Pixeln. */
-  @media (max-width: 40rem) {
-    .turm .weitere { display: none; }
-  }
 
   .naechstes .wann { margin: var(--abstand-2) 0 0; }
   .naechstes p, .marke p { margin: var(--abstand-3) 0 0; max-width: var(--mass); }

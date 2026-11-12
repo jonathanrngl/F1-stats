@@ -123,6 +123,9 @@ const PAARE = [
   ['--danger-fg', '--danger-bg', 4.5], ['--danger-fg', '--surface', 4.5],
   ['--podest-ink', '--gold', 4.5], ['--podest-ink', '--silber', 4.5], ['--podest-ink', '--bronze', 4.5],
   ['--ink', '--gold-wash', 4.5],
+  ['--reifen-schrift-hell', '--reifen-soft', 4.5], ['--reifen-schrift-hell', '--reifen-wet', 4.5],
+  ['--reifen-schrift-dunkel', '--reifen-medium', 4.5], ['--reifen-schrift-dunkel', '--reifen-hard', 4.5],
+  ['--reifen-schrift-dunkel', '--reifen-inter', 4.5],
   // Bedienelemente und Grafik
   ['--border-input', '--plane', 3], ['--border-input', '--surface', 3],
   ['--ink', '--plane', 3], ['--ink', '--surface', 3],

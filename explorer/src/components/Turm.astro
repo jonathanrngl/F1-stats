@@ -1,0 +1,60 @@
+---
+/**
+ * Der Zeitnahme-Turm (docs/DESIGN.md 8.5): eine Rangliste mit einem Wert und
+ * seinem Abstand – Position, Teamstreifen, Kürzel, Name mit Team, Wert,
+ * Abstand. Eine Form für WM-Stand, Podium, Team-mates; wer eine kennt, liest
+ * alle.
+ *
+ * Nur für einen Wert. Eine Wertung mit Siegen, Teams und Punkten bleibt eine
+ * Tabelle. Die Gestaltung steht in theme.css (.turm), damit der Turm auf jeder
+ * Seite gleich aussieht und kein Bereichsattribut je Zeile anfällt.
+ *
+ * Die Teamfarbe ist Zugabe: Der Name des Teams steht daneben, am Telefon in
+ * einer zweiten Zeile. Für Vorleser hängen Einheit und „behind“ als
+ * versteckter Text an Wert und Abstand.
+ */
+interface Zeile {
+  /** Platz, wie er dasteht: 1, „=5“, „DNF“. Plätze 1–3 bekommen Gold, Silber, Bronze. */
+  platz: number | string | null
+  /** Team-ID für den Streifen (teams.css). */
+  teamId?: string | null
+  /** Fahrerkürzel; ohne Kürzel (Teams) entfällt die Spalte. */
+  code?: string | null
+  name: string
+  href?: string | null
+  /** Der Teamname neben dem Fahrer. */
+  team?: string | null
+  /** Der Wert, fertig formatiert. */
+  wert?: string | null
+  /** Der Abstand zum Ersten, fertig formatiert, mit echtem Minus oder Plus. */
+  abstand?: string | null
+  /** Am Telefon ausgeblendet (Startseite: zehn Zeilen breit, fünf schmal). */
+  weitere?: boolean
+}
+
+interface Props {
+  zeilen: Zeile[]
+  /** Was der Wert ist, für Vorleser: „points“. */
+  einheit?: string
+  /** Was der Abstand ist, für Vorleser: „behind“. */
+  abstandWort?: string
+}
+
+const { zeilen, einheit = '', abstandWort = 'behind' } = Astro.props
+const podium = (p: Zeile['platz']) => (p === 1 || p === '1' ? 'p1' : p === 2 || p === '2' ? 'p2' : p === 3 || p === '3' ? 'p3' : null)
+---
+
+<ol class="turm">
+  {zeilen.map((z) => (
+    <li data-team={z.teamId ?? undefined} class:list={{ weitere: z.weitere }}>
+      <span class:list={['platz', podium(z.platz)]}>{z.platz ?? '–'}</span>
+      {z.code && <span class="code" aria-hidden="true">{z.code}</span>}
+      <span class="wer">
+        {z.href ? <a class="zeile" href={z.href}>{z.name}</a> : <span class="zeile">{z.name}</span>}
+        {z.team && <> <i>{z.team}</i></>}
+      </span>
+      <b class="wert">{z.wert}{z.wert && einheit && <span class="sr-only"> {einheit}</span>}</b>
+      <span class="abstand">{z.abstand && <>{z.abstand}<span class="sr-only"> {abstandWort}</span></>}</span>
+    </li>
+  ))}
+</ol>

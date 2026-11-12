@@ -91,6 +91,18 @@
      Zeitenmonitor. Hier: die absolute Bestmarke, Rekord und schnellste Runde. */
   --lila: light-dark(#7b2fbe, #c49bff);
 
+  /* Reifenmischungen, wie die Hersteller sie färben – in beiden Modi gleich,
+     wie Gold. Die Schrift darauf ist je Mischung die, die 4,5:1 erreicht:
+     weiß auf Soft und Wet, dunkel auf Medium, Hard und Intermediate (weiß
+     hatte dort 2,7:1). */
+  --reifen-soft: #e8002d;
+  --reifen-medium: #ffd12e;
+  --reifen-hard: #f4f4f2;
+  --reifen-inter: #43b02a;
+  --reifen-wet: #0067ad;
+  --reifen-schrift-hell: #ffffff;
+  --reifen-schrift-dunkel: #15181d;
+
   /* Flaggen. Ein Hinweis beginnt immer mit einem Wort, das seine Art sagt;
      der Streifen ist Zugabe, nicht Träger (DESIGN.md 8.8). */
   --flagge-gelb: light-dark(#f2c200, #ffd84d);
@@ -1201,6 +1213,8 @@ a.karte:hover { box-shadow: inset 0 -3px 0 var(--ink); }
 .hinweis p { margin: 0; }
 .hinweis.gelb,
 .hinweis.warn { border-left-color: var(--flagge-gelb); }
+/* Ein Ergebnis – Titel entschieden, Titel wechselt im What-if: Tinte, keine Flagge. */
+.hinweis.akzent { border-left-color: var(--ink); }
 
 /* Die Zielflagge: ein Muster, das eine Flagge zeigt – kein Verlauf als Schmuck. */
 .hinweis.karo {
@@ -1758,9 +1772,14 @@ thead button:not(.info)[data-aktiv='1'][data-richtung='auf']::after { content: '
   color: var(--muted);
 }
 
+/* Ein Name ohne eigene Seite: Tinte, aber nicht fett – fett heißt hier „Link“. */
+.turm span.zeile { color: var(--ink); }
+
 /* Am Telefon steht das Team in einer zweiten Zeile, statt den Namen abzuschneiden. */
 @media (max-width: 40rem) {
   .turm .wer i { display: block; font-size: var(--text-2); line-height: 1.3; overflow: hidden; text-overflow: ellipsis; }
+  /* Zeilen, die nur breit gezeigt werden: Auf der Startseite rückte sonst das nächste Rennen aus den ersten 800 Pixeln. */
+  .turm .weitere { display: none; }
 }
 
 .turm .wert,

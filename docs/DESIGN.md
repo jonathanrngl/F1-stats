@@ -792,6 +792,35 @@ Antworten vom 12. November 2026: alle vier wie empfohlen.
 
 Die Freigabe ist damit erteilt; die Fragerunde ist geschlossen.
 
+## Anhang C: Abgleich mit den Mustern generierter Seiten
+
+Nachgeholt mit dem Skill `frontend-design`, der in Phase 2 nicht geladen war.
+Er nennt fünf Muster, auf die generierte Gestaltung heute zuläuft. Der Plan
+wurde gegen jedes geprüft, und gegen die Frage, ob er bei einem ähnlichen
+Auftrag – einer beliebigen Sportstatistikseite – genauso aussähe.
+
+| Muster | Im Plan? | Entscheidung |
+|---|---|---|
+| Creme, Serife, Terrakotta | nein | – |
+| fast schwarz, ein greller Akzent | nein: Asphalt `#1c2026`, und auf dem Monitor 50 Lackierungen statt einer Farbe | bleibt |
+| Zeitungslayout: Haarlinien, keine Rundung, dichte Spalten | teilweise: Haarlinien und eckige Datenflächen | bleibt, eng begrenzt: Haarlinien nur zwischen Zeilen von Daten (Turm, Tabelle) und unter dem Kopf einer Tabelle, wie auf dem Monitor; Fließtext nie in Spalten; Knöpfe und Felder gerundet |
+| Karten-Baukasten mit Schatten und Verläufen | nein; die alten `.karte` werden flach | – |
+| Vorlagen-Beiwerk (Versal-Oberzeile, „A · B · C“, Monospace-Labels, `→`) | nein, alle vier stehen in § 12 als verboten; 14 Mittelpunkte im Bestand werden entfernt | – |
+| „große Zahl, kleines Label, Nebenzahlen“ als Standard-Hero | die Kennzahlleiste hat diese Form | bleibt auf Fahrer-, Team-, Motor-, Reifen-, Strecken- und Saisonseiten, weil der Auftrag sie verlangt – aber nicht als Einstieg der Startseite (dort das Meisterband), und nie neutral: die tragende Zahl auf ihrer Lackierung, ein Rekord in Lila |
+
+Geschärft nach diesem Abgleich:
+
+- **Linke Streifen nur mit Bedeutung.** Ein Streifen links steht an drei
+  Stellen und nirgends sonst: am Titel (die Lackierung), an einer Tabellen-
+  oder Turmzeile (das Team), an einem Hinweis (die Flagge). Keine Karte, kein
+  Zitat, kein Hover bekommt einen.
+- **Eine Kühnheit je Seite** (Prinzip 5) gilt auch für die Breite: Die
+  Abschnittsüberschriften sind breit, aber eine Stufe kleiner als der Titel
+  und ohne Farbe; nur der Titel steht auf der Lackierung.
+- **Texte** werden in Phase 3 nach den Regeln in § 10 geschrieben: aus Sicht
+  des Lesers, aktiv, ohne Werbung, Fehler und Leere mit Richtung statt
+  Stimmung.
+
 ## Abweichungen
 
 *(nach der Umsetzung)*

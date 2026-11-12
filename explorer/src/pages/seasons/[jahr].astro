@@ -7,6 +7,7 @@ import Verlauf from '../../components/Verlauf.astro'
 import Sprung from '../../components/Sprung.astro'
 import WasWaereWenn from '../../components/WasWaereWenn.astro'
 import Meisterband from '../../components/Meisterband.astro'
+import Turm from '../../components/Turm.astro'
 import { meisterbandDaten } from '../../components/meisterband-daten.js'
 
 export async function getStaticPaths() {
@@ -173,17 +174,19 @@ const ziele = [
         <div><h2 id="turm-fahrer">{offen ? 'Drivers, so far' : 'Drivers'}</h2></div>
         <a class="mehr" href="#wertung">All {fahrerWertung.length}</a>
       </div>
-      <ol class="turm">
-        {fahrerWertung.slice(0, 5).map((f, i) => (
-          <li data-team={f.teams.at(-1)?.id}>
-            <span class:list={['platz', { p1: f.position === 1, p2: f.position === 2, p3: f.position === 3 }]}>{f.position ?? '–'}</span>
-            <span class="code" aria-hidden="true">{f.kuerzel}</span>
-            <span class="wer"><a class="zeile" href={pfad.fahrer(f.id)}>{f.name}</a> <i>{f.teams.map((t) => t.name).join(', ')}</i></span>
-            <b class="wert">{ein(f.points)}<span class="sr-only"> points</span></b>
-            <span class="abstand">{i > 0 && <>−{ein(fahrerWertung[0].points - f.points)}<span class="sr-only"> behind</span></>}</span>
-          </li>
-        ))}
-      </ol>
+      <Turm
+        einheit="points"
+        zeilen={fahrerWertung.slice(0, 5).map((f, i) => ({
+          platz: f.position ?? f.text,
+          teamId: f.teams.at(-1)?.id,
+          code: f.kuerzel,
+          name: f.name,
+          href: pfad.fahrer(f.id),
+          team: f.teams.map((t) => t.name).join(', '),
+          wert: ein(f.points),
+          abstand: i > 0 ? `−${ein(fahrerWertung[0].points - f.points)}` : null,
+        }))}
+      />
     </section>
     {teamWertung.length > 0 && (
       <section aria-labelledby="turm-teams">
@@ -191,16 +194,17 @@ const ziele = [
           <div><h2 id="turm-teams">{offen ? 'Constructors, so far' : 'Constructors'}</h2></div>
           <a class="mehr" href="#wertung">All {teamWertung.length}</a>
         </div>
-        <ol class="turm">
-          {teamWertung.slice(0, 5).map((t, i) => (
-            <li data-team={t.id}>
-              <span class:list={['platz', { p1: t.position === 1, p2: t.position === 2, p3: t.position === 3 }]}>{t.position ?? '–'}</span>
-              <span class="wer"><a class="zeile" href={pfad.team(t.id)}>{t.name}</a></span>
-              <b class="wert">{ein(t.points)}<span class="sr-only"> points</span></b>
-              <span class="abstand">{i > 0 && <>−{ein(teamWertung[0].points - t.points)}<span class="sr-only"> behind</span></>}</span>
-            </li>
-          ))}
-        </ol>
+        <Turm
+          einheit="points"
+          zeilen={teamWertung.slice(0, 5).map((t, i) => ({
+            platz: t.position,
+            teamId: t.id,
+            name: t.name,
+            href: pfad.team(t.id),
+            wert: ein(t.points),
+            abstand: i > 0 ? `−${ein(teamWertung[0].points - t.points)}` : null,
+          }))}
+        />
       </section>
     )}
   </div>
