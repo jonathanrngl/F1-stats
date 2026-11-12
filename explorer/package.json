@@ -13,6 +13,7 @@
     "test": "node scripts/test-engine.mjs",
     "test:ausgabe": "node scripts/pruefe-ausgabe.mjs",
     "test:oberflaeche": "node scripts/pruefe-oberflaeche.mjs",
+    "test:kontraste": "node scripts/pruefe-kontraste.mjs",
     "dev": "astro dev",
     "build": "astro build && node scripts/pruefe-ausgabe.mjs",
     "build:schnell": "astro build",
@@ -20,6 +21,7 @@
   },
   "devDependencies": {
     "@astrojs/react": "^7.1.2",
+    "@fontsource-variable/archivo": "^5.3.0",
     "@fontsource-variable/libre-franklin": "^5.3.0",
     "astro": "^7.4.5",
     "oxlint": "^1.90.0",

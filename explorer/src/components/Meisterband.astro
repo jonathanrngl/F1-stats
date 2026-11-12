@@ -1,0 +1,185 @@
+---
+/**
+ * Das Meisterband (docs/DESIGN.md 8.4): jede Saison ein Balken in der Farbe des
+ * Teams ihres Fahrermeisters, so hoch wie dessen Anteil an den Punkten, die in
+ * den gefahrenen Rennen zu holen waren. Die laufende Saison ist schraffiert.
+ *
+ * Groß, auf der Startseite, steht es auf dem Monitor – einer Fläche, die in
+ * beiden Modi dunkel ist: Auf hellem Beton erreichten elf Lackierungen keine
+ * 3:1, und hier ist die Höhe die Information. Jeder Balken ist ein Link auf
+ * seine Saison.
+ *
+ * Klein, auf der Saisonseite, ist es Zusammenhang und nicht der laute Moment:
+ * hell, ohne Links, das Jahr der Seite markiert, für Vorleser ein Satz.
+ *
+ * Was ein Balken bedeutet, steht in seinem Linktext (für Vorleser) und, mit
+ * Skript, in einer eigenen Zeile unter der Legende. Die Zeile verdeckt nichts
+ * und bleibt stehen, bis ein anderer Balken gewählt wird (WCAG 1.4.13). Ohne
+ * Skript zeigt der Browser den Text als Tooltip.
+ *
+ * Die Gestaltung steht in theme.css und nicht hier: Ein <style>-Block hängt in
+ * Astro jedem Element ein Bereichsattribut an, bei 77 Balken einige Hundert.
+ */
+import { pfad } from '../lib/db.js'
+import { zahl } from '../lib/format.js'
+import { meisterbandDaten } from './meisterband-daten.js'
+
+interface Props {
+  /** Klein, auf der Saisonseite: dieses Jahr markiert, ohne Links und ohne Animation. */
+  markiert?: number
+}
+
+const { markiert } = Astro.props
+const klein = markiert !== undefined
+const balken = meisterbandDaten()
+const letztes = balken.at(-1)?.jahr ?? 0
+
+/* Jahreszahlen unter dem Band: die Jahrzehnte und das letzte Jahr, keine näher als acht Saisons am Ende. */
+const marke = (jahr: number) => jahr === letztes || (jahr % 10 === 0 && letztes - jahr >= 8)
+
+/*
+ * Der Text eines Balkens. Die Zahlen stehen darin, nicht nur der Anteil: „94 of
+ * 144 possible points from 16 starts“ sagt, wogegen gemessen wird. 1988 hatte
+ * Senna so 65 %, Prost 73 % – Meister wurde Senna, weil gestrichen wurde.
+ */
+const text = (b: (typeof balken)[number]) => {
+  if (b.leer) return `${b.jahr}: no race run yet`
+  const wer = `${b.name}${b.team ? ` (${b.team})` : ''}`
+  const anteil = `${zahl(b.punkte)} of ${zahl(b.moeglich)} possible points from ${b.starts} ${b.starts === 1 ? 'start' : 'starts'}, ${Math.round(b.anteil * 100)}%`
+  if (b.laufend) return b.meister ? `${b.jahr}, so far: ${wer}, already champion, ${anteil}` : `${b.jahr}, so far: ${wer} leads, ${anteil}`
+  return `${b.jahr}: ${wer}, ${anteil}`
+}
+
+const hier = klein ? balken.find((b) => b.jahr === markiert) : null
+const satz = klein
+  ? `Champions since ${balken[0]?.jahr} by share of the possible points. ${hier && !hier.leer ? text(hier) : ''}`
+  : ''
+const id = klein ? 'meisterband-klein' : 'meisterband'
+---
+
+<figure
+  class:list={['meisterband', { klein, monitor: !klein }]}
+  aria-labelledby={klein ? undefined : `${id}-legende`}
+  role={klein ? 'img' : undefined}
+  aria-label={klein ? satz : undefined}
+>
+  {!klein && (
+    <figcaption class="legende" id={`${id}-legende`}>
+      One bar per season in the champion's team colours. Height: the share of the possible
+      points the champion scored. Hatched: still running.
+    </figcaption>
+  )}
+  {!klein && <p class="zeile nur-mit-js" data-meisterband-zeile aria-hidden="true">{text(balken.at(-1)!)}</p>}
+  <div class="flaeche">
+  {!klein && <span class="massstab" aria-hidden="true">50%</span>}
+  <ol class="balken" data-meisterband={klein ? undefined : ''} aria-hidden={klein ? 'true' : undefined}>
+    {balken.map((b, i) => {
+      const hoehe = b.leer ? 0 : Math.max(1, Math.round(b.anteil * 100))
+      const muster = `${id}-schraffur-${b.jahr}`
+      const bild = (
+        <svg viewBox="0 0 1 100" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+          {b.laufend ? (
+            <>
+              <defs>
+                <pattern id={muster} patternUnits="userSpaceOnUse" width="1" height="5">
+                  <rect class="schraffur" width="1" height="2.5" />
+                </pattern>
+              </defs>
+              <rect y={100 - hoehe} width="1" height={hoehe} fill={`url(#${muster})`} />
+            </>
+          ) : (
+            <rect class="voll" y={100 - hoehe} width="1" height={hoehe} />
+          )}
+        </svg>
+      )
+      return (
+        <li data-team={b.teamId ?? undefined} class:list={{ laufend: b.laufend, hier: b.jahr === markiert, ende: i === balken.length - 1 }}>
+          {klein ? bild : (
+            <a href={pfad.saison(b.jahr)} title={text(b)}>
+              {bild}
+              <span class="sr-only">{text(b)}</span>
+            </a>
+          )}
+          {marke(b.jahr) && <span class="marke" aria-hidden="true">{b.jahr}</span>}
+        </li>
+      )
+    })}
+  </ol>
+  </div>
+</figure>
+
+<script>
+  /*
+   * Mit JavaScript, nur für das große Band:
+   *
+   * Die Zeile. Zeiger und Fokus schreiben den Text des Balkens in die Zeile
+   * unter der Legende; er bleibt dort, bis ein anderer Balken gewählt wird,
+   * und Esc leert sie. Der Tooltip des Browsers wird dann nicht mehr gebraucht.
+   *
+   * Tastatur. 77 Tabstopps zwischen dem Sprunglink und dem WM-Stand wären eine
+   * Wand. Mit Skript ist das Band ein Tabstopp (das jüngste Jahr), und die
+   * Pfeiltasten, Pos1 und Ende wandern durch die Jahre.
+   *
+   * Antippen. Am Telefon steht kein Zeiger über einem 3 px breiten Balken. Der
+   * erste Tipp zeigt das Jahr in der Zeile, erst der zweite auf denselben
+   * Balken öffnet die Saison.
+   */
+  for (const liste of document.querySelectorAll<HTMLOListElement>('[data-meisterband]')) {
+    const zeile = liste.closest('figure')?.querySelector<HTMLElement>('[data-meisterband-zeile]')
+    const links = [...liste.querySelectorAll<HTMLAnchorElement>('a')]
+    if (!links.length || !zeile) continue
+    const texte = links.map((a) => a.title)
+    links.forEach((a) => a.removeAttribute('title'))
+
+    let aktiv = links.length - 1
+    const zeige = (i: number) => {
+      zeile.textContent = texte[i]
+      zeile.classList.add('an')
+      links.forEach((a, j) => a.classList.toggle('gewaehlt', j === i))
+    }
+    const setze = (i: number, fokus: boolean) => {
+      links[aktiv].tabIndex = -1
+      aktiv = Math.max(0, Math.min(links.length - 1, i))
+      links[aktiv].tabIndex = 0
+      zeige(aktiv)
+      if (fokus) links[aktiv].focus()
+    }
+    links.forEach((a) => (a.tabIndex = -1))
+    links[aktiv].tabIndex = 0
+
+    liste.addEventListener('pointerover', (e) => {
+      const i = links.indexOf((e.target as Element).closest('a') as HTMLAnchorElement)
+      if (i >= 0) zeige(i)
+    })
+    liste.addEventListener('focusin', (e) => {
+      const i = links.indexOf(e.target as HTMLAnchorElement)
+      if (i >= 0) setze(i, false)
+    })
+    liste.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        zeile.textContent = ''
+        links.forEach((a) => a.classList.remove('gewaehlt'))
+        return
+      }
+      const i = links.indexOf(e.target as HTMLAnchorElement)
+      if (i < 0) return
+      const ziel = ({ ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: links.length - 1 } as Record<string, number>)[e.key]
+      if (ziel === undefined) return
+      e.preventDefault()
+      setze(ziel, true)
+    })
+
+    let beruehrt = false
+    let gewaehlt = -1
+    liste.addEventListener('pointerdown', (e) => {
+      beruehrt = e.pointerType === 'touch'
+    })
+    liste.addEventListener('click', (e) => {
+      const i = links.indexOf((e.target as Element).closest('a') as HTMLAnchorElement)
+      if (i < 0 || !beruehrt || gewaehlt === i) return
+      e.preventDefault()
+      gewaehlt = i
+      setze(i, true)
+    })
+  }
+</script>

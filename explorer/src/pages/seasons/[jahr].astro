@@ -6,6 +6,8 @@ import { saisonDaten } from '../../lib/saison.js'
 import Verlauf from '../../components/Verlauf.astro'
 import Sprung from '../../components/Sprung.astro'
 import WasWaereWenn from '../../components/WasWaereWenn.astro'
+import Meisterband from '../../components/Meisterband.astro'
+import { meisterbandDaten } from '../../components/meisterband-daten.js'
 
 export async function getStaticPaths() {
   return saisonListe().map((s) => ({ params: { jahr: String(s.jahr) } }))
@@ -70,6 +72,17 @@ const gefahren = rennen.filter((r) => r.siegerId).length
 const saisonLaeuft = !meister && gefahren < rennen.length
 const mitSprints = rennen.some((r) => r.mitSprint)
 
+/* Noch nicht alle Rennen gefahren – auch wenn der Titel schon vergeben ist. */
+const offen = gefahren < rennen.length
+const naechstesJahr = saisonListe()[0]?.jahr > jahr
+
+/*
+ * Die Lackierung der Seite: das Team, für das der Meister – oder, solange es
+ * keinen gibt, der Führende – in diesem Jahr die meisten Rennen fuhr. Dieselbe
+ * Farbe trägt sein Balken im Meisterband.
+ */
+const lackierung = meisterbandDaten().find((b) => b.jahr === jahr)?.teamId ?? null
+
 /* Die Ergebnismatrix: eine Zelle je Fahrer und Rennen. */
 const zelle = (fahrerId, runde) => zellen.get(`${fahrerId}|${runde}`)
 const zellText = (z) => {
@@ -108,66 +121,92 @@ const ziele = [
   titel={`Formula 1 season ${jahr} – standings and races`}
   beschreibung={`${saison.rennen} races${meister ? `, World Champion ${meister.name}` : ''}${teamMeister ? `, constructors' title ${teamMeister.name}` : ''}: standings, results grid, calendar and every entry.`}
   brotkrumen={[{ name: 'Seasons', pfad: '/seasons/' }]}
+  lackierung={lackierung}
 >
+  {/*
+    * Der Kopf: das Jahr auf dem Streifen der Lackierung des Meisterteams, ein
+    * Satz zur Lage, das Meisterband im Kleinen – wo die Saison zwischen allen
+    * anderen steht. Der laute Moment der Seite ist der Stand darunter.
+    */}
   <header class="seitenkopf">
+    <nav class="nachbarn" aria-label="Neighbouring seasons">
+      {jahr > 1950 && <a href={pfad.saison(jahr - 1)}>‹ {jahr - 1}</a>}
+      {naechstesJahr && <a href={pfad.saison(jahr + 1)}>{jahr + 1} ›</a>}
+    </nav>
     <div>
       <p class="oberzeile">
         <a href={pfad.seite('/seasons/')}>Seasons</a>
-        <span class="trenner">/</span>
-        <span class="still">{saisonLaeuft ? `${gefahren} of ${saison.rennen} races run` : `${saison.rennen} races`}</span>
       </p>
-      <h1>{jahr} season</h1>
-      <ul class="eckdaten">
-        {saisonLaeuft && <li class="stark">In progress</li>}
-        {saison.dropped_scores === 1 && <li>Dropped scores</li>}
-        {mitSprints && <li>{rennen.filter((r) => r.mitSprint).length} sprint weekends</li>}
-        {entscheidung && <li>Title decided in round {entscheidung.runde}</li>}
-      </ul>
-      <p class="saison-nachbarn">
-        {jahr > 1950 && <a href={pfad.saison(jahr - 1)}>‹ {jahr - 1}</a>}
-        {saisonListe()[0]?.jahr > jahr && <a href={pfad.saison(jahr + 1)}>{jahr + 1} ›</a>}
-      </p>
+      <div class="titelblock">
+        <h1>{jahr} season</h1>
+        <p class="kopfsatz">
+          {saison.rennen} {saison.rennen === 1 ? 'race' : 'races'}{offen && gefahren > 0 && `, ${gefahren} run so far`}{mitSprints && `, ${rennen.filter((r) => r.mitSprint).length} with a sprint`}.{' '}
+          {meister ? (
+            <>
+              {meister.name} won the title
+              {entscheidung && <> in round {entscheidung.runde}, at the <a href={pfad.rennen(entscheidung.id)}>{entscheidung.nameVoll}</a></>}.{' '}
+            </>
+          ) : fuehrender && gefahren > 0 ? (
+            <>{fuehrender.name} leads the championship. </>
+          ) : null}
+          {teamMeister ? (
+            <>{teamMeister.name} won the constructors' championship.</>
+          ) : teamWertung[0] ? (
+            <>{teamWertung[0].name} lead the constructors.</>
+          ) : (
+            <>There was no constructors' championship yet; it was first awarded in 1958.</>
+          )}
+        </p>
+      </div>
+      <Meisterband markiert={jahr} />
     </div>
   </header>
 
-  <ul class="kacheln namen">
-    {meister ? (
-      <li class="stark">
-        <span>World Champion</span>
-        <b><a href={pfad.fahrer(meister.id)}>{meister.name}</a></b>
-        <i>{ein(meister.points)} points · {meister.siege} {meister.siege === 1 ? 'win' : 'wins'}</i>
-      </li>
-    ) : fuehrender && (
-      <li class="stark">
-        <span>Championship leader</span>
-        <b><a href={pfad.fahrer(fuehrender.id)}>{fuehrender.name}</a></b>
-        <i>{ein(fuehrender.points)} points</i>
-      </li>
+  {/*
+    * Der Stand als zwei Türme, Fahrer und Konstrukteure nebeneinander: Das ist
+    * der Grund, die Seite aufzurufen. Vorher stand er im zweiten Abschnitt,
+    * unter einem Diagramm. Die ganze Wertung mit Siegen und Teams steht unten.
+    */}
+  <div class="tuerme">
+    <section aria-labelledby="turm-fahrer">
+      <div class="abschnitt-kopf">
+        <div><h2 id="turm-fahrer">{offen ? 'Drivers, so far' : 'Drivers'}</h2></div>
+        <a class="mehr" href="#wertung">All {fahrerWertung.length}</a>
+      </div>
+      <ol class="turm">
+        {fahrerWertung.slice(0, 5).map((f, i) => (
+          <li data-team={f.teams.at(-1)?.id}>
+            <span class:list={['platz', { p1: f.position === 1, p2: f.position === 2, p3: f.position === 3 }]}>{f.position ?? '–'}</span>
+            <span class="code" aria-hidden="true">{f.kuerzel}</span>
+            <span class="wer"><a class="zeile" href={pfad.fahrer(f.id)}>{f.name}</a> <i>{f.teams.map((t) => t.name).join(', ')}</i></span>
+            <b class="wert">{ein(f.points)}<span class="sr-only"> points</span></b>
+            <span class="abstand">{i > 0 && <>−{ein(fahrerWertung[0].points - f.points)}<span class="sr-only"> behind</span></>}</span>
+          </li>
+        ))}
+      </ol>
+    </section>
+    {teamWertung.length > 0 && (
+      <section aria-labelledby="turm-teams">
+        <div class="abschnitt-kopf">
+          <div><h2 id="turm-teams">{offen ? 'Constructors, so far' : 'Constructors'}</h2></div>
+          <a class="mehr" href="#wertung">All {teamWertung.length}</a>
+        </div>
+        <ol class="turm">
+          {teamWertung.slice(0, 5).map((t, i) => (
+            <li data-team={t.id}>
+              <span class:list={['platz', { p1: t.position === 1, p2: t.position === 2, p3: t.position === 3 }]}>{t.position ?? '–'}</span>
+              <span class="wer"><a class="zeile" href={pfad.team(t.id)}>{t.name}</a></span>
+              <b class="wert">{ein(t.points)}<span class="sr-only"> points</span></b>
+              <span class="abstand">{i > 0 && <>−{ein(teamWertung[0].points - t.points)}<span class="sr-only"> behind</span></>}</span>
+            </li>
+          ))}
+        </ol>
+      </section>
     )}
-    {teamMeister ? (
-      <li>
-        <span>Constructors' champion</span>
-        <b><a href={pfad.team(teamMeister.id)}>{teamMeister.name}</a></b>
-        <i>{ein(teamMeister.points)} points</i>
-      </li>
-    ) : teamWertung[0] ? (
-      <li>
-        <span>Leading constructor</span>
-        <b><a href={pfad.team(teamWertung[0].id)}>{teamWertung[0].name}</a></b>
-        <i>{ein(teamWertung[0].points)} points</i>
-      </li>
-    ) : (
-      <li>
-        <span>Constructors' championship</span>
-        <b>Not yet held</b>
-        <i>It was first awarded in 1958.</i>
-      </li>
-    )}
-  </ul>
+  </div>
 
   <ul class="kacheln">
-    <li><span>Races</span><b>{saison.rennen}</b></li>
-    <li><span>Different winners</span><b>{kennzahlen.sieger}</b></li>
+    <li><span>Different winners</span><b>{kennzahlen.sieger}</b><i>in {gefahren} {gefahren === 1 ? 'race' : 'races'}</i></li>
     <li><span>Pole-sitters</span><b>{kennzahlen.polesetter}</b></li>
     <li>
       <span>Not classified</span>
@@ -184,19 +223,15 @@ const ziele = [
 
   {saison.dropped_scores === 1 && (
     <p class="hinweis warn">
-      In this season not every result counted towards the championship: only a driver's best
-      races went into the standings, the rest were dropped. The championship standings therefore
-      sit below the sum of the points scored in races.
+      <b>Dropped scores:</b> not every result counted towards the championship. Only a driver's
+      best races went into the standings, so the standings sit below the sum of the points
+      scored in races.
     </p>
   )}
 
-  {entscheidung && (
-    <p class="hinweis akzent">
-      <span>
-        The title was decided in round {entscheidung.runde}:{' '}
-        <a href={pfad.rennen(entscheidung.id)}>{entscheidung.nameVoll}</a>
-        {' '}on {datum(entscheidung.datum)}.
-      </span>
+  {!offen && gefahren > 0 && (
+    <p class="hinweis karo">
+      <b>Season complete.</b> All {gefahren} races have been run; the standings are final.
     </p>
   )}
 
@@ -431,13 +466,20 @@ const ziele = [
     .wertungen { grid-template-columns: minmax(0, 1fr); }
   }
 
-  .kacheln.namen {
-    grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr));
+  /* Der Stand oben: Fahrer und Konstrukteure nebeneinander, wie die Wertungen unten (7 zu 5). */
+  .tuerme {
+    display: grid;
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+    gap: var(--abstand-6) var(--abstand-7);
+    align-items: start;
+    margin-bottom: var(--abstand-6);
   }
 
-  .saison-nachbarn { display: flex; gap: 1rem; margin: 0.6rem 0 0; font-size: 0.9rem; font-weight: 600; }
-  .saison-nachbarn a { text-decoration: none; }
-  .punktesystem { margin: 0 0 1rem; font-size: 0.9rem; color: var(--ink-2); }
+  @media (max-width: 56rem) {
+    .tuerme { grid-template-columns: minmax(0, 1fr); }
+  }
+
+  .punktesystem { max-width: var(--mass); margin: 0 0 var(--abstand-4); color: var(--ink-2); }
   .team-verlauf { margin-top: 1rem; }
   .team-verlauf summary { cursor: pointer; min-height: 2.25rem; font-weight: 600; color: var(--ink); margin-bottom: 0.5rem; }
 

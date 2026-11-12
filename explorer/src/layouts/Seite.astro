@@ -8,12 +8,13 @@
  * selbst zu markieren.
  */
 /*
- * Eine Schrift, mit der Seite ausgeliefert (font-src 'self'): Libre Franklin,
- * die Franklin Gothic der Statistikseiten im Sportteil. Überschriften, Text
- * und Tabellen unterscheiden sich nur in Gewicht und Größe – zwei Familien
- * nebeneinander hatten die Seite in Plakat und Fließtext zerlegt.
+ * Eine Schrift, mit der Seite ausgeliefert (font-src 'self'): Archivo mit
+ * Breiten- und Gewichtsachse. Zwei Familien nebeneinander hatten die Seite
+ * früher in Plakat und Fließtext zerlegt; eine Familie mit Breitenachse trennt
+ * Titel, Text und Zahlen trotzdem – breit, normal, schmal (docs/DESIGN.md, 6).
+ * Libre Franklin kannte nur das Gewicht, und alles sah gleich laut aus.
  */
-import '@fontsource-variable/libre-franklin/wght.css'
+import '@fontsource-variable/archivo/wdth.css'
 import '../styles/theme.css'
 import '../styles/teams.css'
 import Suche from '../components/Suche.astro'
@@ -36,9 +37,15 @@ interface Props {
   brotkrumen?: { name: string; pfad: string }[]
   /** Nicht in Suchmaschinen – für die Fehlerseite, die unter jeder falschen Adresse steht. */
   ohneIndex?: boolean
+  /**
+   * Das Team, dessen Lackierung die Seite trägt (docs/DESIGN.md, Prinzip 1):
+   * Streifen am Titel, Unterstreichungen, Epochenband. Ohne Gegenstand – oder
+   * für ein Team ohne Farbe in teams.css – bleibt es Tinte.
+   */
+  lackierung?: string | null
 }
 
-const { titel, beschreibung, strukturiert = [], brotkrumen = [], ohneIndex = false } = Astro.props
+const { titel, beschreibung, strukturiert = [], brotkrumen = [], ohneIndex = false, lackierung = null } = Astro.props
 
 /*
  * Die Leiste zerfiel in zwei Arten von Punkten, und mit zwölf davon lief sie
@@ -60,13 +67,18 @@ const NAV = [
   { pfad: '/circuits/', label: 'Circuits' },
 ]
 
+/*
+ * Die Werkzeuge stehen nur mit Namen da. Eine Zeile Beschreibung je Punkt
+ * („Two careers side by side“) wiederholte, was der Name sagt, und machte das
+ * Menü dreimal so hoch.
+ */
 const WERKZEUGE = [
-  { pfad: '/records/', label: 'Records', dazu: 'Every all-time mark, linked to its race' },
-  { pfad: '/changes/', label: 'Changes', dazu: 'What has moved, and what is close' },
-  { pfad: '/teammates/', label: 'Team-mates', dazu: 'Drivers rated against the same car' },
-  { pfad: '/comparison/', label: 'Compare', dazu: 'Two careers side by side' },
-  { pfad: '/explorer/', label: 'Explorer', dazu: 'Your own queries over every result' },
-  { pfad: '/quiz/', label: 'Quiz', dazu: 'Test yourself, from easy to expert' },
+  { pfad: '/records/', label: 'Records' },
+  { pfad: '/changes/', label: 'Changes' },
+  { pfad: '/teammates/', label: 'Team-mates' },
+  { pfad: '/comparison/', label: 'Compare' },
+  { pfad: '/explorer/', label: 'Explorer' },
+  { pfad: '/quiz/', label: 'Quiz' },
 ]
 
 /*
@@ -126,8 +138,9 @@ const ldText = ld.length ? JSON.stringify(ld.length === 1 ? ld[0] : ld).replace(
     {/* Fremde Ziele erfahren die Herkunft, nicht die besuchte Unterseite. */}
     <meta name="referrer" content="strict-origin-when-cross-origin" />
     <link rel="icon" type="image/svg+xml" href={`${BASIS}/favicon.svg`} />
-    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#15181d" media="(prefers-color-scheme: dark)" />
+    {/* Der Grund der Seite: hell Beton, dunkel Asphalt (theme.css, --plane). */}
+    <meta name="theme-color" content="#eef1f2" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#1c2026" media="(prefers-color-scheme: dark)" />
     <title>{seitentitel}</title>
     <meta name="description" content={beschreibung} />
     {ohneIndex ? <meta name="robots" content="noindex" /> : <link rel="canonical" href={kanonisch} />}
@@ -149,7 +162,7 @@ const ldText = ld.length ? JSON.stringify(ld.length === 1 ? ld[0] : ld).replace(
     <script is:inline set:html={MODUS_SKRIPT} />
   </head>
 
-  <body>
+  <body data-lackierung={lackierung ?? undefined}>
     {/*
       * Der erste Tabstopp jeder Seite: Wer mit der Tastatur kommt, müsste sonst
       * durch elf Punkte der Kopfleiste, bevor der Inhalt beginnt.
@@ -185,10 +198,7 @@ const ldText = ld.length ? JSON.stringify(ld.length === 1 ? ld[0] : ld).replace(
                 <ul>
                   {WERKZEUGE.map((w) => (
                     <li>
-                      <a href={`${BASIS}${w.pfad}`} aria-current={istAktiv(w.pfad) ? 'page' : undefined}>
-                        <b>{w.label}</b>
-                        <span>{w.dazu}</span>
-                      </a>
+                      <a href={`${BASIS}${w.pfad}`} aria-current={istAktiv(w.pfad) ? 'page' : undefined}>{w.label}</a>
                     </li>
                   ))}
                 </ul>
@@ -253,10 +263,8 @@ const ldText = ld.length ? JSON.stringify(ld.length === 1 ? ld[0] : ld).replace(
             <a class="logo" href={`${BASIS}/`}>
               <b>Formula 1</b><span>Statistics</span>
             </a>
-            <p>
-              Every number on this site is worked out from the race results themselves – not
-              copied from a curated list.
-            </p>
+            {/* Woher die Zahlen kommen, steht hier und nur hier (docs/DESIGN.md, 10). */}
+            <p>Every number on this site is calculated from the race results.</p>
           </div>
           <nav aria-label="Browse (footer)">
             <h2>Browse</h2>

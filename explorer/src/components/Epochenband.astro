@@ -1,0 +1,74 @@
+---
+/**
+ * Das Epochenband (docs/DESIGN.md 8.3): Wo der Gegenstand einer Seite auf der
+ * Zeitachse steht. Ein Feld je Saison von 1950 bis zur jüngsten; gefahrene
+ * Saisons hoch in der Lackierung der Seite, Titeljahre noch höher in Tinte mit
+ * Goldkappe, die übrigen eine flache Linie.
+ *
+ * Ein Zeitraum wie „2001–2026“ verschwiege Lücken – Alonso fuhr 2019 und 2020
+ * nicht. Die Felder zeigen sie, ohne dass man liest.
+ *
+ * Für Vorleser ist das Band ein Bild mit einem Satz; die Felder selbst sind
+ * Schmuck für sie. Gestaltet in theme.css (.epochen), aus demselben Grund wie
+ * das Meisterband: kein Bereichsattribut an 77 Feldern.
+ */
+import { saisonListe } from '../lib/db.js'
+
+interface Props {
+  /** Die Jahre, in denen der Gegenstand dabei war. */
+  jahre: Iterable<number>
+  /** Darunter die Jahre mit einem Titel. */
+  titel?: Iterable<number>
+  /** Wie die Jahre heißen: „Seasons“, „Races here“ … */
+  wort?: string
+}
+
+const { jahre, titel = [], wort = 'Seasons' } = Astro.props
+const an = new Set(jahre)
+const titelJahre = new Set(titel)
+const alle = saisonListe().map((s) => s.jahr).sort((a, b) => a - b)
+const von = alle[0]
+const bis = alle.at(-1)
+
+/** 1950, 1951, 1952, 1955 → „1950–1952, 1955“ */
+const spannen = (menge: Set<number>) => {
+  const s = [...menge].sort((a, b) => a - b)
+  const teile: string[] = []
+  for (let i = 0; i < s.length; i++) {
+    let j = i
+    while (j + 1 < s.length && s[j + 1] === s[j] + 1) j++
+    teile.push(i === j ? String(s[i]) : `${s[i]}–${s[j]}`)
+    i = j
+  }
+  return teile.join(', ')
+}
+
+const gefahren = [...an].sort((a, b) => a - b)
+const erstes = gefahren[0]
+const letztes = gefahren.at(-1)
+
+/*
+ * Beschriftet werden die Enden der Achse und das erste und letzte Jahr des
+ * Gegenstands. Steht eine Zahl näher als acht Saisons an einer anderen, die
+ * schon steht, entfällt sie – sonst liefen sie am Telefon ineinander.
+ */
+const marken: number[] = []
+for (const j of [von, bis, erstes, letztes]) {
+  if (j === undefined || marken.includes(j)) continue
+  if (marken.some((m) => Math.abs(m - j) < 8)) continue
+  marken.push(j)
+}
+
+const satz =
+  `${wort}: ${an.size ? spannen(an) : 'none'}.` + (titelJahre.size ? ` Titles: ${spannen(titelJahre)}.` : '')
+---
+
+<div class="epochen" role="img" aria-label={satz}>
+  <ol aria-hidden="true">
+    {alle.map((j) => (
+      <li class:list={{ an: an.has(j) && !titelJahre.has(j), titel: titelJahre.has(j), ende: j === bis }}>
+        {marken.includes(j) && <span>{j}</span>}
+      </li>
+    ))}
+  </ol>
+</div>
