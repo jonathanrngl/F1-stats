@@ -561,7 +561,21 @@ Auf dem Grund, oben 1 px Tinte. Links die Wortmarke und der eine Satz zur
 Herkunft; daneben Browse und Analysis; darunter Quelle, Fassung, Lizenz, API,
 Feed, Kalender, klassische Fassung. Alle Links unterstrichen.
 
-### 8.13 Zustände
+### 8.13 Favicon und Vorschaubild
+
+Beide zeigen das Meisterband, nicht die Marke des Sports. Das alte Favicon
+stand auf „F1“, das alte Vorschaubild auf schrägen roten Streifen wie im Logo
+der Formel 1, einer gesperrten Versalzeile und fast schwarzem Grund.
+
+| | Vorlage | Inhalt |
+|---|---|---|
+| `public/og.png` (1200 × 630) | `scripts/og-bild.html`, gezeichnet mit `node scripts/og-bild.mjs` | Wortmarke, ein Satz, darunter das Meisterband der abgeschlossenen Saisons 1950–2025 auf der Monitorfläche, Quelle im Fuß. Feste Werte – Geschichte ändert sich nicht; keine Anzahl, die nach dem nächsten Rennen falsch wäre. Einmal im Jahr, nach der Saison, neu zeichnen. |
+| `public/favicon.svg` | von Hand | Monitorfläche `#232830`, vier Balken in den dunklen Lackierungen von Ferrari, Lotus, McLaren und Mercedes, eine Achse in Tinte. Geprüft bei 16, 32 und 64 px auf hellem und dunklem Grund. |
+
+Recraft, das sonst erste Werkzeug für Bildmarken, war in dieser Umgebung nicht
+angebunden; beide sind von Hand gezeichnet und aus dem Meisterband abgeleitet.
+
+### 8.14 Zustände
 
 - **Laden** (Inseln, „On this day“): die Fläche steht in ihrer endgültigen
   Höhe, darin „Loading …“ in `--muted`. Kein Spinner, kein Skelett.

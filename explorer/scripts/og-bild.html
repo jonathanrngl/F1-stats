@@ -1,25 +1,55 @@
 <!--
   Vorlage für public/og.png, das Vorschaubild geteilter Links (1200 × 630).
   Neu erzeugen:
-    chrome --headless=new --hide-scrollbars --force-device-scale-factor=1 \n      --window-size=1200,630 --screenshot=public/og.png scripts/og-bild.html
-  Bewusst ohne Zahlen: „1.163 Rennen“ wäre nach dem nächsten Rennen falsch.
+    node scripts/og-bild.mjs
+  Das Bild ist das Meisterband der Startseite (docs/DESIGN.md 8.4) auf der
+  Monitorfläche: je abgeschlossene Saison ein Balken in der Lackierung des
+  Meisterteams, so hoch wie der Anteil an den möglichen Punkten. Die Werte
+  stehen fest im Bild – sie sind Geschichte und ändern sich nicht. Eine
+  laufende Saison fehlt bewusst, und das Bild nennt keine Anzahl: „1,169
+  races“ wäre nach dem nächsten Rennen falsch.
+  Die Farben sind die dunklen Werte aus teams.css, wie auf dem Monitor.
 -->
-<!doctype html><html><head><meta charset="utf-8"><style>
+<!doctype html><html lang="en-GB"><head><meta charset="utf-8"><style>
+@font-face{font-family:'Archivo Variable';src:url('../node_modules/@fontsource-variable/archivo/files/archivo-latin-wdth-normal.woff2') format('woff2');font-weight:100 900;font-stretch:62% 125%}
 html,body{margin:0;width:1200px;height:630px;overflow:hidden}
-body{background:#111113;color:#f5f5f3;font-family:"Segoe UI",system-ui,sans-serif;position:relative}
-.streifen{position:absolute;right:-60px;top:0;bottom:0;width:520px;display:grid;align-content:center;gap:26px;transform:skewX(-18deg)}
-.streifen i{display:block;height:46px;background:#e10600;border-radius:6px;margin-left:auto}
-.streifen i:nth-child(1){width:520px}.streifen i:nth-child(2){width:410px;opacity:.85}.streifen i:nth-child(3){width:300px;opacity:.7}
-.inhalt{position:absolute;left:80px;top:96px;width:640px}
-.ober{font-size:26px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#ff2b1f}
-h1{margin:14px 0 0;font-size:92px;line-height:1;font-weight:850;letter-spacing:-.03em}
-p{margin:34px 0 0;font-size:34px;line-height:1.35;color:#cfcec6}
-.fuss{position:absolute;left:80px;bottom:64px;font-size:24px;color:#a9a8a2;letter-spacing:.02em}
-.linie{position:absolute;left:0;right:0;bottom:0;height:10px;background:#e10600}
+body{background:#eef1f2;color:#16191e;font-family:'Archivo Variable',system-ui,sans-serif;position:relative}
+.marke{position:absolute;left:72px;top:64px;font-size:60px;line-height:1;white-space:nowrap}
+.marke b{font-stretch:125%;font-weight:800;letter-spacing:-.01em}
+.marke span{font-weight:400;color:#545b65}
+.satz{position:absolute;left:72px;top:146px;font-size:30px;color:#363c45}
+.monitor{position:absolute;left:72px;right:72px;top:220px;height:300px;background:#232830}
+.balken{position:absolute;left:28px;right:28px;top:40px;height:200px;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);column-gap:2px;align-items:end;border-bottom:2px solid #eceef0}
+.balken i{display:block}
+.achse{position:absolute;left:28px;right:28px;top:252px;height:20px}
+.achse span{position:absolute;font-size:18px;font-stretch:75%;color:#9ba2ac;font-variant-numeric:tabular-nums}
+.fuss{position:absolute;left:72px;bottom:44px;font-size:20px;color:#545b65}
 </style></head><body>
-<div class="streifen"><i></i><i></i><i></i></div>
-<div class="inhalt"><div class="ober">Formula 1</div><h1>Statistics</h1>
-<p>Every season since 1950, in numbers: results, records, head-to-heads.</p></div>
-<div class="fuss">Worked out from the race results themselves · Data: F1DB, CC BY 4.0</div>
-<div class="linie"></div>
+<div class="marke"><b>Formula 1</b> <span>Statistics</span></div>
+<div class="satz">Champions, races and records since 1950</div>
+<div class="monitor"><div class="balken" id="balken"></div><div class="achse" id="achse"></div></div>
+<div class="fuss">Data from F1DB, CC BY 4.0. Not an official Formula 1 site.</div>
+<script>
+/* [Jahr, Anteil in Prozent, Farbe]: Fahrermeister 1950–2025, aus Meisterband-Daten. */
+const DATEN = [[1950,56,"#e0405e"],[1951,63,"#e0405e"],[1952,85,"#ff4055"],[1953,65,"#ff4055"],[1954,79,"#27f4d2"],[1955,76,"#27f4d2"],[1956,56,"#ff4055"],[1957,79,"#ff4f5f"],[1958,54,"#ff4055"],[1959,47,"#3aa37c"],[1960,67,"#3aa37c"],[1961,60,"#ff4055"],[1962,64,"#4f9b6c"],[1963,81,"#2fa37a"],[1964,44,"#ff4055"],[1965,67,"#2fa37a"],[1966,56,"#6d8fd4"],[1967,52,"#6d8fd4"],[1968,44,"#2fa37a"],[1969,64,"#5a95dc"],[1970,56,"#2fa37a"],[1971,63,"#5b84c9"],[1972,56,"#2fa37a"],[1973,56,"#5b84c9"],[1974,41,"#ff9933"],[1975,55,"#ff4055"],[1976,48,"#ff9933"],[1977,57,"#ff4055"],[1978,44,"#2fa37a"],[1979,44,"#ff4055"],[1980,56,"#64c4ff"],[1981,37,"#6d8fd4"],[1982,33,"#64c4ff"],[1983,44,"#6d8fd4"],[1984,52,"#ff9933"],[1985,53,"#ff9933"],[1986,51,"#ff9933"],[1987,56,"#64c4ff"],[1988,65,"#ff9933"],[1989,56,"#ff9933"],[1990,54,"#ff9933"],[1991,62,"#ff9933"],[1992,68,"#64c4ff"],[1993,62,"#64c4ff"],[1994,66,"#34c77b"],[1995,60,"#34c77b"],[1996,61,"#64c4ff"],[1997,48,"#64c4ff"],[1998,63,"#ff9933"],[1999,48,"#ff9933"],[2000,64,"#ff4055"],[2001,72,"#ff4055"],[2002,85,"#ff4055"],[2003,58,"#ff4055"],[2004,82,"#ff4055"],[2005,74,"#ffd800"],[2006,74,"#ffd800"],[2007,65,"#ff4055"],[2008,54,"#ff9933"],[2009,58,"#b8fd6e"],[2010,54,"#5b8fe0"],[2011,83,"#5b8fe0"],[2012,56,"#5b8fe0"],[2013,84,"#5b8fe0"],[2014,77,"#27f4d2"],[2015,80,"#27f4d2"],[2016,73,"#27f4d2"],[2017,73,"#27f4d2"],[2018,78,"#27f4d2"],[2019,76,"#27f4d2"],[2020,83,"#27f4d2"],[2021,70,"#5b8fe0"],[2022,76,"#5b8fe0"],[2023,93,"#5b8fe0"],[2024,65,"#5b8fe0"],[2025,65,"#ff9933"]]
+const band = document.getElementById('balken')
+const achse = document.getElementById('achse')
+const n = DATEN.length
+for (const [jahr, anteil, farbe] of DATEN) {
+  const i = document.createElement('i')
+  i.style.height = anteil * 2 + 'px'
+  i.style.background = farbe
+  i.title = String(jahr)
+  band.append(i)
+}
+for (const [k, [jahr]] of DATEN.entries()) {
+  if (jahr % 10 !== 0 && k !== n - 1) continue
+  if (jahr % 10 === 0 && DATEN[n - 1][0] - jahr < 5) continue
+  const s = document.createElement('span')
+  s.textContent = jahr
+  if (k === n - 1) s.style.right = '0'
+  else s.style.left = (k / n * 100) + '%'
+  achse.append(s)
+}
+</script>
 </body></html>
