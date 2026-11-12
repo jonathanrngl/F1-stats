@@ -24,29 +24,30 @@ const quote = (v) => `${Math.round(v * 100)}%`
   titel="Team-mate ratings – drivers measured against the same car"
   beschreibung="A rating built only from duels between team-mates, who shared the same car. A model, not a measurement – with its assumptions stated."
 >
+  {/* Kopf ohne Lackierung: ein Werkzeug, kein Gegenstand (DESIGN.md, Prinzip 1). */}
   <header class="seitenkopf">
     <div>
       <p class="oberzeile">Analysis</p>
-      <h1>Team-mates</h1>
-      <p class="lead">
-        How good was a driver, independent of the car? It cannot be measured – but two
-        team-mates drove the same car, so whoever finished ahead says something about the
-        drivers. This page turns those duels into a rating.
-      </p>
+      <div class="titelblock">
+        <h1>Team-mates</h1>
+        <p class="lead">
+          Team-mates drove the same car, so whoever finished ahead says something about the
+          drivers. This page turns those duels into a rating.
+        </p>
+      </div>
     </div>
   </header>
 
   {/*
-    * Der Warnhinweis bleibt sichtbar und oben: Es ist die einzige Seite, die ein
-    * Modell zeigt statt einer Zählung. Die drei Annahmen dahinter stehen
-    * zugeklappt darunter – wer der Zahl misstraut, findet sie mit einem Klick.
+    * Der Warnhinweis bleibt sichtbar und oben, als gelbe Flagge: Es ist die
+    * einzige Seite, die ein Modell zeigt statt einer Zählung. Die drei Annahmen
+    * dahinter stehen zugeklappt darunter – wer der Zahl misstraut, findet sie
+    * mit einem Klick.
     */}
   <div class="hinweis warn">
-    <b>This is a model, not a count.</b>{' '}
-    Everything else on this site is counted from the results. This page runs a chess-style
-    rating over {zahl(netz.fahrer)} drivers and their team-mate duels; {zahl(netz.groessteGruppe)}
-    {' '}of them are connected into a single chain, so most ratings are comparable. Drivers with
-    fewer than {MIN} duels are left out.
+    <b>Model:</b> not a count but a chess-style rating over {zahl(netz.fahrer)} drivers and their
+    team-mate duels; {zahl(netz.groessteGruppe)} of them are connected into a single chain, so
+    most ratings are comparable. Drivers with fewer than {MIN} duels are left out.
   </div>
 
   <details class="erklaerung">
@@ -96,7 +97,7 @@ const quote = (v) => `${Math.round(v * 100)}%`
                 <td class="num"><span class={plakette(i + 1)}>{i + 1}</span></td>
                 <td>
                   <a class="zeile" href={pfad.fahrer(r.id)}>{r.name}</a>
-                  <span class="neben">{r.von}–{r.bis} · {r.gegner} team-mates</span>
+                  <span class="neben">{r.von}–{r.bis}, {r.gegner} team-mates</span>
                 </td>
                 <td class="num meister">{r.wertung}</td>
                 <td class="num">{r.duelle}</td>
@@ -129,7 +130,7 @@ const quote = (v) => `${Math.round(v * 100)}%`
                 <td class="num"><span class={plakette(i + 1)}>{i + 1}</span></td>
                 <td>
                   <a class="zeile" href={pfad.fahrer(r.id)}>{r.name}</a>
-                  <span class="neben">{r.von}–{r.bis} · {r.gegner} team-mates</span>
+                  <span class="neben">{r.von}–{r.bis}, {r.gegner} team-mates</span>
                 </td>
                 <td class="num meister">{r.wertung}</td>
                 <td class="num">{r.duelle}</td>
@@ -181,8 +182,8 @@ const quote = (v) => `${Math.round(v * 100)}%`
   .raster {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(28rem, 100%), 1fr));
-    gap: 3rem 1.5rem;
-    margin-top: 3rem;
+    gap: var(--abstand-7) var(--abstand-5);
+    margin-top: var(--abstand-7);
   }
 
   .raster > .abschnitt { margin-top: 0; }
