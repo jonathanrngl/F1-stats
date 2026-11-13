@@ -818,7 +818,24 @@ main {
 }
 
 .seitenkopf > div { grid-column: 1; grid-row: 1; min-width: 0; }
-.seitenkopf > .wappen { grid-column: 2; grid-row: 1; }
+.seitenkopf > :is(.wappen, .kennung) { grid-column: 2; grid-row: 1; }
+
+/* Länderkürzel mit Zeitnahme-Kürzel und Startnummer darunter (Fahrerseite). */
+.kennung {
+  display: grid;
+  justify-items: end;
+  gap: var(--abstand-1);
+}
+
+.kennung .code-nummer {
+  font-size: var(--text-2);
+  font-stretch: var(--schmal);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
 
 /* Der Streifen in der Lackierung – nur, wenn die Seite einen Gegenstand hat. */
 body[data-lackierung] .seitenkopf h1,

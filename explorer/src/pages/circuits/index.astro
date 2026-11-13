@@ -42,12 +42,13 @@ const gewicht = startplatzGewicht(db(), { ab: GEWICHT_AB, minRennen: GEWICHT_MIN
 
   <Weltkarte strecken={strecken} jahre={jahre} aktuellAb={aktuellAb} pfadZu={pfad.strecke} />
 
-  <section class="abschnitt">
+  <section class="abschnitt" id="alle-strecken">
     <div class="abschnitt-kopf"><div><h2>All circuits</h2></div></div>
 
     <Filter
       platzhalter="Filter by circuit, place or country"
       einheit={['circuit', 'circuits']}
+      bereich="#alle-strecken"
       pillen={[{ label: `Used since ${aktuellAb}`, spalte: 2, art: 'bis', wert: aktuellAb }]}
     />
 

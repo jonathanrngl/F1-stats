@@ -360,7 +360,7 @@ export function uebersetze(frage, verzeichnis = {}) {
       k.alias
         ? `“${k.text}” stands for it`
         : k.ueberragt
-          ? `“${k.text}” – of the drivers with that name, by far the most starts`
+          ? `“${k.text}”: of the drivers with that name, by far the most starts`
           : 'the name appears in the question',
     )
   }
@@ -371,7 +371,7 @@ export function uebersetze(frage, verzeichnis = {}) {
     if (re.test(rest)) {
       verbrauche(re.exec(rest)[0])
       a.unverstanden.push(
-        `“${nach}” fits ${liste.length} drivers (${liste.slice(0, 4).map((e) => e.name).join(', ')}) – name the first name as well.`,
+        `“${nach}” fits ${liste.length} drivers (${liste.slice(0, 4).map((e) => e.name).join(', ')}). Name the first name as well.`,
       )
     }
   }
