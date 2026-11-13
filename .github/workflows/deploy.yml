@@ -83,6 +83,13 @@ jobs:
         working-directory: explorer
         run: npm run lint
 
+      # Jede Farbrolle auf jeder Fläche, hell und dunkel (docs/DESIGN.md 5.3).
+      # Ohne diesen Schritt fiele eine Farbänderung unter 4,5:1 erst auf, wenn
+      # jemand nachrechnet.
+      - name: Kontraste pruefen
+        working-directory: explorer
+        run: npm run test:kontraste
+
       # Die Datenbank ist nicht eingecheckt; sie entsteht aus der gepinnten
       # F1DB-Fassung, geprueft gegen deren Pruefsummendatei. Die Rundendaten
       # liegen im Repo (explorer/runden/) und kommen im selben Lauf hinzu.
