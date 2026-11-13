@@ -12,7 +12,9 @@
  * die Zelle steht ohnehin da.
  *
  * Eine Seite, eine Leiste. Das Skript wirkt auf alle Tabellenzeilen im
- * Inhalt; ein Abschnitt mit `data-gruppe` verschwindet, wenn in ihm nichts
+ * Inhalt – oder, mit `bereich`, nur auf die in diesem Element: Auf /circuits/
+ * stehen zwei Tabellen, und gezählt wurden „104 circuits“ statt 78, weil die
+ * zweite mitlief; ein Abschnitt mit `data-gruppe` verschwindet, wenn in ihm nichts
  * übrig bleibt, und ein Element mit `data-beim-filtern-weg` (die
  * Sprungleiste der Rennliste) ebenso, solange gefiltert wird.
  */
@@ -30,12 +32,14 @@ interface Props {
   /** Einzahl und Mehrzahl für die Zählung: „12 of 860 drivers". */
   einheit: [string, string]
   pillen?: Pille[]
+  /** CSS-Selektor des Bereichs, dessen Zeilen gefiltert werden. Ohne Angabe: der ganze Inhalt. */
+  bereich?: string
 }
 
-const { platzhalter, einheit, pillen = [] } = Astro.props
+const { platzhalter, einheit, pillen = [], bereich = 'main' } = Astro.props
 ---
 
-<div class="filterleiste" data-einheit={einheit.join('|')}>
+<div class="filterleiste" data-einheit={einheit.join('|')} data-bereich={bereich}>
   <input type="search" placeholder={platzhalter} aria-label={platzhalter} autocomplete="off" />
   {pillen.length > 0 && (
     <div class="pillen" role="group" aria-label="Quick filters">
@@ -62,8 +66,9 @@ const { platzhalter, einheit, pillen = [] } = Astro.props
     const anzeige = leiste.querySelector('output')
     const pillen = [...leiste.querySelectorAll('.pillen button')]
     const [eins, viele] = leiste.dataset.einheit.split('|')
-    const gruppen = [...document.querySelectorAll('main [data-gruppe]')]
-    const weg = [...document.querySelectorAll('main [data-beim-filtern-weg]')]
+    const bereich = leiste.dataset.bereich || 'main'
+    const gruppen = [...document.querySelectorAll(`${bereich} [data-gruppe]`)]
+    const weg = [...document.querySelectorAll(`${bereich} [data-beim-filtern-weg]`)]
 
     const falte = (s) => s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase()
 
@@ -78,7 +83,7 @@ const { platzhalter, einheit, pillen = [] } = Astro.props
      * traf nichts. Dazu kommen die title-Attribute: Das Länderkürzel „GBR“
      * trägt dort „United Kingdom“, und nach dem Land sucht man mit Namen.
      */
-    const zeilen = [...document.querySelectorAll('main tbody tr')].map((tr) => {
+    const zeilen = [...document.querySelectorAll(`${bereich} tbody tr`)].map((tr) => {
       const zellen = [...tr.cells].map((c) => c.textContent.trim())
       const titel = [...tr.querySelectorAll('[title]')].map((e) => e.getAttribute('title'))
       return { tr, text: falte([...zellen, ...titel].join(' ').replace(/\s+/g, ' ')), zellen }

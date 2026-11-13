@@ -416,7 +416,7 @@ export function rekordeInReichweite(db, rennen, dasFeld) {
           name: name.get(z.id),
           text:
             gleichauf > 1
-              ? `Shares the record here on ${siegWort(z.anzahl)} – one more would make it theirs alone.`
+              ? `Shares the record here on ${siegWort(z.anzahl)}; one more would make it theirs alone.`
               : `Holds the record here on ${siegWort(z.anzahl)} and could extend it.`,
         })
       } else if (z.anzahl === spitze - 1) {
@@ -424,7 +424,7 @@ export function rekordeInReichweite(db, rennen, dasFeld) {
           art: 'strecke',
           fahrer: z.id,
           name: name.get(z.id),
-          text: `On ${siegWort(z.anzahl)}, one behind the record of ${spitze} – a win would equal it.`,
+          text: `On ${siegWort(z.anzahl)}, one behind the record of ${spitze}; a win would equal it.`,
         })
       }
     }
@@ -451,7 +451,7 @@ export function rekordeInReichweite(db, rennen, dasFeld) {
           art: 'bestenliste',
           fahrer: id,
           name: name.get(id),
-          text: `Shares the all-time record on ${eigene} ${l.wort} – one more, and it is theirs alone.`,
+          text: `Shares the all-time record on ${eigene} ${l.wort}; one more, and it is theirs alone.`,
         })
       } else if (eigene === best - 1) {
         const halter = fuehrende.map((x) => x.name).join(', ')

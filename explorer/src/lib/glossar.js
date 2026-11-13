@@ -43,12 +43,12 @@ export const GLOSSAR = [
   {
     begriffe: ['wins', 'win'],
     titel: 'Wins',
-    text: 'Races finished in first place. Sprint wins are not included – they are counted separately.',
+    text: 'Races finished in first place. Sprint wins are not included; they are counted separately.',
   },
   {
     begriffe: ['podiums', 'podium'],
     titel: 'Podiums',
-    text: 'Finishes in the top three. After the race the first three drivers stand on the podium to receive their trophies – hence the name.',
+    text: 'Finishes in the top three. After the race the first three drivers stand on the podium to receive their trophies, hence the name.',
   },
   {
     begriffe: ['races with a podium'],
@@ -58,17 +58,17 @@ export const GLOSSAR = [
   {
     begriffe: ['pole positions', 'pole position', 'poles', 'pole'],
     titel: 'Pole position',
-    text: 'The driver who sets the fastest time in qualifying starts the race from first place on the grid – the “pole”. A grid penalty can push the pole-sitter back, so taking pole and starting first are not always the same.',
+    text: 'The driver who sets the fastest time in qualifying starts the race from first place on the grid: the “pole”. A grid penalty can push the pole-sitter back, so taking pole and starting first are not always the same.',
   },
   {
     begriffe: ['pole-sitters'],
     titel: 'Pole-sitters',
-    text: 'How many different drivers took at least one pole position – the fastest time in qualifying – during the season.',
+    text: 'How many different drivers took at least one pole position (the fastest time in qualifying) during the season.',
   },
   {
     begriffe: ['pole to win', 'pole-to-win conversion'],
     titel: 'Pole to win',
-    text: 'How often a pole position – starting from first place – was turned into a win. A high share means the driver rarely lost the lead once at the front.',
+    text: 'How often a pole position, starting from first place, was turned into a win. A high share means the driver rarely lost the lead once at the front.',
   },
   {
     begriffe: ['fastest laps', 'fastest lap'],
@@ -98,12 +98,12 @@ export const GLOSSAR = [
   {
     begriffe: ['driver of the day'],
     titel: 'Driver of the Day',
-    text: 'A fan vote held during each race since 2016. It has no effect on points or results – it shows whose race the audience liked best.',
+    text: 'A fan vote held during each race since 2016. It has no effect on points or results; it shows whose race the audience liked best.',
   },
   {
     begriffe: ['grand slams', 'grand slam'],
     titel: 'Grand Slam',
-    text: 'The perfect weekend: pole position, the win, the fastest lap, and leading every single lap of the race – all in the same Grand Prix.',
+    text: 'The perfect weekend: pole position, the win, the fastest lap, and leading every single lap of the race, all in the same Grand Prix.',
   },
   {
     begriffe: ['one-twos', 'one-two'],
@@ -140,7 +140,7 @@ export const GLOSSAR = [
   {
     begriffe: ['dropped'],
     titel: 'Dropped points',
-    text: 'Until 1990 only a driver’s best results counted towards the title – for example the best 11 of 16 races. Points from the remaining races were dropped.',
+    text: 'Until 1990 only a driver’s best results counted towards the title, for example the best 11 of 16 races. Points from the remaining races were dropped.',
   },
   {
     begriffe: ['share of possible points'],
@@ -172,7 +172,7 @@ export const GLOSSAR = [
   {
     begriffe: ['avg grid position'],
     titel: 'Average grid position',
-    text: 'The average starting position. The grid – the starting order – is set by qualifying, so this shows how fast the driver usually was over one lap.',
+    text: 'The average starting position. The grid, the starting order, is set by qualifying, so this shows how fast the driver usually was over one lap.',
   },
   {
     begriffe: ['avg finish'],
@@ -197,12 +197,12 @@ export const GLOSSAR = [
   {
     begriffe: ['retirement rate', 'not classified'],
     titel: 'Not classified',
-    text: 'Starts that did not end in the results – usually because the car broke down or crashed. Today a driver must cover 90% of the winner’s distance to be classified – even a car that stopped near the end can still count.',
+    text: 'Starts that did not end in the results, usually because the car broke down or crashed. Today a driver must cover 90% of the winner’s distance to be classified, so even a car that stopped near the end can still count.',
   },
   {
     begriffe: ['cars finishing'],
     titel: 'Cars finishing',
-    text: 'The share of the team’s starts in which the car was classified at the finish – a rough measure of reliability.',
+    text: 'The share of the team’s starts in which the car was classified at the finish: a rough measure of reliability.',
   },
   {
     begriffe: ['positions gained'],
@@ -234,7 +234,7 @@ export const GLOSSAR = [
   {
     begriffe: ['streak'],
     titel: 'Streak',
-    text: 'A run of consecutive races with the same result – for example a win or a points finish in every race.',
+    text: 'A run of consecutive races with the same result, for example a win or a points finish in every race.',
   },
 
   // ------------------------------------------------------------- Rekordlisten
@@ -276,7 +276,7 @@ export const GLOSSAR = [
   {
     begriffe: ['youngest pole-sitters'],
     titel: 'Age at pole',
-    text: 'The driver’s age on the day they took pole position – the fastest time in qualifying.',
+    text: 'The driver’s age on the day they took pole position, the fastest time in qualifying.',
   },
   {
     begriffe: ['youngest world champions', 'oldest world champions'],
@@ -308,7 +308,7 @@ export const GLOSSAR = [
   {
     begriffe: ['extending since'],
     titel: 'Extending since',
-    text: 'When the holder took the record – since then every success has pushed it further.',
+    text: 'When the holder took the record. Since then every success has pushed it further.',
   },
   {
     begriffe: ['most recently'],
@@ -422,7 +422,7 @@ export const GLOSSAR = [
   {
     begriffe: ['fastest'],
     titel: 'Fastest stop',
-    text: 'The driver’s quickest pit stop of the race. The time covers the whole trip through the pit lane, usually around 20 seconds – the car itself stands still for only two to three.',
+    text: 'The driver’s quickest pit stop of the race. The time covers the whole trip through the pit lane, usually around 20 seconds; the car itself stands still for only two to three.',
   },
   {
     begriffe: ['no.'],
@@ -432,14 +432,14 @@ export const GLOSSAR = [
 
   // --------------------------------------------------------- Autos und Teams
   {
-    begriffe: ['teams', 'team · engine'],
+    begriffe: ['teams', 'team · engine', 'team and engine'],
     titel: 'Team',
     text: 'In Formula 1 the team builds its own car and is officially called a constructor. Many teams buy their engine from another manufacturer, so team and engine name often differ.',
   },
   {
     begriffe: ['constructor'],
     titel: 'Constructor',
-    text: 'The company that built the chassis – the car without its engine. In Formula 1 this is what counts as the team.',
+    text: 'The company that built the chassis, the car without its engine. In Formula 1 this is what counts as the team.',
   },
   {
     begriffe: ['entrant'],
@@ -452,14 +452,14 @@ export const GLOSSAR = [
     text: 'The car itself, without its engine. Each new car gets its own model name, such as McLaren MP4/4.',
   },
   {
-    begriffe: ['engine', 'car · engine'],
+    begriffe: ['engine', 'car · engine', 'car and engine'],
     titel: 'Engine',
     text: 'The power unit. Teams either build their own or buy them from a manufacturer such as Mercedes, Ferrari or Honda.',
   },
   {
     begriffe: ['capacity'],
     titel: 'Capacity',
-    text: 'The engine’s displacement in litres. The rules have changed it many times – from 4.5 litres in the 1950s to 1.6 litres since 2014.',
+    text: 'The engine’s displacement in litres. The rules have changed it many times, from 4.5 litres in the 1950s to 1.6 litres since 2014.',
   },
   {
     begriffe: ['layout'],
@@ -501,7 +501,7 @@ export const GLOSSAR = [
   {
     begriffe: ['race distance'],
     titel: 'Race distance',
-    text: 'The total length of the race. A Grand Prix runs just over 305 km – Monaco is the exception – or ends after two hours.',
+    text: 'The total length of the race. A Grand Prix runs just over 305 km (Monaco is the exception) or ends after two hours.',
   },
   {
     begriffe: ['scheduled laps'],
@@ -518,7 +518,7 @@ export const GLOSSAR = [
   {
     begriffe: ['first entry'],
     titel: 'First entry',
-    text: 'The first race the driver was entered for – even if they did not qualify or start.',
+    text: 'The first race the driver was entered for, even if they did not qualify or start.',
   },
   {
     begriffe: ['first win', 'last win', 'last start'],

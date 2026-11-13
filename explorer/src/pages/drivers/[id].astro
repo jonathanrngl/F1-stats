@@ -193,7 +193,6 @@ const kopfsatz = [
   fahrer.date_of_birth &&
     `Born ${datum(fahrer.date_of_birth)}${geburt?.ort ? ` in ${geburt.ort}${geburt.land ? `, ${geburt.land}` : ''}` : ''}.`,
   fahrer.date_of_death && `Died ${datum(fahrer.date_of_death)}.`,
-  fahrer.abbreviation && `Timing code ${fahrer.abbreviation}${geburt?.nummer ? `, car number ${geburt.nummer}` : ''}.`,
   fahrer.full_name !== fahrer.display_name && `Full name ${fahrer.full_name}.`,
 ]
   .filter(Boolean)
@@ -272,7 +271,20 @@ const person = {
     * gleichen Gewichts (docs/DESIGN.md 8.2).
     */}
   <header class="seitenkopf">
-    <span class="wappen" title={heimat.name}>{heimat.code}</span>
+    {/*
+      * Land, Zeitnahme-Kürzel und Startnummer stehen rechts neben dem Namen,
+      * wie auf dem Monitor („ESP / ALO #14“). Im Kopfsatz machten sie ihn am
+      * Telefon sechs Zeilen lang, ohne etwas zu erzählen.
+      */}
+    <div class="kennung">
+      <span class="wappen" title={heimat.name}>{heimat.code}</span>
+      {(fahrer.abbreviation || geburt?.nummer) && (
+        <span class="code-nummer">
+          {fahrer.abbreviation && <><span class="sr-only">Timing code </span>{fahrer.abbreviation}</>}
+          {geburt?.nummer && <><span class="sr-only">, car number</span> <span aria-hidden="true">#</span>{geburt.nummer}</>}
+        </span>
+      )}
+    </div>
     <div>
       <p class="oberzeile">
         <a href={pfad.seite('/drivers/')}>Drivers</a>

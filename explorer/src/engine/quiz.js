@@ -133,7 +133,7 @@ const mal = (n, einzahl, mehrzahl = `${einzahl}s`) => `${zahl(n)} ${n === 1 ? ei
 const punkte = (n) => `${ein(n)} ${n === 1 ? 'point' : 'points'}`
 /** „the 2021 Abu Dhabi Grand Prix" */
 const rennenText = (r) => `the ${r.jahr} ${r.gp}`
-const liste = (xs, einheit) => `${xs.map((x) => `${x.name} ${zahl(x.wert)}`).join(' · ')} ${einheit}.`
+const liste = (xs, einheit) => `${xs.map((x) => `${x.name} ${zahl(x.wert)}`).join(', ')} ${einheit}.`
 /** „A", „A and B", „A, B and C" */
 const und = (xs) => (xs.length < 2 ? xs.join('') : `${xs.slice(0, -1).join(', ')} and ${xs.at(-1)}`)
 /** Höchstens vier Namen, der Rest als Zahl: „Cooper, BRM, Ferguson and 4 others". */
@@ -558,7 +558,7 @@ function fahrerFragen(db, k, { stelle }) {
       ),
       erklaerung:
         `${f.name} won the ${jahr} championship with ${team.name}` +
-        (f.titel.length > 1 ? ` – title ${nummer} of ${f.titel.length}.` : '.'),
+        (f.titel.length > 1 ? `, title ${nummer} of ${f.titel.length}.` : '.'),
     })
 
     /*
@@ -1457,7 +1457,7 @@ function rekordFragen(db, k, { stelle }) {
     },
     {
       art: 'slams', stufe: 3, l: () => grandSlams(db, 8),
-      text: 'Who has the most grand slams – pole, win, fastest lap and every lap led in the same race?',
+      text: 'Who has the most grand slams (pole, win, fastest lap and every lap led in the same race)?',
       erklaerung: (a, b) => `${a.name} managed it ${mals(a.wert)}; ${b.name} follows with ${b.wert}.`,
     },
     {

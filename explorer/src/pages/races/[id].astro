@@ -46,15 +46,21 @@ const rueckstand = (e) =>
 const lackierung = sieger?.teamId ?? null
 
 /*
- * Das Epochenband: die Jahre, in denen dieser Grand Prix ausgetragen wurde –
- * nur Rennen mit Ergebnis, ein angesetztes ist noch nicht gefahren.
+ * Das Epochenband: die Jahre mit einem Rennen auf dieser Strecke – nur Rennen
+ * mit Ergebnis, ein angesetztes ist noch nicht gefahren.
+ *
+ * Nach der Strecke, nicht nach dem Namen des Grand Prix: Namen wechseln. Der
+ * „São Paulo Grand Prix“ heißt erst seit 2021 so, Interlagos ist seit 1973 im
+ * Kalender; nach dem Namen zeigte das Band fünf Jahre statt fünfzig. Eine
+ * Strecke mit zwei Grand Prix in einem Jahr (Imola als San Marino und Emilia
+ * Romagna) zählt das Jahr einmal.
  */
-const gpJahre = alle(
+const streckenJahre = alle(
   `SELECT DISTINCT r.year AS jahr FROM race r
-    WHERE r.grand_prix_id = ?
+    WHERE r.circuit_id = ?
       AND EXISTS (SELECT 1 FROM race_result x WHERE x.race_id = r.id)
     ORDER BY r.year`,
-  rennen.grand_prix_id,
+  rennen.circuit_id,
 ).map((r) => r.jahr)
 
 /* Wer hier Weltmeister wurde – für den Hinweis „Title decided“. */
@@ -152,7 +158,7 @@ const ereignis = {
   {/*
     * Der Kopf: Brotkrume, der Name auf dem Streifen der Lackierung des
     * Siegerteams, ein Satz mit Strecke, Ort, Datum, Runden und Distanz, das
-    * Epochenband dieses Grand Prix. Der Sieger steht im Turm darunter.
+    * Epochenband dieser Strecke. Der Sieger steht im Turm darunter.
     */}
   <header class="seitenkopf">
     <span class="wappen" title={rennen.land ?? ''}>{rennen.ioc ?? '–'}</span>
@@ -166,7 +172,7 @@ const ereignis = {
           Round {rennen.round} of the {rennen.year} season, at <a href={pfad.strecke(rennen.circuit_id)}>{rennen.strecke}</a>{ortText} on {datum(rennen.date)}.{rundenSatz && ` ${rundenSatz}`}{rennen.had_sprint === 1 && ' A sprint weekend.'}
         </p>
       </div>
-      <Epochenband jahre={gpJahre} wort="Grand Prix held" />
+      <Epochenband jahre={streckenJahre} wort={`Races at ${rennen.strecke}`} />
     </div>
   </header>
 
@@ -273,7 +279,7 @@ const ereignis = {
           <thead>
             <tr>
               <th class="num" scope="col">Pos</th><th scope="col">Driver</th><th class="num" scope="col"><abbr title="Car number">No.</abbr></th>
-              <th scope="col">Team</th>
+              <th scope="col">Team and engine</th>
               <th class="num" scope="col">Grid</th><th class="num" scope="col">Laps</th>
               <th scope="col">Time / reason</th><th class="num" scope="col">Points</th>
             </tr>

@@ -613,7 +613,7 @@ export function inReichweite(db, verlaeufe, stand, optionen = {}) {
         )
       } else if ((jung?.[tempoFeld] ?? 0) === 0) {
         hochrechnung = unknown(
-          `Not a single success of this kind since ${ab} – a strike rate of zero yields no number.`,
+          `Not a single success of this kind since ${ab}; a strike rate of zero yields no number.`,
           starts,
         )
       } else {
@@ -758,6 +758,6 @@ export function beschreibeAenderung(e) {
     return `${wer} reaches ${zahlwort(e.wert, e.kategorie)} and now shares the record${alt ? ` with ${alt}` : ''}.`
   }
   return `${wer} moves clear with ${zahlwort(e.wert, e.kategorie)}${
-    alt ? ` – ${alt} no longer shares it` : ''
+    alt ? `; ${alt} no longer shares it` : ''
   }.`
 }
