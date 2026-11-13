@@ -96,8 +96,8 @@ async function pruefeAlles() {
    * Verletzung der Inhaltsrichtlinie ist ein solcher Fehler – das ist der
    * Hauptgrund für diesen Teil.
    */
-  async function seite(weg, { breite = 1280, hoehe = 900 } = {}) {
-    const kontext = await browser.newContext({ viewport: { width: breite, height: hoehe } })
+  async function seite(weg, { breite = 1280, hoehe = 900, modus = 'light' } = {}) {
+    const kontext = await browser.newContext({ viewport: { width: breite, height: hoehe }, colorScheme: modus })
     const p = await kontext.newPage()
     const meldungen = []
     p.on('console', (m) => m.type() === 'error' && meldungen.push(m.text()))
@@ -365,6 +365,47 @@ async function pruefeAlles() {
     await p.locator('main table tbody tr').first().waitFor({ timeout: 10000 })
     pruefe('Explorer: Monaco aus der Adresse – Senna vorn', (await p.locator('main table tbody tr').first().textContent()).includes('Ayrton Senna'))
   })
+
+  /*
+   * Barrierefreiheit nach WCAG 2.1 AA, hell und dunkel, mit axe-core. Vor dem
+   * Umbau auf „Zeitnahme“ meldete axe auf jeder Seite etwas – Verweise im Fuß
+   * ohne Unterstreichung, ein Kontrast unter 4,5:1, Grafiken mit fokussierbaren
+   * Kindern, 78 Kartenpunkte ohne Namen –, und niemand merkte es, weil nichts
+   * danach fragte. Jetzt fragt diese Prüfung bei jedem Bau.
+   *
+   * axe wird per evaluate eingespielt, nicht als <script>: Die
+   * Inhaltsrichtlinie der Seite blockiert Skripte ohne Hash, evaluate läuft
+   * außerhalb von ihr. Die Inseln laden beim Hineinscrollen, deshalb einmal ans
+   * Ende und zurück, bevor geprüft wird.
+   */
+  const AXE = fs.readFileSync(path.join(process.cwd(), 'node_modules', 'axe-core', 'axe.min.js'), 'utf8')
+  const AXE_SEITEN = [
+    '/', '/seasons/1988/', '/drivers/fernando-alonso/', '/teams/ferrari/', '/races/abu-dhabi-grand-prix-2021/',
+    '/records/', '/circuits/', '/comparison/?a=lewis-hamilton&b=michael-schumacher', '/explorer/', '/quiz/',
+  ]
+  let axeLaeufe = 0
+  for (const weg of AXE_SEITEN) {
+    for (const modus of ['light', 'dark']) {
+      await schritt(`axe ${weg} ${modus}`, weg, { modus }, async (p) => {
+        await p.evaluate(async () => {
+          for (let y = 0; y < document.body.scrollHeight; y += 800) {
+            window.scrollTo(0, y)
+            await new Promise((r) => setTimeout(r, 30))
+          }
+          window.scrollTo(0, 0)
+        })
+        await p.waitForLoadState('networkidle')
+        await p.evaluate(AXE)
+        const befunde = await p.evaluate(async () => {
+          const r = await window.axe.run(document, { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'] } })
+          return r.violations.map((v) => `${v.id} (${v.nodes.length}): ${v.nodes[0]?.target.join(' ')}`)
+        })
+        pruefe(`axe ${weg} ${modus}`, befunde.length === 0, befunde.slice(0, 3).join(' | '))
+        axeLaeufe++
+      })
+    }
+  }
+  console.log(`   ✓ axe auf ${axeLaeufe} Seiten und Modi gelaufen`)
 
   await browser.close()
   srv.close()

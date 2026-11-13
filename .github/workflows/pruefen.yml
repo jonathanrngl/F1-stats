@@ -1,0 +1,69 @@
+# Prüft jeden Pull Request, bevor er gemergt wird – dieselben Schritte wie der
+# build-Job in deploy.yml, ohne zu veröffentlichen.
+#
+# Vorher lief jede Prüfung erst nach dem Merge, im Deploy. Ein roter Bau hielt
+# zwar die Veröffentlichung an, aber man sah ihn erst, wenn der Fehler schon
+# auf main lag, und ein Pull Request zeigte „no checks“. Da jeder Push auf
+# main sofort veröffentlicht, gehört die Prüfung davor.
+#
+# Kein Schritt hier braucht Schreibrechte oder Geheimnisse: Der Job führt Code
+# aus dem Pull Request aus und darf deshalb nur lesen. pull_request (nicht
+# pull_request_target) gibt einem Pull Request aus einem fremden Fork ohnehin
+# nur einen Token mit Leserechten.
+name: Prüfen
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# Ein neuer Push auf denselben Pull Request macht den alten Lauf überflüssig.
+concurrency:
+  group: pruefen-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pruefen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      # Pins und Begründungen wie in deploy.yml.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: explorer/package.json
+
+      - name: Abhaengigkeiten
+        working-directory: explorer
+        run: npm ci --ignore-scripts
+
+      - name: Lint
+        working-directory: explorer
+        run: npm run lint
+
+      # Jede Farbrolle auf jeder Fläche, hell und dunkel (docs/DESIGN.md 5.3).
+      - name: Kontraste pruefen
+        working-directory: explorer
+        run: npm run test:kontraste
+
+      - name: Datenbank importieren
+        working-directory: explorer
+        run: npm run import
+
+      - name: Statistik-Engine pruefen
+        working-directory: explorer
+        run: npm test
+
+      - name: Explorer bauen
+        working-directory: explorer
+        run: npm run build
+
+      # Browserprüfung inklusive axe (WCAG 2.1 AA, hell und dunkel).
+      - name: Oberflaeche pruefen
+        working-directory: explorer
+        run: npm run test:oberflaeche

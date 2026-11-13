@@ -17,7 +17,8 @@ npm run build           # alle Seiten nach dist/, danach Ausgabe- und Linkprüfu
 npm run vorschau        # dist/ ausliefern wie GitHub Pages, auf :4323/F1-stats/
 npm run lint            # oxlint über src/ und scripts/
 npm test                # Statistik-Engine gegen die Datenbank
-npm run test:oberflaeche  # die gebaute Seite im installierten Chrome
+npm run test:oberflaeche  # die gebaute Seite im installierten Chrome, mit axe
+npm run test:kontraste  # jede Farbrolle auf jeder Fläche, hell und dunkel
 ```
 
 `npm run vorschau` ersetzt `astro preview`, das die Seiten ohne den Vorsatz
@@ -164,7 +165,15 @@ zusammengeklebter Text und jeder seiteninterne Verweis, der ins Leere zeigt.
 Konsolenfehler (auch keine Verletzung der Inhaltsrichtlinie), Suche,
 Vergleich, Explorer und What-if funktionieren, ein eigenes Punktesystem lässt
 sich anlegen, auf einer anderen Saison wiederfinden und löschen, Menü und Suche am Telefon,
-Sprunglink, 404-Seite und die Umleitung alter Adressen.
+Sprunglink, 404-Seite und die Umleitung alter Adressen. Dazu axe-core
+(WCAG 2.1 AA) auf zehn Seiten, hell und dunkel.
+
+`npm run test:kontraste` rechnet aus `src/styles/theme.css` und `teams.css`,
+ob jede Farbrolle auf jeder Fläche den nötigen Kontrast hat
+(`docs/DESIGN.md`, 5.3).
+
+Alle Prüfungen laufen bei jedem Pull Request (`.github/workflows/pruefen.yml`)
+und noch einmal vor jedem Deploy.
 
 ## Pole-Position ist nicht Startplatz 1
 
