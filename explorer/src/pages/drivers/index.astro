@@ -3,6 +3,7 @@ import { zahl } from '../../lib/format.js'
 import Seite from '../../layouts/Seite.astro'
 import Filter from '../../components/Filter.astro'
 import Sortierung from '../../components/Sortierung.astro'
+import Startfeld from '../../components/Startfeld.astro'
 import { fahrerListe, pfad } from '../../lib/db.js'
 
 const fahrer = fahrerListe()
@@ -20,10 +21,14 @@ const neuestesJahr = Math.max(...fahrer.map((f) => f.bis ?? 0))
 >
   <header class="seitenkopf">
     <div>
-      <h1>All drivers since 1950</h1>
-      <p class="lead">{zahl(fahrer.length)} drivers who were entered at least once.</p>
+      <h1>Drivers</h1>
+      <p class="lead">Today’s grid first, then all {zahl(fahrer.length)} drivers who were entered at least once since 1950.</p>
     </div>
   </header>
+
+  <Startfeld art="fahrer" />
+
+  <h2 class="liste-titel">All drivers since 1950</h2>
 
   <Filter
     platzhalter="Filter by name, country or period"

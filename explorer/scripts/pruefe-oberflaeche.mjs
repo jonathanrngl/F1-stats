@@ -343,6 +343,22 @@ async function pruefeAlles() {
     pruefe('erster Tabstopp ist „Skip to content“', text === 'Skip to content', text)
   })
 
+  // Revision 2: das nächste Rennen vorn, das Startfeld als Karten, jede Karte ein Verweis.
+  await schritt('Rennwoche', '/', {}, async (p) => {
+    const kopf = p.locator('.rennwoche h2')
+    pruefe('Startseite: das nächste Rennen auf dem Monitor', (await kopf.count()) === 1, await kopf.textContent().catch(() => ''))
+    const wort = (await p.locator('[data-rennwoche-wort]').textContent())?.trim()
+    pruefe('Rennwoche: Fahne gesetzt', ['Next race', 'Race week', 'Race weekend'].includes(wort), wort)
+  })
+  await schritt('Startfeld', '/drivers/', {}, async (p) => {
+    const karten = p.locator('.startfeld .startkarte')
+    const n = await karten.count()
+    pruefe('Startfeld: mindestens 20 Fahrerkarten', n >= 20, String(n))
+    await karten.first().click({ position: { x: 8, y: 30 } })
+    await p.waitForURL(/\/drivers\/[^/]+\/$/, { timeout: 5000 }).catch(() => {})
+    pruefe('Startfeld: ein Klick auf die Karte öffnet den Fahrer', /\/drivers\/[^/]+\/$/.test(p.url()), p.url())
+  })
+
   // Eine unbekannte Adresse bekommt die eigene 404-Seite, eine alte deutsche wird umgeleitet.
   {
     const { p, kontext, status } = await seite('/gibt-es-nicht/')
@@ -382,6 +398,7 @@ async function pruefeAlles() {
   const AXE_SEITEN = [
     '/', '/seasons/1988/', '/drivers/fernando-alonso/', '/teams/ferrari/', '/races/abu-dhabi-grand-prix-2021/',
     '/records/', '/circuits/', '/comparison/?a=lewis-hamilton&b=michael-schumacher', '/explorer/', '/quiz/',
+    '/drivers/', '/teams/',
   ]
   let axeLaeufe = 0
   for (const weg of AXE_SEITEN) {

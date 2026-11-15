@@ -2,6 +2,7 @@
 import Seite from '../../layouts/Seite.astro'
 import Filter from '../../components/Filter.astro'
 import Sortierung from '../../components/Sortierung.astro'
+import Startfeld from '../../components/Startfeld.astro'
 import { zahl } from '../../lib/format.js'
 import { teamListe, pfad } from '../../lib/db.js'
 
@@ -12,13 +13,17 @@ const neuestesJahr = Math.max(...teams.map((t) => t.bis ?? 0))
 <Seite titel="All Formula 1 teams" beschreibung={`${teams.length} constructors since 1950.`}>
   <header class="seitenkopf">
     <div>
-      <h1>All constructors since 1950</h1>
+      <h1>Teams</h1>
       <p class="lead">
-        {teams.length} constructors. Name changes and predecessor teams are set out on each
-        team's own page.
+        Today’s grid first, then all {teams.length} constructors since 1950. Name changes and
+        predecessor teams are set out on each team’s own page.
       </p>
     </div>
   </header>
+
+  <Startfeld art="teams" />
+
+  <h2 class="liste-titel">All constructors since 1950</h2>
 
   <Filter
     platzhalter="Filter by team, country or period"

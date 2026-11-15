@@ -120,6 +120,7 @@ const PAARE = [
   ['--lila', '--plane', 4.5], ['--lila', '--surface', 4.5], ['--lila', '--zebra', 4.5],
   ['--good', '--plane', 4.5], ['--good', '--surface', 4.5], ['--good', '--zebra', 4.5],
   ['--warn', '--plane', 4.5], ['--warn', '--surface', 4.5],
+  ['--live', '--plane', 4.5], ['--live', '--surface', 4.5],
   ['--danger-fg', '--danger-bg', 4.5], ['--danger-fg', '--surface', 4.5],
   ['--podest-ink', '--gold', 4.5], ['--podest-ink', '--silber', 4.5], ['--podest-ink', '--bronze', 4.5],
   ['--ink', '--gold-wash', 4.5],
@@ -173,6 +174,18 @@ function teamFarben() {
   return out
 }
 
+/*
+ * Die Startnummer auf den Karten des Startfelds steht in Tinte auf der
+ * Teamfarbe, und die Karten stehen auf dem Monitor – also gilt die dunkle
+ * Farbe. Große, fette Ziffern: 3:1 genügt (DESIGN.md, Revision 2).
+ */
+function pruefePlatten() {
+  const tinte = wert('--podest-ink', 'dunkel')
+  return teamFarben().map((t) => ({
+    vorn: '--podest-ink', grund: `--t-${t.id}`, modus: 'dunkel', min: 3, wert: kontrast(tinte, t.dunkel),
+  }))
+}
+
 // ------------------------------------------------------------------ Ausgabe
 
 const f = (x) => (x === null ? '—' : x.toFixed(2).replace('.', ','))
@@ -202,6 +215,7 @@ if (process.argv.includes('--teams')) {
       console.log(`| \`${z.vorn}\` | \`${z.grund}\` | ${z.min} | ${mark(h)} | ${mark(d)} |`)
     }
   } else {
+    zeilen.push(...pruefePlatten())
     const fehlt = zeilen.filter((z) => z.wert === null)
     const schlecht = zeilen.filter((z) => z.wert !== null && z.wert < z.min)
     const zaehlt = schlecht.filter((z) => !NUR_MELDEN(z.vorn, z.modus))

@@ -91,6 +91,12 @@
      Zeitenmonitor. Hier: die absolute Bestmarke, Rekord und schnellste Runde. */
   --lila: light-dark(#7b2fbe, #c49bff);
 
+  /* Rot für „jetzt“: das nächste Rennen, die Rennwoche. Nur dort, nie als
+     Schmuck und nie für Ergebnisse – ein Ausfall ist `--danger-fg`, ein
+     anderes, dunkleres Rot, und steht nie in derselben Komponente
+     (DESIGN.md, Revision 2). */
+  --live: light-dark(#c8102e, #ff5a52);
+
   /* Reifenmischungen, wie die Hersteller sie färben – in beiden Modi gleich,
      wie Gold. Die Schrift darauf ist je Mischung die, die 4,5:1 erreicht:
      weiß auf Soft und Wet, dunkel auf Medium, Hard und Intermediate (weiß
@@ -216,7 +222,9 @@
 /*
  * Die Monitorfläche: immer dunkel, in beiden Modi der Seite. Darauf steht das
  * Meisterband – die Teamfarben erreichen dort alle mindestens 3:1, auf dem
- * hellen Beton elf von ihnen nicht (DESIGN.md 5.5). Eine je Seite.
+ * hellen Beton elf von ihnen nicht (DESIGN.md 5.5). Eine Bühne je Seite: seit
+ * Revision 2 auch das nächste Rennen über dem Band und das Startfeld auf
+ * /drivers/ und /teams/.
  */
 .monitor {
   color-scheme: dark;
@@ -1016,6 +1024,9 @@ body[data-lackierung] .titelblock h1 { padding-left: 0; border-left: 0; }
 
 .abschnitt:first-child,
 .sprung + .abschnitt { margin-top: 0; }
+
+/* Die Überschrift über einer langen Liste, wenn darüber das Startfeld steht (/drivers/, /teams/). */
+.liste-titel { margin: 0 0 var(--abstand-4); }
 
 .abschnitt-kopf {
   display: flex;

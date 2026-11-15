@@ -1,0 +1,281 @@
+---
+/**
+ * Das nächste Rennen als Kopf der Startseite: Name, Ort, wie lange noch, der
+ * Zeitplan des Wochenendes in der Ortszeit des Betrachters und wo das Rennen
+ * in der Saison steht.
+ *
+ * Es steht auf dem Monitor, direkt über dem Meisterband – beide zusammen sind
+ * die eine dunkle Bühne der Seite (DESIGN.md, Revision 2). Das Rot (`--live`)
+ * steht hier zweimal und sagt beide Male dasselbe: Das ist das Rennen, das
+ * als Nächstes kommt.
+ *
+ * Gibt es kein nächstes Rennen, setzt die Startseite die Komponente gar nicht
+ * erst ein; dann steht das Meisterband allein auf dem Monitor.
+ */
+import { datum, km, zahl } from '../lib/format.js'
+import { eine, pfad } from '../lib/db.js'
+import Countdown from './Countdown.astro'
+
+interface Session {
+  name: string
+  datum: string
+  zeit: string | null
+  rennen?: boolean
+}
+
+interface Props {
+  /** Das Rennen aus naechstesRennen() (engine/vorschau.js). */
+  rennen: {
+    jahr: number
+    runde: number
+    datum: string
+    zeit: string | null
+    grandPrix: string
+    grandPrixVoll: string | null
+    strecke: string
+    ort: string | null
+    land: string | null
+    runden: number | null
+    laenge: number | null
+    kurven: number | null
+    rennenImJahr: number
+  }
+  sessions: Session[]
+  /** Der Satz zur Titelfrage, wenn es einen gibt. */
+  titelSatz?: string | null
+}
+
+const { rennen, sessions, titelSatz = null } = Astro.props
+
+const name = rennen.grandPrixVoll ?? `${rennen.grandPrix} Grand Prix`
+/* Wie viele Rennen des Jahres schon ein Ergebnis haben – abgesagte zählen nicht mit. */
+const { gelaufen } = eine(
+  `SELECT COUNT(*) AS gelaufen FROM race r
+    WHERE r.year = ? AND EXISTS (SELECT 1 FROM race_result rr WHERE rr.race_id = r.id)`,
+  rennen.jahr,
+)
+
+/* „20–22 November“, über ein Monatsende „30 October – 1 November“. */
+const erster = sessions[0]?.datum ?? rennen.datum
+const tag = (d: string) => Number(d.slice(8, 10))
+const zeitraum =
+  erster === rennen.datum
+    ? datum(rennen.datum)
+    : erster.slice(0, 7) === rennen.datum.slice(0, 7)
+      ? `${tag(erster)}–${datum(rennen.datum)}`
+      : `${datum(erster).replace(/ \d{4}$/, '')} – ${datum(rennen.datum)}`
+
+const ort = [rennen.strecke, rennen.ort && rennen.ort !== rennen.strecke ? rennen.ort : null].filter(Boolean).join(', ')
+const eckdaten =
+  rennen.runden && rennen.laenge
+    ? `${zahl(rennen.runden)} laps of ${km(rennen.laenge)}${rennen.kurven ? `, ${rennen.kurven} turns` : ''}.`
+    : null
+
+/** Mit Uhrzeit als ISO-Zeitpunkt, sonst nur das Datum – wie auf /preview/. */
+const zeitpunkt = (s: Session) => (s.zeit ? `${s.datum}T${s.zeit.slice(0, 5)}Z` : s.datum)
+
+const runden = Array.from({ length: rennen.rennenImJahr }, (_, i) => i + 1)
+const streifenText = `Round ${rennen.runde} of ${rennen.rennenImJahr}: ${gelaufen} ${gelaufen === 1 ? 'race' : 'races'} run, ${rennen.rennenImJahr - rennen.runde} to come after this one.`
+---
+
+<section
+  class="rennwoche monitor"
+  aria-labelledby="rennwoche-titel"
+  data-rennwoche
+  data-von={erster}
+  data-rennen={rennen.datum}
+>
+  <p class="fahne">
+    <span class="wort" data-rennwoche-wort>Next race</span><span><span class="sr-only">, </span>Round {rennen.runde} of {rennen.rennenImJahr}</span>
+  </p>
+  <h2 id="rennwoche-titel">{name}</h2>
+  <p class="ort">{ort}{rennen.land && rennen.land !== rennen.ort ? `, ${rennen.land}` : ''}. {zeitraum}.</p>
+
+  <div class="raster">
+    <div class="bis">
+      <p class="countdown"><Countdown datum={rennen.datum} zeit={rennen.zeit} /></p>
+      {titelSatz && <p class="satz">{titelSatz}</p>}
+      {eckdaten && <p class="satz leise">{eckdaten}</p>}
+      <p class="weiter"><a class="knopf" href={pfad.seite('/preview/')}>Read the preview</a></p>
+    </div>
+
+    {sessions.length > 1 && (
+      <div class="plan">
+        <h3>
+          Schedule<span data-ortszeit-hinweis hidden>, in your time zone</span><noscript>, in UTC</noscript>
+        </h3>
+        <ol>
+          {sessions.map((s) => (
+            <li class={s.rennen ? 'rennen' : undefined}>
+              <span class="session">{s.name}</span>
+              {s.zeit ? (
+                <time datetime={zeitpunkt(s)} data-ortszeit>{datum(s.datum)}, {s.zeit.slice(0, 5)} UTC</time>
+              ) : (
+                <time datetime={s.datum}>{datum(s.datum)}</time>
+              )}
+            </li>
+          ))}
+        </ol>
+      </div>
+    )}
+  </div>
+
+  {/*
+    * Die Saison als Streifen, ein Feld je Rennen: gefahren, das nächste in
+    * Rot, die übrigen offen. Der Satz daneben sagt dasselbe für Vorleser.
+    */}
+  <div class="saison" role="img" aria-label={streifenText}>
+    {runden.map((n) => (
+      <span class:list={[n === rennen.runde ? 'naechstes' : n <= gelaufen ? 'gelaufen' : 'offen']} />
+    ))}
+  </div>
+</section>
+
+<script>
+  /*
+   * Das Wort über dem Namen: „Race weekend“ von der ersten Session bis zum
+   * Rennen, „Race week“ in den Tagen davor, sonst „Next race“. Gezählt in
+   * Kalendertagen des Betrachters; ohne Skript bleibt „Next race“ stehen.
+   */
+  const TAG = 86_400_000
+  const lokal = (iso: string) => {
+    const [j, m, t] = iso.split('-').map(Number)
+    return new Date(j, m - 1, t).getTime()
+  }
+  for (const el of document.querySelectorAll<HTMLElement>('[data-rennwoche]')) {
+    const wort = el.querySelector<HTMLElement>('[data-rennwoche-wort]')
+    if (!wort) continue
+    const jetzt = new Date()
+    const heute = new Date(jetzt.getFullYear(), jetzt.getMonth(), jetzt.getDate()).getTime()
+    const von = lokal(el.dataset.von!)
+    const rennen = lokal(el.dataset.rennen!)
+    if (heute >= von && heute <= rennen) wort.textContent = 'Race weekend'
+    else if (heute < von && heute >= rennen - 6 * TAG) wort.textContent = 'Race week'
+  }
+</script>
+
+<style>
+  /*
+   * Die Bühne: dunkel, groß, ein Name. Unten schließt das Meisterband ohne
+   * Fuge an – es trägt dieselbe Fläche, deshalb hier kein unterer Rand.
+   */
+  .rennwoche {
+    display: grid;
+    gap: var(--abstand-2);
+    padding: var(--abstand-6) var(--abstand-6) var(--abstand-5);
+    border-radius: var(--radius) var(--radius) 0 0;
+  }
+
+  /* Das Rot sitzt als Fahne vor dem Wort, nicht als Fläche. */
+  .fahne {
+    display: flex;
+    align-items: center;
+    gap: var(--abstand-2);
+    margin: 0;
+    font-size: var(--text-2);
+    font-weight: 600;
+    color: var(--muted);
+  }
+
+  .fahne::before {
+    content: '';
+    flex: none;
+    width: 0.375rem;
+    height: 1.1em;
+    background: var(--live);
+  }
+
+  .fahne .wort { font-weight: 750; color: var(--live); }
+
+  h2 {
+    max-width: 22ch;
+    margin: 0;
+    font-size: clamp(var(--text-7), 1rem + 4.2vw, var(--text-9));
+    font-stretch: var(--breit);
+    font-weight: 800;
+    line-height: 1.02;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+    text-wrap: balance;
+  }
+
+  .ort { margin: 0; font-size: var(--text-4); color: var(--ink-2); }
+
+  .raster {
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+    gap: var(--abstand-5) var(--abstand-7);
+    align-items: start;
+    margin-top: var(--abstand-5);
+  }
+
+  .bis p { margin: 0; max-width: var(--mass); }
+  .bis p + p { margin-top: var(--abstand-3); }
+
+  /* Die Tage bis zum Rennen: die eine Zahl, die sich bewegt. */
+  .countdown { color: var(--muted); }
+  .countdown :global(b) {
+    margin-right: var(--abstand-1);
+    font-size: var(--text-9);
+    font-stretch: var(--eng);
+    font-weight: 800;
+    line-height: 1;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .satz { color: var(--ink-2); }
+  .satz.leise { font-size: var(--text-2); color: var(--muted); }
+  .weiter { padding-top: var(--abstand-2); }
+
+  .plan h3 {
+    margin: 0 0 var(--abstand-2);
+    font-size: var(--text-2);
+    font-weight: 600;
+    color: var(--muted);
+  }
+
+  .plan ol { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--border); }
+
+  .plan li {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--abstand-3);
+    align-items: baseline;
+    padding: var(--abstand-2) 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .plan .session { color: var(--ink-2); }
+  .plan time { font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .plan .rennen .session,
+  .plan .rennen time { font-weight: 800; color: var(--ink); }
+
+  /*
+   * Der Saisonstreifen: gefahren in Tinte, offen als Rinne, das nächste Rennen
+   * rot und höher. Die Höhe trägt mit, nicht nur die Farbe.
+   */
+  .saison {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    gap: 3px;
+    align-items: end;
+    height: 0.875rem;
+    margin-top: var(--abstand-5);
+  }
+
+  .saison span { height: 0.375rem; background: var(--surface-3); }
+  .saison .gelaufen { background: var(--muted); }
+  .saison .naechstes { height: 100%; background: var(--live); }
+
+  @media (max-width: 56rem) {
+    .raster { grid-template-columns: minmax(0, 1fr); }
+  }
+
+  @media (max-width: 40rem) {
+    .rennwoche { padding: var(--abstand-5) var(--abstand-4) var(--abstand-4); }
+    .countdown :global(b) { font-size: var(--text-8); }
+    .saison { gap: 2px; }
+  }
+</style>

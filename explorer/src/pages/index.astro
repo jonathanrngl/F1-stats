@@ -1,19 +1,21 @@
 ---
 import { datum, zahl } from '../lib/format.js'
 import Seite from '../layouts/Seite.astro'
-import Countdown from '../components/Countdown.astro'
+import Rennwoche from '../components/Rennwoche.astro'
 import Gefolgt from '../components/Gefolgt.astro'
 import Meisterband from '../components/Meisterband.astro'
 import Turm from '../components/Turm.astro'
 import { alle, db, eine, saisonListe, pfad } from '../lib/db.js'
-import { naechstesRennen, standVorRennen, titelKannFallen } from '../engine/vorschau.js'
+import { naechstesRennen, standVorRennen, titelKannFallen, zeitplan } from '../engine/vorschau.js'
 import { datenstand, juengsteAenderungen, rekordVerlaeufe, zahlwort } from '../engine/aenderungen.js'
 
 /*
- * Die Startseite beantwortet drei Fragen, in dieser Reihenfolge und alle in den
- * ersten 800 Pixeln: Wie steht es um die Geschichte (das Meisterband), wie
- * steht die Weltmeisterschaft, wann ist das nächste Rennen. Dazu der jüngste
- * Rekordwechsel, „On this day“ und, wer folgt, „Following“.
+ * Die Startseite beantwortet drei Fragen: Wann ist das nächste Rennen (der
+ * Kopf auf dem Monitor), wie steht es um die Geschichte (das Meisterband,
+ * direkt darunter auf derselben dunklen Fläche) und wie steht die
+ * Weltmeisterschaft. Dazu der jüngste Rekordwechsel, „On this day“ und, wer
+ * folgt, „Following“. Das Rennen steht seit Revision 2 von docs/DESIGN.md
+ * vorn: Die Seite soll nach Rennwochenende aussehen.
  *
  * Was vorher hier stand und gegangen ist: vier Zahlenkacheln (Races, Drivers,
  * Teams, Circuits), „Right now“ in drei gleichen Spalten, ein Verzeichnis aller
@@ -28,6 +30,7 @@ import { datenstand, juengsteAenderungen, rekordVerlaeufe, zahlwort } from '../e
 const { von, bis } = eine('SELECT MIN(year) AS von, MAX(year) AS bis FROM season')
 
 const naechstes = naechstesRennen(db())
+const sessions = naechstes ? zeitplan(db(), naechstes.id) : []
 const stand = naechstes ? standVorRennen(db(), naechstes) : null
 const mitStand = stand && !stand.vorsaison
 const fuehrend = mitStand ? (stand.fahrer?.[0] ?? null) : null
@@ -76,21 +79,10 @@ const letzteMarke = datenStand
     <h1>Formula 1, {von} to {bis}</h1>
   </header>
 
+  {naechstes && <Rennwoche rennen={naechstes} sessions={sessions} titelSatz={titelSatz} />}
   <Meisterband />
 
   <div class="start-raster">
-    {naechstes && (
-      <section class="abschnitt naechstes" aria-labelledby="naechstes-titel">
-        <h2 id="naechstes-titel">Next: {naechstes.grandPrixVoll ?? naechstes.grandPrix}</h2>
-        <p class="wann">
-          Round {naechstes.runde}, {datum(naechstes.datum)}.
-        </p>
-        <p class="countdown"><Countdown datum={naechstes.datum} zeit={naechstes.zeit} /></p>
-        {titelSatz && <p class="titelsatz">{titelSatz}</p>}
-        <p><a href={pfad.seite('/preview/')}>Read the preview</a></p>
-      </section>
-    )}
-
     {mitStand && (
       <section class="abschnitt wm" aria-labelledby="wm-titel">
         <div class="abschnitt-kopf">
@@ -296,64 +288,56 @@ const letzteMarke = datenStand
 </script>
 <style>
   /*
-   * Der Titel der Startseite ist der größte der Seite, sonst nichts: keine
-   * Oberzeile, kein Lead, kein farbiges Wort. Was darunter folgt, ist Daten.
+   * Der Titel der Startseite nennt den Zeitraum, mehr nicht. Seit Revision 2
+   * ist er nicht mehr das Größte der Seite: Das ist der Name des nächsten
+   * Rennens auf dem Monitor darunter.
    */
-  .start { margin-bottom: var(--abstand-5); }
+  .start { margin-bottom: var(--abstand-4); }
   .weiter { margin: var(--abstand-3) 0 0; }
-
-  @media (max-width: 40rem) {
-    .start { margin-bottom: var(--abstand-4); }
-  }
-  .start h1 { font-size: clamp(var(--text-7), 1.4rem + 3.4vw, var(--text-9)); max-width: none; }
+  .start h1 { font-size: clamp(var(--text-6), 1rem + 1.6vw, var(--text-7)); max-width: none; }
 
   /*
-   * Unter dem Band zwei Spalten: links der WM-Stand (7 von 12), rechts das
-   * nächste Rennen und der jüngste Rekordwechsel (5 von 12). Schmal untereinander,
-   * in derselben Reihenfolge – so liest die Tastatur, was das Auge liest.
+   * Rennen und Meisterband sind eine Bühne: Das Band schließt ohne Fuge an
+   * (`~`, nicht `+`: Astro setzt das Skript der Rennwoche dazwischen),
+   * mit einer Haarlinie dazwischen und den unteren Ecken der Bühne.
+   */
+  :global(.rennwoche) ~ :global(.meisterband) {
+    border-top: 1px solid var(--border);
+    border-radius: 0 0 var(--radius) var(--radius);
+  }
+
+  /* Breit hat die Bühne mehr Rand als das Band allein; das Band rückt mit, damit beide eine Kante haben. */
+  @media (min-width: 40rem) {
+    :global(.rennwoche) ~ :global(.meisterband) {
+      padding-inline: var(--abstand-6) calc(var(--abstand-6) + 1.5rem);
+    }
+  }
+
+  /*
+   * Unter der Bühne zwei Spalten: links der WM-Stand (7 von 12), rechts der
+   * jüngste Rekordwechsel (5 von 12). Schmal untereinander, in derselben
+   * Reihenfolge – so liest die Tastatur, was das Auge liest.
    */
   .start-raster {
     display: grid;
     grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
-    grid-template-rows: auto 1fr;
     gap: 0 var(--abstand-7);
     align-items: start;
   }
 
-  /*
-   * Im Quelltext stehen das nächste Rennen, der Stand und der Rekordwechsel in
-   * dieser Reihenfolge: So liest es am Telefon und für Vorleser, und am Telefon
-   * stehen Band, nächstes Rennen und Stand so in den ersten 800 Pixeln. Breit
-   * stellt das Raster den Stand links neben die beiden anderen.
-   */
-  .start-raster > .wm { grid-column: 1; grid-row: 1 / span 2; }
-  .start-raster > .naechstes { grid-column: 2; grid-row: 1; }
-  .start-raster > .marke { grid-column: 2; grid-row: 2; }
   .start-raster > :only-child { grid-column: 1 / -1; }
-  .start-raster > .naechstes { margin-top: var(--abstand-7); }
+
+  /* Nebeneinander beginnen beide Spalten oben; untereinander behält der Rekordwechsel seinen Abstand. */
+  @media (min-width: 56rem) {
+    .start-raster > .marke { margin-top: 0; }
+  }
 
   @media (max-width: 56rem) {
     .start-raster { grid-template-columns: minmax(0, 1fr); }
-    .start-raster > * { grid-column: 1 !important; grid-row: auto !important; }
-    .start-raster > .naechstes { margin-top: 0; }
   }
 
+  .marke p { margin: var(--abstand-3) 0 0; max-width: var(--mass); }
 
-  .naechstes .wann { margin: var(--abstand-2) 0 0; }
-  .naechstes p, .marke p { margin: var(--abstand-3) 0 0; max-width: var(--mass); }
-
-  /* Die Tage bis zum Rennen: die eine Zahl, die sich bewegt. Eng und groß. */
-  .countdown { color: var(--muted); }
-  .countdown :global(b) {
-    font-size: var(--text-7);
-    font-stretch: var(--eng);
-    font-weight: 700;
-    line-height: 1;
-    color: var(--ink);
-    font-variant-numeric: tabular-nums;
-  }
-
-  .titelsatz { color: var(--ink-2); }
   .marke b { color: var(--ink); }
 
   /*
