@@ -6,7 +6,8 @@ Raster, Bausteine, Bewegung, Texte – und was es nicht gibt.
 
 Stand: Entwurf zur Freigabe (Phase 2), Revision 1 nach dem Plan-Review,
 12. November 2026. Was nach der Freigabe anders kam, steht am Ende unter
-„Abweichungen“.
+„Abweichungen“. Revision 2 vom 15. November 2026 (Rennwochenende, Anhang D)
+ändert § 5.2, § 5.5 und § 12.
 
 ---
 
@@ -54,7 +55,8 @@ jedes trägt eine Angabe.
 4. **Die Breite trägt Bedeutung.** Eine Schriftfamilie, Archivo, mit
    Breitenachse: breit und schwer für Namen und Titel (wie die Schrift auf einer
    Lackierung), normal für Text, schmal für Zahlenkolonnen.
-5. **Ein lauter Moment pro Seite.** Startseite: das Meisterband. Fahrer und
+5. **Ein lauter Moment pro Seite.** Startseite: die Bühne aus nächstem Rennen
+   und Meisterband (Revision 2). Fahrer und
    Team: der Name auf seiner Lackierung. Saison: der Turm des WM-Stands. Rennen:
    das Podium. Alles andere ist ruhig.
 
@@ -119,7 +121,8 @@ auf der Startseite.
 
 **Was wir nicht tun.** Kein Logo mit Streifen, kein Karbon-Muster, keine
 Reifen-Icons als Schmuck, keine Countdown-Uhr mit Sekunden, kein dunkler Modus
-als Voreinstellung, keine Fotos.
+als Voreinstellung, keine Fotos. Auch nach Revision 2 nicht: keine Schrift,
+kein Logo, keine Marke der Formel 1.
 
 ## 5. Farbe
 
@@ -160,6 +163,7 @@ Hex-Werte.
 | `--good` | `#0b7048` | `#3cc994` | besser als die eigene Bezugsgröße |
 | `--warn` | `#8a5000` | `#e3a94f` | bemerkenswert, verschoben |
 | `--danger-fg` / `-bg` | `#b00500` / `#fdf0ef` | `#ff8b83` / `#301615` | Ausfall, Fehler |
+| `--live` | `#c8102e` | `#ff5a52` | das nächste Rennen, die Rennwoche (Revision 2) |
 | `--gold` / `--silber` / `--bronze` | `#e5b83a` / `#c6c9ce` / `#d49563` | gleich | Podium, Text darauf `--podest-ink` |
 | `--flagge-gelb` | `#f2c200` | `#ffd84d` | Datenlücke, Sonderfall |
 | `--flagge-blau` | `#1f6fe5` | `#5b9bff` | Hinweis |
@@ -206,12 +210,19 @@ erzeugt (`--tabelle`).
 | `--good` | `--zebra` | 4.5 | 5,70 | 6,67 |
 | `--warn` | `--plane` | 4.5 | 5,73 | 7,83 |
 | `--warn` | `--surface` | 4.5 | 6,51 | 7,09 |
+| `--live` | `--plane` | 4.5 | 5,18 | 5,32 |
+| `--live` | `--surface` | 4.5 | 5,88 | 4,82 |
 | `--danger-fg` | `--danger-bg` | 4.5 | 6,59 | 7,41 |
 | `--danger-fg` | `--surface` | 4.5 | 7,32 | 6,54 |
 | `--podest-ink` | `--gold` | 4.5 | 9,32 | 9,32 |
 | `--podest-ink` | `--silber` | 4.5 | 10,48 | 10,48 |
 | `--podest-ink` | `--bronze` | 4.5 | 6,86 | 6,86 |
 | `--ink` | `--gold-wash` | 4.5 | 15,88 | 12,09 |
+| `--reifen-schrift-hell` | `--reifen-soft` | 4.5 | 4,70 | 4,70 |
+| `--reifen-schrift-hell` | `--reifen-wet` | 4.5 | 5,93 | 5,93 |
+| `--reifen-schrift-dunkel` | `--reifen-medium` | 4.5 | 12,21 | 12,21 |
+| `--reifen-schrift-dunkel` | `--reifen-hard` | 4.5 | 16,16 | 16,16 |
+| `--reifen-schrift-dunkel` | `--reifen-inter` | 4.5 | 6,34 | 6,34 |
 | `--border-input` | `--plane` | 3 | 3,54 | 4,44 |
 | `--border-input` | `--surface` | 3 | 4,02 | 4,02 |
 | `--ink` | `--plane` | 3 | 15,52 | 14,06 |
@@ -249,10 +260,11 @@ Teams immer daneben, die Farbe ist Zugabe, nicht Träger.
 ### 5.5 Die Monitorfläche
 
 `.monitor` setzt `color-scheme: dark` auf ein Element. Alle Rollen darin lösen
-sich dann dunkel auf, auch die Teamfarben – in beiden Modi der Seite. Nur das
-große Meisterband der Startseite steht auf dem Monitor; das kleine auf der
-Saisonseite steht hell. Eine zweite Monitorfläche auf derselben Seite gibt es
-nicht.
+sich dann dunkel auf, auch die Teamfarben – in beiden Modi der Seite. Seit
+Revision 2 stehen drei Bühnen auf dem Monitor: auf der Startseite das nächste
+Rennen mit dem Meisterband direkt darunter (eine Fläche), auf /drivers/ und
+/teams/ das aktuelle Startfeld. Das kleine Band auf der Saisonseite steht
+hell. Eine zweite, getrennte Monitorfläche auf derselben Seite gibt es nicht.
 
 ### 5.6 Diagramme
 
@@ -651,7 +663,7 @@ verlangt; die Ausnahme steht hier.
 | `→` an Links | keine |
 | Metazeile A · B · C | keine |
 | ein Wort der Überschrift farbig oder kursiv | keine |
-| gleiche abgerundete Karten mit Schatten | keine; Schatten nur für Aufklappendes über der Seite |
+| gleiche abgerundete Karten mit Schatten | Karten des Startfelds (Revision 2): ohne Schatten, je Karte die Teamfarbe und die Startnummer, also Daten; Schatten nur für Aufklappendes über der Seite |
 | Verlauf als Deko | Karomuster der Zielflagge (§ 8.8); Scrollschatten der Tabellen (zeigen, dass es weitergeht) |
 | 01/02/03 ohne Reihenfolge | keine; Positionen sind eine Reihenfolge |
 | Einblenden jedes Abschnitts | keine (§ 9) |
@@ -872,3 +884,60 @@ Zum Schluss fiel auf jeder Seite das Element weg, das am wenigsten sagt:
 
 Eine Brotkrume steht damit nur noch dort, wo sie zurückführt (Fahrer → Drivers,
 Saison → Seasons).
+
+---
+
+## Anhang D: Revision 2 – Rennwochenende
+
+Auftrag vom 15. November 2026: Die Seite soll mehr nach der offiziellen
+Formel-1-Seite aussehen, in der eigenen Sprache. Auf Nachfrage gewählt:
+
+| Frage | Antwort |
+|---|---|
+| Was übernehmen? | Rennwochenende, dunkler und kontrastreicher Eindruck, Fahrer- und Teamkarten. Nicht gewählt: schwerere Überschriften. |
+| Wie nah? | „Nah in der Stimmung“: ein Rot für „jetzt / nächstes Rennen“, dunkler im Eindruck. Keine Schrift, kein Logo, keine Marke der Formel 1; Name, Archivo und der Hinweis „nicht offiziell“ bleiben. |
+| Dunkel als Voreinstellung? | Nein, die Seite folgt weiter dem System. |
+| Bilder? | Datengrafik statt Fotos: Teamfarben, Startnummern, Bänder. |
+
+Damit ändern sich drei Entscheidungen aus Anhang B und § 12:
+
+| War | Jetzt | Warum |
+|---|---|---|
+| D4: „kein F1-Rot“ | eine Rolle `--live` (`#c8102e` / `#ff5a52`), nur für das nächste Rennen | ausdrücklich so bestellt. Sie ist nicht das Rot der Marke und steht nie als Fläche, nur als Fahne vor einem Wort und als Feld im Saisonstreifen. Ein Ausfall bleibt `--danger-fg`; beide stehen nie in derselben Komponente. |
+| § 5.5: eine Monitorfläche, nur das Meisterband | eine Bühne je Seite: Startseite (Rennen + Band), /drivers/, /teams/ | „dunkler im Eindruck“, ohne dunkle Voreinstellung. Auf dem Monitor erreichen alle Teamfarben 3:1. |
+| § 12: keine gleichen Karten | Karten des Startfelds | Jede Karte trägt Teamfarbe, Platz, Punkte und Startnummer; das ist die Datengrafik an Stelle des Fotos. Flach, ohne Schatten. |
+
+### Bausteine
+
+- **Rennwoche** (`components/Rennwoche.astro`). Kopf der Startseite, solange
+  ein Rennen aussteht. Fahne in `--live` mit „Next race“, in den sechs Tagen
+  davor „Race week“, ab der ersten Session „Race weekend“ (im Browser
+  gerechnet; ohne Skript bleibt „Next race“). Der Name des Grand Prix breit und
+  schwer, `--text-9` – jetzt das Größte der Seite; der Seitentitel darüber
+  ist auf `--text-7` zurückgegangen. Tage bis zum Rennen, Titelsatz, Runden ×
+  Länge, Knopf zur Vorschau, der Zeitplan in Ortszeit, darunter ein Feld je
+  Rennen der Saison: gefahren grau, das nächste rot und höher, offen als
+  Rinne. Das Meisterband schließt ohne Fuge an.
+- **Startfeld** (`components/Startfeld.astro`, Daten in
+  `startfeld-daten.js`). Über den Tabellen auf /drivers/ und /teams/. Das
+  Feld ist, wer im jüngsten Rennen mit Ergebnis gefahren ist, sortiert nach
+  der Wertung. Fahrerkarte: Teamstreifen oben, Platz, Punkte, Vorname,
+  Nachname breit, Team, die Startnummer als Tafel in Teamfarbe. Teamkarte:
+  dazu die beiden Fahrer mit kleinen Tafeln und die Punkte als Balken im
+  Verhältnis zum Führenden. Die ganze Karte ist klickbar, der Link ist der
+  Name. Die Tabellen darunter, mit Filter und Sortierung, bleiben unverändert.
+- **Kontraste.** `npm run test:kontraste` prüft `--live` auf Grund und
+  Fläche und die Startnummer (`--podest-ink`) auf jeder dunklen Teamfarbe
+  (große Ziffern, 3:1).
+
+### Was nicht ging
+
+- **Streckenumrisse.** F1DB führt je Layout nur Länge und Kurvenzahl, keine
+  Form. Ein Umriss bräuchte eine eigene Quelle mit Lizenz; bis dahin stehen
+  Runden, Länge und Kurven als Satz in der Rennwoche.
+- **800 px am Telefon.** Die Startseite zeigte dort Band, nächstes Rennen und
+  Stand in den ersten 800 px. Jetzt füllt die Bühne den ersten Schirm; der
+  Stand beginnt bei rund 1 050 px. Das ist der Preis dafür, dass das Rennen
+  vorn steht.
+- **Überschriften** bleiben in gemischter Schreibung; schwerere, versale
+  Überschriften wurden nicht gewählt.

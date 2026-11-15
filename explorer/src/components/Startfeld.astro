@@ -1,0 +1,244 @@
+---
+/**
+ * Das aktuelle Startfeld als Karten in Teamfarben, über den Tabellen auf
+ * /drivers/ und /teams/.
+ *
+ * Eine Karte je Fahrer oder Team, sortiert nach der Wertung: Platz und Punkte
+ * oben, der Name groß, unten rechts die Startnummer auf der Teamfarbe – wie
+ * die Nummerntafel am Auto. Bilder gibt es keine; die Farbe und die Nummer
+ * sind das Bild (DESIGN.md, Revision 2).
+ *
+ * Die Karten stehen auf dem Monitor: Dort erreichen alle Teamfarben 3:1, und
+ * die Nummer in Tinte auf der Farbe ebenso (`npm run test:kontraste`
+ * rechnet beides). Jede Karte ist ganz ein Verweis; der eigentliche Link ist
+ * der Name, die Fläche darüber nur sein verlängerter Arm.
+ */
+import { zahl } from '../lib/format.js'
+import { pfad } from '../lib/db.js'
+import { startfeld } from './startfeld-daten.js'
+
+interface Props {
+  art: 'fahrer' | 'teams'
+}
+
+const { art } = Astro.props
+const feld = startfeld()
+const spitze = feld?.teams[0]?.punkte ?? 0
+const punkte = (n: number | null) => `${zahl(n ?? 0)} ${n === 1 ? 'point' : 'points'}`
+---
+
+{feld && (
+  <section class="startfeld monitor" aria-labelledby="startfeld-titel">
+    <h2 id="startfeld-titel">The {feld.jahr} grid</h2>
+    <p class="stand">
+      {art === 'fahrer' ? 'Drivers' : 'Teams'} in championship order after round {feld.runde}, the {feld.grandPrix}.
+    </p>
+
+    {art === 'fahrer' ? (
+      <ol class="startkarten">
+        {feld.fahrer.map((f) => (
+          <li class="startkarte" data-team={f.teamId}>
+            <span class="platz">{f.position ? <><span class="sr-only">Position </span>{f.position}</> : '–'}</span>
+            <span class="punkte">{punkte(f.punkte)}</span>
+            <a class="name" href={pfad.fahrer(f.id)}>
+              <span class="vorname">{f.vorname}</span> <span class="nachname">{f.nachname}</span>
+            </a>
+            <span class="team">{f.team}</span>
+            {f.nummer && <span class="tafel"><span class="sr-only">Car number </span>{f.nummer}</span>}
+          </li>
+        ))}
+      </ol>
+    ) : (
+      <ol class="startkarten">
+        {feld.teams.map((t) => (
+          <li class="startkarte teamkarte" data-team={t.id}>
+            <span class="platz"><span class="sr-only">Position </span>{t.position}</span>
+            <span class="punkte">{punkte(t.punkte)}</span>
+            <a class="name" href={pfad.team(t.id)}><span class="nachname">{t.name}</span></a>
+            <ul class="fahrer">
+              {t.fahrer.map((f) => (
+                <li>
+                  {f.nummer && <span class="tafel klein" aria-hidden="true">{f.nummer}</span>}
+                  {f.vorname} {f.nachname}
+                </li>
+              ))}
+            </ul>
+            {/* Die Punkte als Anteil am Führenden – die Länge sagt, was die Zahl oben sagt. */}
+            <svg class="anteil" viewBox="0 0 100 4" preserveAspectRatio="none" aria-hidden="true">
+              <rect class="rinne" width="100" height="4" />
+              <rect class="voll" width={spitze ? Math.max((t.punkte / spitze) * 100, t.punkte > 0 ? 1 : 0) : 0} height="4" />
+            </svg>
+          </li>
+        ))}
+      </ol>
+    )}
+  </section>
+)}
+
+<style>
+  .startfeld {
+    margin: 0 0 var(--abstand-7);
+    padding: var(--abstand-5) var(--abstand-5) var(--abstand-6);
+    border-radius: var(--radius);
+  }
+
+  h2 {
+    margin: 0;
+    font-size: var(--text-7);
+    font-stretch: var(--breit);
+    font-weight: 800;
+    line-height: 1.1;
+    color: var(--ink);
+  }
+
+  .stand { margin: var(--abstand-2) 0 var(--abstand-5); max-width: var(--mass); color: var(--muted); }
+
+  .startkarten {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(15rem, 100%), 1fr));
+    gap: var(--abstand-3);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /*
+   * Die Karte: oben ein Streifen in Teamfarbe, Platz und Punkte, darunter der
+   * Name; rechts unten die Nummerntafel. Flach, ohne Schatten – sie liegt
+   * auf dem Monitor wie eine Zeile im Turm.
+   */
+  .startkarte {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      'platz punkte'
+      'name  tafel'
+      'team  tafel';
+    align-items: end;
+    gap: var(--abstand-1) var(--abstand-3);
+    padding: var(--abstand-3) var(--abstand-4) var(--abstand-4);
+    background: var(--surface-2);
+    border-top: 4px solid var(--team, var(--s-rest));
+    border-radius: 0 0 var(--radius) var(--radius);
+  }
+
+  .startkarte:hover { background: var(--surface-3); }
+  .startkarte:has(.name:focus-visible) { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .name:focus-visible { outline: none; }
+
+  .platz {
+    grid-area: platz;
+    align-self: start;
+    font-size: var(--text-6);
+    font-stretch: var(--eng);
+    font-weight: 800;
+    line-height: 1;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .punkte {
+    grid-area: punkte;
+    align-self: start;
+    justify-self: end;
+    font-size: var(--text-2);
+    font-weight: 600;
+    color: var(--ink-2);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .name {
+    grid-area: name;
+    display: grid;
+    margin-top: var(--abstand-3);
+    color: var(--ink);
+    text-decoration: none;
+  }
+
+  /* Die ganze Karte nimmt den Klick; der Name bleibt der Link, den Vorleser hören. */
+  .name::after { content: ''; position: absolute; inset: 0; }
+
+  .vorname { font-size: var(--text-3); color: var(--ink-2); }
+
+  .nachname {
+    font-size: var(--text-5);
+    font-stretch: var(--breit);
+    font-weight: 800;
+    line-height: 1.1;
+    overflow-wrap: anywhere;
+  }
+
+  .team { grid-area: team; font-size: var(--text-2); color: var(--muted); }
+
+  /* Die Nummerntafel: Tinte auf Teamfarbe, eng und fett, wie am Auto. */
+  .tafel {
+    grid-area: tafel;
+    display: grid;
+    place-items: center;
+    min-width: 3.25rem;
+    height: 3.25rem;
+    padding: 0 var(--abstand-2);
+    font-size: var(--text-7);
+    font-stretch: var(--eng);
+    font-weight: 800;
+    line-height: 1;
+    color: var(--podest-ink);
+    background: var(--team, var(--s-rest));
+    border-radius: var(--radius);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Teamkarte: die Fahrer mit kleinen Tafeln, unten die Punkte als Balken. */
+  .teamkarte {
+    grid-template-areas:
+      'platz  punkte'
+      'name   name'
+      'fahrer fahrer'
+      'anteil anteil';
+  }
+
+  .fahrer {
+    grid-area: fahrer;
+    display: grid;
+    gap: var(--abstand-1);
+    margin: var(--abstand-2) 0 0;
+    padding: 0;
+    list-style: none;
+    font-size: var(--text-2);
+    color: var(--ink-2);
+  }
+
+  .fahrer li { display: flex; align-items: center; gap: var(--abstand-2); }
+
+  .tafel.klein {
+    min-width: 1.75rem;
+    height: 1.5rem;
+    padding: 0 var(--abstand-1);
+    font-size: var(--text-3);
+  }
+
+  .anteil { grid-area: anteil; display: block; width: 100%; height: 4px; margin-top: var(--abstand-3); }
+  .anteil .rinne { fill: var(--surface); }
+  .anteil .voll { fill: var(--team, var(--s-rest)); }
+
+  /* Am Telefon zwei Fahrer nebeneinander; die Nummer rückt unter den Namen. */
+  @media (max-width: 34rem) {
+    .startfeld { padding: var(--abstand-4) var(--abstand-3) var(--abstand-5); }
+    .startkarten:not(:has(.teamkarte)) { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--abstand-2); }
+    .startkarte:not(.teamkarte) {
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-areas:
+        'platz tafel'
+        'name  name'
+        'team  team'
+        'punkte punkte';
+      padding: var(--abstand-2) var(--abstand-3) var(--abstand-3);
+    }
+    .startkarte:not(.teamkarte) .punkte { justify-self: start; }
+    .startkarte:not(.teamkarte) .tafel { align-self: start; min-width: 2.5rem; height: 2.25rem; font-size: var(--text-6); }
+    .startkarte:not(.teamkarte) .name { margin-top: var(--abstand-2); }
+    .nachname { font-size: var(--text-4); }
+  }
+</style>
